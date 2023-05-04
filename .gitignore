@@ -32,3 +32,7 @@
 *.app
 
 .obj
+compile_commands.json
+prod_webserv
+webserv
+.cache

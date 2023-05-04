@@ -8,7 +8,7 @@
  *
  */
 
-#include "../include/shapes/Rectangle.hpp"
+#include "Rectangle.hpp"
 #include <iostream>
 
 /**
