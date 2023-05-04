@@ -20,11 +20,14 @@
     An RFC compliant HTTP web server written in C++98
     <br />
     <br />
+    <strong>42 Abu Dhabi</strong>
+    <br />
     <a href="https://github.com/mehrinfirdousi">mfirdous</a>
     ·
-    <a href="https://github.com/hsarhan">hsarhan</a>
+    <a href="https://github.com/h-sarhan">hsarhan</a>
     ·
     <a href="https://github.com/hadi14250">hakaddou</a>
+
   </p>
 </div>
 
@@ -91,6 +94,11 @@ This project produces no warnings even with strict warning flags on gcc and clan
     make
   ```
 
+* To run our unit tests
+  ```sh
+    make test
+  ```
+
 ### Usage
 
 * To run the web server with default configuration
@@ -102,8 +110,6 @@ This project produces no warnings even with strict warning flags on gcc and clan
   ```sh
     ./webserv ./server.conf
   ```
-
-
 
 <!-- LICENSE -->
 ## License
