@@ -31,8 +31,10 @@
 *.out
 *.app
 
+# Additional ignored files
 .obj
 compile_commands.json
 prod_webserv
 webserv
 .cache
+run_tests
