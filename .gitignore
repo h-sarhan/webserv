@@ -38,3 +38,5 @@ prod_webserv
 webserv
 .cache
 run_tests
+docs/html
+docs/latex

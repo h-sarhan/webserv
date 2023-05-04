@@ -96,7 +96,13 @@ clean:
 fclean: clean
 	rm -f $(RELEASE_BUILD) $(DBG_BUILD)
 
+# Creates and hosts doxygen documentation
+docs:
+	doxygen
+	@(which python3 && python3 -m http.server --directory docs/html) || \
+	(which python && python -m http.server --directory docs/html)
+
 # Remove object files and builds and re-compile release and debug builds
 re: fclean $(RELEASE_BUILD) $(DBG_BUILD)
 
-.PHONY: all re fclean clean run dbg db
+.PHONY: all re fclean clean run dbg db docs test
