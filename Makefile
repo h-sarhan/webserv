@@ -1,36 +1,46 @@
+# Compiler
 CXX = clang++
 
+# Source files
+SRC_DIR = ./src
 SHAPE_SRC = Rectangle.cpp
 SHAPE_SRC := $(addprefix /shapes/, $(SHAPE_SRC))
+SRC := $(addprefix $(SRC_DIR)/, $(SHAPE_SRC))
+SRC += $(SRC_DIR)/main.cpp
 
-SRC_DIR = ./src
-SRC = main.cpp $(SHAPE_SRC)
-SRC := $(addprefix $(SRC_DIR)/, $(SRC))
-
+# Release and debug object files
 OBJ_DIR = .obj
-
 RELEASE_OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=.o))
 DBG_OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=_dbg.o))
 
-RELEASE_BUILD = prod_webserv
-DBG_BUILD = webserv
-
+# Warning and include flags
 WRN = -Wall -Wextra -Werror -Wpedantic -Wcast-align -Wunused -Wshadow \
 			-Wcast-qual -Wmissing-prototypes -Wno-missing-braces
 INC = -Iinclude -Iinclude/math -Iinclude/shapes -Itests
 CXXFLAGS = $(WRN) $(INC)
 
-RELEASE_FLAGS = -Ofast -march=native -flto -funroll-loops \
-					-finline-functions -fvectorize -DNDEBUG
-
+# Release and debug flags
+DBG_BUILD = webserv
 DEBUG_FLAGS = -g3 -fno-omit-frame-pointer -DDEBUG
+RELEASE_BUILD = prod_webserv
+RELEASE_FLAGS = -Ofast -march=native -flto -funroll-loops -finline-functions \
+				-fvectorize -DNDEBUG
+
+# If valgrind is not available use the address sanitizer instead
 ifeq (, $(shell which valgrind))
-	DEBUG_FLAGS += -fsanitize=address,undefined,
+	DEBUG_FLAGS += -fsanitize=address,undefined
 endif
 
+# Compile database for use with clangd
 COMPILE_DB = compile_commands.json
 
+# Dependency files needed for recompiling with header file changes
 DEPENDS := $(RELEASE_OBJ:.o=.d) $(DBG_OBJ:.o=.d)
+
+# Unit tests
+TEST_SRC := $(filter-out $(SRC_DIR)/main.cpp, $(SRC)) tests/shape_tests.cpp
+TEST_OBJ := $(addprefix $(OBJ_DIR)/, $(TEST_SRC:.cpp=.o))
+TEST = run_tests
 
 # Build debug and release executables
 all: $(RELEASE_BUILD) $(DBG_BUILD) db
@@ -61,7 +71,16 @@ $(RELEASE_BUILD): $(RELEASE_OBJ) Makefile
 $(DBG_BUILD): $(DBG_OBJ) Makefile
 	$(CXX) $(CXXFLAGS) $(DEBUG_FLAGS) $(DBG_OBJ) $(LINK_FLAGS) -o $(DBG_BUILD)
 
+# Include dependencies needed to recompile on header file changes
 -include $(DEPENDS)
+
+# Create test executable
+$(TEST): $(TEST_OBJ)
+	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) $(TEST_OBJ) $(LINK_FLAGS) -o $(TEST)
+
+# Run unit tests
+test: $(TEST)
+	./$(TEST)
 
 # Create compile db
 db: $(COMPILE_DB)
