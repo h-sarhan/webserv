@@ -8,8 +8,8 @@
  *
  */
 
-#include "../common.hpp"
-#include "../math/Vec2.hpp"
+#include "Vec2.hpp"
+#include "common.hpp"
 
 /**
  * @brief Represents a rectangle

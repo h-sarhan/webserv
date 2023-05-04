@@ -8,7 +8,7 @@
  *
  */
 
-#include "../../include/shapes/Rectangle.hpp"
+#include "Rectangle.hpp"
 #include <algorithm>
 
 Rectangle::Rectangle(void) : _height(0), _width(0), _origin()
