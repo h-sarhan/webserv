@@ -17,7 +17,7 @@ DBG_BUILD = webserv
 
 WRN = -Wall -Wextra -Werror -Wpedantic -Wcast-align -Wunused -Wshadow \
 			-Wcast-qual -Wmissing-prototypes -Wno-missing-braces
-INC = -Iinclude -Iinclude/math -Iinclude/shapes
+INC = -Iinclude -Iinclude/math -Iinclude/shapes -Itests
 CXXFLAGS = $(WRN) $(INC)
 
 RELEASE_FLAGS = -Ofast -march=native -flto -funroll-loops \
