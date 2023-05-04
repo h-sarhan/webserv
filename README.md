@@ -11,7 +11,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/h-sarhan/webserv">
-    <img src="logo.png" alt="Logo" width="240" height="240">
+    <img src="assets/logo.png" alt="Logo" width="240" height="240">
   </a>
 
 <h3 align="center">webserv</h3>
