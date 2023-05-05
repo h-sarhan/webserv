@@ -40,3 +40,8 @@ webserv
 run_tests
 docs/html
 docs/latex
+.build
+docs/doxygen/html
+docs/doxygen/xml
+docs/sphinx/build
+docs/sphinx/source/api
