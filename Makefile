@@ -9,7 +9,7 @@ SRC := $(addprefix $(SRC_DIR)/, $(SHAPE_SRC))
 SRC += $(SRC_DIR)/main.cpp
 
 # Release and debug object files
-OBJ_DIR = .obj
+OBJ_DIR = .build
 RELEASE_OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=.o))
 DBG_OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=_dbg.o))
 
@@ -56,7 +56,7 @@ dbg: $(DBG_BUILD) db
 # Release objs
 $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(@D)
-	$(CXX) -MJ $@.json $(CXXFLAGS) $(RELEASE_FLAGS)  -MMD -MP -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS)  -MMD -MP -c -o $@ $<
 
 # Debug objs
 $(OBJ_DIR)/%_dbg.o: %.cpp
@@ -86,7 +86,7 @@ test: $(TEST)
 db: $(COMPILE_DB)
 
 $(COMPILE_DB): Makefile
-	sed -e '1s/^/[\'$$'\n''/' -e '$$s/,$$/\'$$'\n'']/' .obj/src/*.o.json > compile_commands.json
+	sed -e '1s/^/[\'$$'\n''/' -e '$$s/,$$/\'$$'\n'']/' $(OBJ_DIR)/src/**/*.o.json $(OBJ_DIR)/src/*.o.json > compile_commands.json
 
 # Remove object files
 clean:
@@ -94,15 +94,16 @@ clean:
 
 # Remove object files and builds
 fclean: clean
-	rm -f $(RELEASE_BUILD) $(DBG_BUILD)
+	rm -f $(RELEASE_BUILD) $(DBG_BUILD) $(TEST)
 
 # Creates and hosts doxygen documentation
 docs:
 	doxygen
-	@(which python3 && python3 -m http.server --directory docs/html) || \
-	(which python && python -m http.server --directory docs/html)
+	make html -C docs/sphinx
+	sleep 2 && python3 -m webbrowser -t "http://localhost:8000"
+	python3 -m http.server --directory docs/sphinx/build/html
 
 # Remove object files and builds and re-compile release and debug builds
-re: fclean $(RELEASE_BUILD) $(DBG_BUILD)
+re: fclean $(RELEASE_BUILD) $(DBG_BUILD) db
 
 .PHONY: all re fclean clean run dbg db docs test
