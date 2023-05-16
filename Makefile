@@ -15,7 +15,7 @@ DBG_OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=_dbg.o))
 
 # Warning and include flags
 WRN = -Wall -Wextra -Werror -Wpedantic -Wcast-align -Wunused -Wshadow \
-			-Wcast-qual -Wmissing-prototypes -Wno-missing-braces
+			-Wcast-qual -Wmissing-prototypes -Wno-missing-braces -std=c++98
 INC = -Iinclude -Iinclude/math -Iinclude/shapes -Itests
 CXXFLAGS = $(WRN) $(INC)
 
@@ -23,7 +23,7 @@ CXXFLAGS = $(WRN) $(INC)
 DBG_BUILD = webserv
 DEBUG_FLAGS = -g3 -fno-omit-frame-pointer -DDEBUG
 RELEASE_BUILD = prod_webserv
-RELEASE_FLAGS = -Ofast -march=native -flto -funroll-loops -finline-functions \
+RELEASE_FLAGS = -Ofast -march=native -funroll-loops -finline-functions \
 				-fvectorize -DNDEBUG
 
 # If valgrind is not available use the address sanitizer instead
