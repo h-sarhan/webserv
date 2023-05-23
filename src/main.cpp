@@ -8,9 +8,6 @@
  *
  */
 
-#include "Rectangle.hpp"
-#include <iostream>
-
 /**
  * @brief Entrypoint to our program
  *
@@ -18,16 +15,4 @@
  */
 int main(void)
 {
-    const Point a = {99.0, 0};
-    const Rectangle rect1(100, 100, a);
-    const Point b = {0, -1};
-    const Rectangle rect2(100, 100, b);
-    if (rect1.overlap(rect2))
-    {
-        std::cout << "The two rectangles overlap" << std::endl;
-    }
-    else
-    {
-        std::cout << "The two rectangles do not overlap" << std::endl;
-    }
 }

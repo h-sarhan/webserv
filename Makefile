@@ -3,9 +3,9 @@ CXX = clang++
 
 # Source files
 SRC_DIR = ./src
-SHAPE_SRC = Rectangle.cpp
-SHAPE_SRC := $(addprefix /shapes/, $(SHAPE_SRC))
-SRC := $(addprefix $(SRC_DIR)/, $(SHAPE_SRC))
+# SHAPE_SRC = Rectangle.cpp
+# SHAPE_SRC := $(addprefix /shapes/, $(SHAPE_SRC))
+# SRC := $(addprefix $(SRC_DIR)/, $(SHAPE_SRC))
 SRC += $(SRC_DIR)/main.cpp
 
 # Release and debug object files
