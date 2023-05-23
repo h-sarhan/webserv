@@ -1,8 +1,7 @@
 /**
- * @file CofigTokens.hpp
+ * @file TokenTypes.hpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file defines the tokens that we will be used while parsing the
- * confg file
+ * @brief This file defines the tokens types that will be used by the tokenizer
  * @date 2023-05-23
  *
  * @copyright Copyright (c) 2023
@@ -13,7 +12,7 @@
  * @brief The tokens that will be produced after tokenizing the config file
  *
  */
-enum ConfigTokenType
+typedef enum
 {
     // Single-character tokens.
     LEFT_BRACE,
@@ -40,4 +39,4 @@ enum ConfigTokenType
     REDIRECT,
 
     EOF
-};
+} TokenType;
