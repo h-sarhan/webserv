@@ -12,6 +12,11 @@
 #include <fstream>
 #include <iostream>
 
+static void printToken(const Token &token)
+{
+    std::cout << token << std::endl;
+}
+
 Tokenizer::Tokenizer(const std::string &filename) : _line(0)
 {
     std::ifstream configFile;
@@ -27,6 +32,7 @@ Tokenizer::Tokenizer(const std::string &filename) : _line(0)
 
     // Close the file
     configFile.close();
+    std::for_each(_tkns.begin(), _tkns.end(), printToken);
 }
 
 void Tokenizer::tokenizeFile(std::ifstream &configFile)
@@ -43,17 +49,22 @@ void Tokenizer::tokenizeFile(std::ifstream &configFile)
     }
 }
 
-void Tokenizer::tokenizeLine(const std::string &line, const uint32_t num)
+void Tokenizer::tokenizeLine(const std::string &line, const uint32_t lineNum)
 {
-    (void) num;
     std::stringstream lineStream(line);
     tokenIterator lineStart(lineStream);
+    // TODO use std::for_each here
     for (tokenIterator it = lineStart; it != tokenIterator(); it++)
     {
-        std::cout << "|" << *it << "|"
-                  << " ";
+        const std::string contents = *it;
+        uint32_t col;
+        if (lineStream.tellg() == -1)
+            col = line.length() - contents.length();
+        else
+            col = (uint32_t) lineStream.tellg() - contents.length();
+        Token token(WORD, contents, lineNum, col + 1);
+        _tkns.push_back(token);
     }
-    std::cout << std::endl;
 }
 
 const std::vector<Token> &Tokenizer::tokens(void) const

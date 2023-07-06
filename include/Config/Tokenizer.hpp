@@ -16,6 +16,7 @@
 
 typedef std::istream_iterator<std::string> tokenIterator;
 
+// TODO: Create exception class for config file not found
 /**
  * @brief This class tokenizes the configuration file of our web server.
  * The list of tokens produces helps with parsing the configuration.

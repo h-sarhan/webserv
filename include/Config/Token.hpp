@@ -76,4 +76,6 @@ class Token
     uint32_t column(void) const;
 };
 
+std::ostream &operator<<(std::ostream &os, const Token &tkn);
+
 #endif

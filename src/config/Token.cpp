@@ -9,6 +9,7 @@
  */
 
 #include "Token.hpp"
+#include <iostream>
 
 Token::Token(const TokenType &type, const std::string &contents, uint32_t line,
              uint32_t column)
@@ -39,4 +40,11 @@ uint32_t Token::line(void) const
 uint32_t Token::column(void) const
 {
     return this->_column;
+}
+
+std::ostream &operator<<(std::ostream &os, const Token &tkn)
+{
+    std::cout << "{type: " << tkn.type() << ", str: " << tkn.contents()
+              << ", line: " << tkn.line() << ", col: " << tkn.column() << "}";
+    return os;
 }
