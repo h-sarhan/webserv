@@ -25,7 +25,6 @@ typedef enum
 
     // Literals.
     WORD,
-    NUMBER,
 
     // Keywords.
     SERVER,
