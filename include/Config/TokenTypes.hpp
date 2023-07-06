@@ -8,6 +8,9 @@
  *
  */
 
+#ifndef TOKEN_TYPES_HPP
+#define TOKEN_TYPES_HPP
+
 /**
  * @brief The tokens that will be produced after tokenizing the config file
  *
@@ -40,3 +43,5 @@ typedef enum
 
     EOF
 } TokenType;
+
+#endif

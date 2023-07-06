@@ -13,6 +13,7 @@
 #define COMMON_HPP
 #include <cstddef>
 #include <string>
+#include <vector>
 #endif
 
 /**
