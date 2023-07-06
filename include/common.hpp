@@ -12,6 +12,7 @@
 #ifndef COMMON_HPP
 #define COMMON_HPP
 #include <cstddef>
+#include <sstream>
 #include <string>
 #include <vector>
 #endif

@@ -3,10 +3,11 @@ CXX = clang++
 
 # Source files
 SRC_DIR = ./src
-# SHAPE_SRC = Rectangle.cpp
-# SHAPE_SRC := $(addprefix /shapes/, $(SHAPE_SRC))
-# SRC := $(addprefix $(SRC_DIR)/, $(SHAPE_SRC))
-SRC += $(SRC_DIR)/main.cpp
+CONFIG_DIR = $(SRC_DIR)/config
+CONFIG_SRC = Tokenizer.cpp Token.cpp
+CONFIG_SRC := $(addprefix $(CONFIG_DIR)/, $(CONFIG_SRC))
+
+SRC = $(SRC_DIR)/main.cpp $(CONFIG_SRC)
 
 # Release and debug object files
 OBJ_DIR = .build

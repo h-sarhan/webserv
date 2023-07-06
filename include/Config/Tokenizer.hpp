@@ -12,6 +12,9 @@
 #define TOKENIZER_HPP
 
 #include "Token.hpp"
+#include "common.hpp"
+
+typedef std::istream_iterator<std::string> tokenIterator;
 
 /**
  * @brief This class tokenizes the configuration file of our web server.
@@ -20,12 +23,7 @@
 class Tokenizer
 {
   private:
-    const std::string _src;
     std::vector<Token> _tkns;
-    Tokenizer(const Tokenizer &old);
-    Tokenizer operator=(const Tokenizer &srcold);
-    uint32_t _start;
-    uint32_t _current;
     uint32_t _line;
 
   public:
@@ -42,5 +40,11 @@ class Tokenizer
      * @return const std::vector<Token>& The token list
      */
     const std::vector<Token> &tokens(void) const;
+
+  private:
+    Tokenizer(const Tokenizer &old);
+    Tokenizer &operator=(const Tokenizer &old);
+    void tokenizeFile(std::ifstream &configFile);
+    void tokenizeLine(const std::string &line, const uint32_t num);
 };
 #endif
