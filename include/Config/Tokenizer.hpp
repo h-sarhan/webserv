@@ -1,5 +1,5 @@
 /**
- * @file ConfigTokenizer.hpp
+ * @file Tokenizer.hpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
  * @brief This file defines the ConfigTokenizer class
  * @date 2023-05-23
@@ -8,12 +8,11 @@
  *
  */
 
-#ifndef CONFIG_TOKENIZER_HPP
-#define CONFIG_TOKENIZER_HPP
+#ifndef TOKENIZER_HPP
+#define TOKENIZER_HPP
 
 #include "Token.hpp"
 #include "common.hpp"
-#include <map>
 
 typedef std::istream_iterator<std::string> tokenIterator;
 
@@ -34,10 +33,10 @@ class ConfigTokenizer
 
     const std::vector<const Token> &tokens(void) const;
 
-    // Map from token to str
+    // Map strings to tokens
     static std::map<const std::string, const TokenType> strToToken;
 
-    // Map from str to token
+    // Maps tokens to strings
     static std::map<const TokenType, const std::string> tokenToStr;
 
   private:

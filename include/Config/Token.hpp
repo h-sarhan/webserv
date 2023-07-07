@@ -11,8 +11,8 @@
 #ifndef TOKEN
 #define TOKEN
 
-#include "TokenTypes.hpp"
 #include "common.hpp"
+#include "enums/TokenTypes.hpp"
 
 /**
  * @brief This class represents a single token. A token refers to a single

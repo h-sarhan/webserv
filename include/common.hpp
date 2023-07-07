@@ -12,6 +12,8 @@
 #ifndef COMMON_HPP
 #define COMMON_HPP
 #include <cstddef>
+#include <map>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
