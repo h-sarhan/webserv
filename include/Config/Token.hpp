@@ -48,6 +48,12 @@ class Token
     Token(const Token &old);
 
     /**
+     * @brief Destroy the Token object
+     *
+     */
+    ~Token(void);
+
+    /**
      * @brief Get the contents of the token
      *
      * @return std::string Token contents
@@ -74,6 +80,9 @@ class Token
      * @return uint32_t Column number
      */
     uint32_t column(void) const;
+
+  private:
+    Token &operator=(const Token &old);
 };
 
 std::ostream &operator<<(std::ostream &os, const Token &tkn);

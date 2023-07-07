@@ -22,6 +22,10 @@ Token::Token(const Token &old)
 {
 }
 
+Token::~Token()
+{
+}
+
 std::string Token::contents(void) const
 {
     return this->_str;
