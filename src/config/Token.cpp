@@ -22,6 +22,17 @@ Token::Token(const Token &old)
 {
 }
 
+Token &Token::operator=(const Token &old)
+{
+    if (this == &old)
+        return *this;
+    this->_column = old._column;
+    this->_line = old._line;
+    this->_str = old._str;
+    this->_type = old._type;
+    return *this;
+}
+
 Token::~Token()
 {
 }

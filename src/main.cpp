@@ -8,6 +8,7 @@
  *
  */
 
+#include "ServerConfig.hpp"
 #include "Tokenizer.hpp"
 #include <fstream>
 #include <iostream>

@@ -188,9 +188,9 @@ void ConfigTokenizer::tokenizeWord(const std::string &wordStr,
  * @brief Helper function to generate the strToToken map
  *
  */
-static const std::map<const std::string, const TokenType> createStrToToken(void)
+static const std::map<std::string, const TokenType> createStrToToken(void)
 {
-    std::map<const std::string, const TokenType> tokenMap;
+    std::map<std::string, const TokenType> tokenMap;
     tokenMap.insert(std::make_pair("server", SERVER));
     tokenMap.insert(std::make_pair("listen", LISTEN));
     tokenMap.insert(std::make_pair("server_name", SERVER_NAME));
@@ -211,9 +211,9 @@ static const std::map<const std::string, const TokenType> createStrToToken(void)
  * @brief Helper function to generate the tokenToStr map
  *
  */
-static const std::map<const TokenType, const std::string> createTokenToStr(void)
+static const std::map<TokenType, const std::string> createTokenToStr(void)
 {
-    std::map<const TokenType, const std::string> tokenMap;
+    std::map<TokenType, const std::string> tokenMap;
     tokenMap.insert(std::make_pair(SERVER, "SERVER"));
     tokenMap.insert(std::make_pair(LISTEN, "LISTEN"));
     tokenMap.insert(std::make_pair(SERVER_NAME, "SERVER_NAME"));
@@ -239,7 +239,7 @@ ConfigTokenizer::~ConfigTokenizer(void)
 }
 
 // Assigning the static maps
-std::map<const std::string, const TokenType> ConfigTokenizer::strToToken =
+std::map<std::string, const TokenType> ConfigTokenizer::strToToken =
     createStrToToken();
-std::map<const TokenType, const std::string> ConfigTokenizer::tokenToStr =
+std::map<TokenType, const std::string> ConfigTokenizer::tokenToStr =
     createTokenToStr();

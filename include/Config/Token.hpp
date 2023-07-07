@@ -23,10 +23,10 @@
 class Token
 {
   private:
-    const TokenType _type;
-    const std::string _str;
-    const uint32_t _line;
-    const uint32_t _column;
+    TokenType _type;
+    std::string _str;
+    uint32_t _line;
+    uint32_t _column;
 
   public:
     /**
@@ -46,6 +46,14 @@ class Token
      * @param old The token we are copyng from
      */
     Token(const Token &old);
+
+    /**
+     * @brief Token copy assignment constructor
+     *
+     * @param old Token to copy from
+     * @return Token& Instance of the current token
+     */
+    Token &operator=(const Token &old);
 
     /**
      * @brief Destroy the Token object
@@ -82,7 +90,6 @@ class Token
     uint32_t column(void) const;
 
   private:
-    Token &operator=(const Token &old);
 };
 
 std::ostream &operator<<(std::ostream &os, const Token &tkn);

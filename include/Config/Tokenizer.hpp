@@ -34,10 +34,10 @@ class ConfigTokenizer
     const std::vector<const Token> &tokens(void) const;
 
     // Map strings to tokens
-    static std::map<const std::string, const TokenType> strToToken;
+    static std::map<std::string, const TokenType> strToToken;
 
     // Maps tokens to strings
-    static std::map<const TokenType, const std::string> tokenToStr;
+    static std::map<TokenType, const std::string> tokenToStr;
 
   private:
     ConfigTokenizer(const ConfigTokenizer &old);
