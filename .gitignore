@@ -45,3 +45,4 @@ docs/doxygen/html
 docs/doxygen/xml
 docs/sphinx/build
 docs/sphinx/source/api
+.vscode
