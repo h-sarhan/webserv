@@ -12,127 +12,182 @@
 #include <fstream>
 #include <iostream>
 
+/**
+ * @brief Static helper function to print a token
+ *
+ * @param token Token to be printed
+ */
 static void printToken(const Token &token)
 {
-    std::cout << "|" << token.contents() << " "
-              << Tokenizer::tokenToStr[token.type()] << "|" << std::endl;
+    std::cout << "|" << token << "|" << std::endl;
 }
 
-Tokenizer::Tokenizer(const std::string &filename) : _line(0)
+/**
+ * @brief Construct a new Tokenizer object
+ *
+ * @param filename The path to the config file
+ * @throws std::runtime_error Throws an exception when the configuration
+ * file can't be opened
+ */
+ConfigTokenizer::ConfigTokenizer(const std::string &filename) : _line(0)
 {
-    std::ifstream configFile;
+    std::ifstream configStream;
 
     // Load file
-    configFile.open(filename);
+    configStream.open(filename);
 
     // Check if the file opened correctly
-    if (!configFile)
+    if (!configStream)
         throw std::runtime_error("Could not open config file");
 
-    tokenizeFile(configFile);
+    tokenizeFile(configStream);
 
-    // Close the file
-    configFile.close();
-    std::for_each(_tkns.begin(), _tkns.end(), printToken);
+    // Printing tokens for debugging
+    std::for_each(_tokens.begin(), _tokens.end(), printToken);
 }
 
-void Tokenizer::tokenizeFile(std::ifstream &configFile)
+/**
+ * @brief Tokenizes the configuration file
+ *
+ * @param configStream Input file stream of the config file
+ * @throws std::runtime_error Throws an error when there is an issue reading
+ * the file
+ */
+void ConfigTokenizer::tokenizeFile(std::ifstream &configStream)
 {
-    std::string line;
-    uint32_t lineNumber = 1;
-    while (std::getline(configFile, line))
+    std::string lineStr;
+    uint32_t lineNum = 1;
+    while (std::getline(configStream, lineStr))
     {
-        if (!configFile)
+        if (!configStream)
             throw std::runtime_error("Error reading config file");
 
-        tokenizeLine(line, lineNumber);
-        lineNumber++;
+        tokenizeLine(lineStr, lineNum);
+        lineNum++;
     }
 }
 
-void Tokenizer::tokenizeLine(std::string line, const uint32_t lineNum)
+/**
+ * @brief Splits a line into whitespace separated words and then tokenizes each
+ * word
+ *
+ * @param lineStr The string containing the line
+ * @param lineNum
+ */
+void ConfigTokenizer::tokenizeLine(std::string &lineStr, const uint32_t lineNum)
 {
     // Trim out comments
-    size_t poundPos = line.find('#');
-    if (poundPos != std::string::npos)
-        line = line.substr(0, poundPos);
+    size_t commentPos = lineStr.find('#');
+    if (commentPos != std::string::npos)
+        lineStr = lineStr.substr(0, commentPos);
 
-    std::stringstream lineStream(line);
-    tokenIterator lineStart(lineStream);
+    std::stringstream lineStream(lineStr);
+    tokenIterator wordsStart(lineStream);
 
-    for (tokenIterator it = lineStart; it != tokenIterator(); it++)
+    for (tokenIterator it = wordsStart; it != tokenIterator(); it++)
     {
-        std::string contents = *it;
-        uint32_t start;
+        std::string wordStr = *it;
+        uint32_t wordPos;
         if (lineStream.tellg() == -1)
-            start = line.length() - contents.length();
+            wordPos = lineStr.length() - wordStr.length();
         else
-            start = (uint32_t) lineStream.tellg() - contents.length();
-        tokenizeStr(contents, start, lineNum);
+            wordPos = (uint32_t) lineStream.tellg() - wordStr.length();
+        tokenizeWord(wordStr, wordPos, lineNum);
     }
 }
 
-const std::vector<const Token> &Tokenizer::tokens(void) const
+/**
+ * @brief Returns the token list generated
+ *
+ * @return const std::vector<Token>& The token list
+ */
+const std::vector<const Token> &ConfigTokenizer::tokens(void) const
 {
-    return _tkns;
+    return _tokens;
 }
 
-bool Tokenizer::isSingleCharToken(const char c) const
+/**
+ * @brief Checks if a character is a token
+ *
+ * @param c Character that we are checking
+ * @return bool Returns true if it is a token
+ */
+bool ConfigTokenizer::isSingleCharToken(const char c) const
 {
     if (c == '{' || c == '}' || c == '#' || c == ';')
         return true;
     return false;
 }
 
-void Tokenizer::addSingleCharToken(const char tokenChr, const uint32_t line,
-                                   const uint32_t column)
+/**
+ * @brief Adds a WORD token to the token list. This also checks if the word is a
+ * reserved word and changes its type appropriately
+ *
+ * @param wordIdx The index to where we are in the wordStr
+ * @param wordStr The string containing the word
+ * @param lineNum The line number we are currently in
+ * @param column The column we are currently in
+ */
+void ConfigTokenizer::addWord(uint32_t &wordIdx, const std::string &wordStr,
+                              const uint32_t lineNum, const uint32_t column)
 {
-    const std::string tokenStr(1, tokenChr);
-    const Token token = Token(strToToken[tokenStr], tokenStr, line, column);
-    _tkns.push_back(token);
-}
+    const uint32_t wordStart = wordIdx;
 
-void Tokenizer::addWord(uint32_t &i, const std::string &contents,
-                        const uint32_t lineNum, const uint32_t column)
-{
-    const uint32_t wordStart = i;
+    while (wordIdx < wordStr.length() && !isSingleCharToken(wordStr[wordIdx]))
+        wordIdx++;
 
-    while (i < contents.length() && !isSingleCharToken(contents[i]))
-        i++;
+    const uint32_t wordEnd = wordIdx;
+    if (wordIdx < wordStr.length() && isSingleCharToken(wordStr[wordIdx]) &&
+        wordIdx > 0)
+        wordIdx--;
 
-    const uint32_t wordEnd = i;
-    if (i < contents.length() && isSingleCharToken(contents[i]) && i > 0)
-        i--;
+    const std::string tokenStr = wordStr.substr(wordStart, wordEnd);
 
-    const std::string tokenStr = contents.substr(wordStart, wordEnd);
-    // Assume we are looking at a word
-    TokenType tokenType = WORD;
-
-    // Unless it is a keyword
+    // Check if the token is a reserved keyword
+    TokenType type;
     if (strToToken.count(tokenStr) != 0)
-        tokenType = strToToken[tokenStr];
+        type = strToToken[tokenStr];
+    else
+        type = WORD;
 
-    const Token token(tokenType, tokenStr, lineNum, column);
-    _tkns.push_back(token);
+    _tokens.push_back(Token(type, tokenStr, lineNum, column));
 }
 
-void Tokenizer::tokenizeStr(const std::string &contents, const uint32_t start,
-                            const uint32_t lineNum)
+/**
+ * @brief Goes through a whitespace separated word and extracts tokens from it
+ *
+ * @param wordStr The string containing the whitespace separated word
+ * @param wordPos Where the word is in the line
+ * @param lineNum The line number we are in
+ */
+void ConfigTokenizer::tokenizeWord(const std::string &wordStr,
+                                   const uint32_t wordPos,
+                                   const uint32_t lineNum)
 {
-    uint32_t i = 0;
-    while (i < contents.length())
+    uint32_t wordIdx = 0;
+    while (wordIdx < wordStr.length())
     {
-        const char c = contents[i];
+        const char c = wordStr[wordIdx];
         if (c == '#')
             return;
+        uint32_t column = wordPos + wordIdx + 1;
         if (isSingleCharToken(c))
-            addSingleCharToken(c, lineNum, start + i + 1);
+        {
+            const std::string tokenStr(1, c);
+            const TokenType type = strToToken[tokenStr];
+            const Token token(type, tokenStr, lineNum, column);
+            _tokens.push_back(token);
+        }
         else
-            addWord(i, contents, lineNum, start + i + 1);
-        i++;
+            addWord(wordIdx, wordStr, lineNum, column);
+        wordIdx++;
     }
 }
 
+/**
+ * @brief Helper function to generate the strToToken map
+ *
+ */
 static const std::map<const std::string, const TokenType> createStrToToken(void)
 {
     std::map<const std::string, const TokenType> tokenMap;
@@ -152,6 +207,10 @@ static const std::map<const std::string, const TokenType> createStrToToken(void)
     return tokenMap;
 }
 
+/**
+ * @brief Helper function to generate the tokenToStr map
+ *
+ */
 static const std::map<const TokenType, const std::string> createTokenToStr(void)
 {
     std::map<const TokenType, const std::string> tokenMap;
@@ -172,8 +231,15 @@ static const std::map<const TokenType, const std::string> createTokenToStr(void)
     return tokenMap;
 }
 
-std::map<const std::string, const TokenType> Tokenizer::strToToken =
-    createStrToToken();
+/**
+ * @brief Destroy the Config Tokenizer object
+ */
+ConfigTokenizer::~ConfigTokenizer(void)
+{
+}
 
-std::map<const TokenType, const std::string> Tokenizer::tokenToStr =
+// Assigning the static maps
+std::map<const std::string, const TokenType> ConfigTokenizer::strToToken =
+    createStrToToken();
+std::map<const TokenType, const std::string> ConfigTokenizer::tokenToStr =
     createTokenToStr();

@@ -29,7 +29,7 @@ int main(int argc, char **argv)
         filename = argv[1];
     try
     {
-        Tokenizer a(filename);
+        ConfigTokenizer a(filename);
     }
     catch (const std::runtime_error &e)
     {

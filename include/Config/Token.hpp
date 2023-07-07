@@ -37,7 +37,7 @@ class Token
      * @param line The line the token was found on
      * @param column The column number the token was found on
      */
-    Token(const TokenType &type, const std::string &contents, uint32_t line,
+    Token(const TokenType &type, const std::string &contents, uint32_t lineNum,
           uint32_t column);
 
     /**
