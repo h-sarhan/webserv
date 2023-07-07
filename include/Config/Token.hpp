@@ -34,7 +34,7 @@ class Token
      *
      * @param type Type of the token
      * @param contents The string that makes up the token
-     * @param line The line the token was found on
+     * @param lineNum The line the token was found on
      * @param column The column number the token was found on
      */
     Token(const TokenType &type, const std::string &contents, uint32_t lineNum,

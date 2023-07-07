@@ -4,7 +4,7 @@ CXX = clang++
 # Source files
 SRC_DIR = ./src
 CONFIG_DIR = $(SRC_DIR)/config
-CONFIG_SRC = Tokenizer.cpp Token.cpp
+CONFIG_SRC = Tokenizer.cpp Token.cpp ServerConfig.cpp
 CONFIG_SRC := $(addprefix $(CONFIG_DIR)/, $(CONFIG_SRC))
 
 SRC = $(SRC_DIR)/main.cpp $(CONFIG_SRC)
