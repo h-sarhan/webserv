@@ -43,7 +43,7 @@ int main(int argc, char **argv)
 	char ipstr[INET6_ADDRSTRLEN];
 
 	if (argc != 2) {
-		fprintf(stderr,"usage: showip hostname\n");
+		std::cerr << "usage: showip hostname" << std::endl;
 		return 1;
 	}
 
@@ -52,11 +52,11 @@ int main(int argc, char **argv)
 	hints.ai_socktype = SOCK_STREAM;
 
 	if ((status = getaddrinfo(argv[1], NULL, &hints, &res)) != 0) {
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
+		std::cerr << "getaddrinfo: " << gai_strerror(status) << std::endl;
 		return 2;
 	}
 
-	printf("IP addresses for %s:\n\n", argv[1]);
+	std::cout << "IP addresses for: " << argv[1] << std::endl << std::endl;
 
 	for(p = res;p != NULL; p = p->ai_next) 
 	{
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 
 		// convert the IP to a string and print it:
 		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
-		printf("  %s: %s\n", ipver.c_str(), ipstr);
+		std::cout << ipver.c_str() << " : " << ipstr << std::endl;
 	}
 
 	freeaddrinfo(res); // free the linked list
