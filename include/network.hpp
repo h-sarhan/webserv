@@ -13,10 +13,17 @@
 #ifndef NETWORK_HPP
 # define NETWORK_HPP
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <netdb.h>
+# include <arpa/inet.h>
+# include <netinet/in.h>
+# include <stdlib.h>
+# include <cstring>
+# include <errno.h>
+# include <unistd.h>
+
+# define QUEUE_LIMIT 10
+# define PORT "1234"
 
 #endif
