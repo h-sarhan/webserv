@@ -22,6 +22,9 @@
 # include <cstring>
 # include <errno.h>
 # include <unistd.h>
+// # include "Server.hpp"
+# include "SystemCallException.hpp"
+
 
 # define QUEUE_LIMIT 10
 # define PORT "1234"

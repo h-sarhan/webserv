@@ -16,7 +16,7 @@ DBG_OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=_dbg.o))
 # Warning and include flags
 WRN = -Wall -Wextra -Werror -Wpedantic -Wcast-align -Wunused -Wshadow \
 			-Wcast-qual -Wmissing-prototypes -Wno-missing-braces -std=c++98
-INC = -Iinclude -Iinclude/math -Iinclude/shapes -Itests
+INC = -Iinclude -Iinclude/math -Iinclude/shapes -Iinclude/Network -Itests
 CXXFLAGS = $(WRN) $(INC)
 
 # Release and debug flags
