@@ -8,10 +8,10 @@
  *
  */
 
-#include <iostream>
-#include "network.hpp"
 #include "Server.hpp"
 #include "common.hpp"
+#include "network.hpp"
+#include <iostream>
 
 /**
  * @brief Entrypoint to our program
@@ -26,11 +26,10 @@ int main(void)
         s.bindSocket();
         s.startListening();
     }
-    catch(const std::exception& e)
+    catch (const std::exception &e)
     {
         std::cerr << e.what() << std::endl;
     }
-    
-	
-	return 0;
+
+    return 0;
 }

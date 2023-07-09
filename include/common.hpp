@@ -16,7 +16,7 @@
 
 #ifndef COMMON_HPP
 #define COMMON_HPP
-#include <cstddef>
 #include <algorithm>
+#include <cstddef>
 
 #endif

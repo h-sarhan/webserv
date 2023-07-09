@@ -18,6 +18,6 @@ SpacesBeforeTrailingComments: 3
 # AlwaysBreakAfterReturnType: TopLevelDefinitions
 #  #define SHORT_NAME       42
 #  #define LONGER_NAME      0x007f   # does nice spacing for macros
-AlignConsecutiveMacros: Consecutive
+AlignConsecutiveMacros: true
 # use \n instead of \r\n
 UseCRLF: false
