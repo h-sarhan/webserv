@@ -10,6 +10,9 @@
  *
  */
 
+#ifndef SYSTEM_CALL_EXCEPTION_HPP
+#define SYSTEM_CALL_EXCEPTION_HPP
+
 #include <exception>
 #include <iostream>
 #include <string>
@@ -37,3 +40,5 @@ class SystemCallException : public std::exception
     {
     }
 };
+
+#endif

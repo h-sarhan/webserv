@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <poll.h>
+#include <fcntl.h>
 
 #define QUEUE_LIMIT 10
 #define PORT        "1234"

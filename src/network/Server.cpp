@@ -51,6 +51,7 @@ void Server::bindSocket()
             std::cout << "socket: " << strerror(errno) << std::endl;
         else
         {
+            // fcntl(this->sockFd, F_SETFL, O_NONBLOCK); // Setting the socket to be non-blocking
             checkErr("setsockopt",
                      setsockopt(this->sockFd, SOL_SOCKET, SO_REUSEADDR,
                                 &reusePort, sizeof(reusePort)));
@@ -107,7 +108,7 @@ void Server::startListening()
     int newFd;
     sockaddr_storage their_addr;
     socklen_t addr_size;
-
+    
     signal(SIGINT, sig_int_handler);
     checkErr("listen", listen(this->sockFd, QUEUE_LIMIT));
     addr_size = sizeof(their_addr);
