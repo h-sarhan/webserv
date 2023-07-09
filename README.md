@@ -1,12 +1,6 @@
 <a name="readme-top"></a>
 
 
-<!-- PROJECT SHIELDS -->
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-
-
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
@@ -25,9 +19,6 @@
     <a href="https://github.com/mehrinfirdousi">mfirdous</a>
     ·
     <a href="https://github.com/h-sarhan">hsarhan</a>
-    ·
-    <a href="https://github.com/hadi14250">hakaddou</a>
-
   </p>
 </div>
 
@@ -94,7 +85,7 @@ This project produces no warnings even with strict warning flags on gcc and clan
     make
   ```
 
-* To run our unit tests
+* To run our tests
   ```sh
     make test
   ```

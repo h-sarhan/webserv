@@ -8,8 +8,9 @@
  *
  */
 
-#include "config/ServerConfig.hpp"
-#include "config/Tokenizer.hpp"
+#include "Server.hpp"
+#include "ServerConfig.hpp"
+#include "Tokenizer.hpp"
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -41,9 +42,14 @@ int main(int argc, char **argv)
         filename = argv[1];
     try
     {
-        ServerConfig config;
+        ConfigTokenizer tokenizer(filename);
+        std::vector<Token> tokens = tokenizer.tokens();
+
+        Server s("webserv.com", "1234");
+        s.bindSocket();
+        s.startListening();
     }
-    catch (const std::runtime_error &e)
+    catch (const std::exception &e)
     {
         std::cerr << e.what() << std::endl;
         return (EXIT_FAILURE);
