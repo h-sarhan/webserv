@@ -9,6 +9,7 @@
  */
 
 #include "Server.hpp"
+int g_sockFd = -1;
 
 Server::Server() : name("webserv.com"), port("1234"), sockFd(-1)
 {
@@ -64,61 +65,41 @@ void Server::bindSocket()
     }
     if (!p)
         throw SystemCallException("failed to bind");
+    g_sockFd = this->sockFd;
 }
 
 // just a sample connection handler for now
 static void handleConnection(int newFd)
 {
     int bytes_sent;
-
     std::string msg =
         "HTTP/1.1 200 OK\r\nContent-Type: text/html; "
         "charset=UTF-8\r\nContent-Length: 100\r\n\r\n<!DOCTYPE "
         "html><html><head><title>Hello World</title></head><body><h1>Hello "
         "World</h1></body></html>";
-    std::string msg2 =
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean "
-        "venenatis dolor neque. Maecenas vel magna id nibh tristique aliquam. "
-        "Etiam venenatis elit ultrices, iaculis nulla ut, gravida ligula. Sed "
-        "at rhoncus turpis. Curabitur suscipit augue quis nisi vulputate, ac "
-        "porttitor arcu ornare. Nullam suscipit maximus felis sit amet "
-        "bibendum. Etiam nec tincidunt neque. Nunc purus urna, mollis sit amet "
-        "accumsan et, finibus ut velit. Mauris suscipit ac augue a volutpat. "
-        "Nulla a nulla non enim consequat pharetra. Nunc ut pharetra leo. Sed "
-        "eu varius ante, sed aliquam massa. Cras placerat lorem sit amet leo "
-        "euismod rhoncus. Donec fermentum est dui, vel imperdiet leo dictum "
-        "sed. Nam tincidunt purus at porttitor viverra. Integer porta lacinia "
-        "gravida. Curabitur maximus nibh sem, eu ullamcorper lacus hendrerit "
-        "non. Ut lorem libero, posuere et massa id, ornare pulvinar dui. "
-        "Aliquam sodales nisl neque. Donec convallis mi nec elit suscipit "
-        "rhoncus. Maecenas scelerisque, ipsum non vestibulum placerat, orci "
-        "enim porta nibh, sed lacinia odio orci ut urna. In eu nulla euismod, "
-        "fringilla nulla non, scelerisque massa. Curabitur leo eros, iaculis "
-        "quis pulvinar sed, dictum id diam. Aenean ultrices tellus a enim "
-        "aliquam varius. Nam semper urna massa, eu dictum lacus ornare id. Nam "
-        "in nunc sem. Praesent molestie eget massa eget suscipit. Curabitur "
-        "non lorem a turpis feugiat sagittis. In nulla ante, porta sed "
-        "tincidunt eu, vestibulum sit amet mi. Sed et neque mi. Sed at urna "
-        "lacinia, suscipit enim vel, posuere tellus. Nunc in imperdiet dolor, "
-        "in fermentum eros. Sed blandit nisi a ultrices venenatis. Aenean ut "
-        "purus nec enim volutpat tristique sit amet eu orci. Morbi consectetur "
-        "velit vel massa rhoncus sollicitudin. In nisi tellus, pretium sed "
-        "libero vel, consequat condimentum quam. Proin interdum tellus sed "
-        "massa pharetra lobortis. Sed vel elementum lorem, vitae tincidunt "
-        "leo. Orci varius natoque penatibus et magnis dis parturient montes, "
-        "nascetur ridiculus mus. Duis non ipsum ornare accumsan.";
-
-    checkErr("send", bytes_sent = send(newFd, msg.c_str(), msg.length(), 0));
-    std::cout << "bytes sent = " << bytes_sent << ", msg len = " << msg.length()
-              << std::endl;
-
+    std::string msg2 = LONG_MSG;
     char *buf = new char[2000];
+
+    // receiving request
+    std::cout << "Received a request: " << std::endl;
 	bzero(buf, 2000);
     checkErr("recv", bytes_sent = recv(newFd, buf, 2000, 0));
-    std::cout << "bytes rec = " << bytes_sent << ", msg = " << std::endl
+    std::cout << "bytes = " << bytes_sent << ", msg: " << std::endl
               << buf << std::endl;
     delete[] buf;
+    
+    // sending a response
+    std::cout << "Sending a response: " << std::endl;
+    checkErr("send", bytes_sent = send(newFd, msg.c_str(), msg.length(), 0));
+    std::cout << "bytes = " << bytes_sent << ", msg len = " << msg.length()
+              << std::endl << std::endl;
     close(newFd);
+}
+
+static void sig_int_handler(int sigNo)
+{
+    (void)sigNo;
+    close(g_sockFd);
 }
 
 void Server::startListening()
@@ -127,16 +108,22 @@ void Server::startListening()
     sockaddr_storage their_addr;
     socklen_t addr_size;
 
+    signal(SIGINT, sig_int_handler);
     checkErr("listen", listen(this->sockFd, QUEUE_LIMIT));
     addr_size = sizeof(their_addr);
     std::cout << "Listening on port " << this->port << std::endl;
-    newFd = checkErr(
-        "accept", accept(this->sockFd, (sockaddr *) &their_addr, &addr_size));
-    handleConnection(newFd);
+    while (true)
+    {
+        std::cout << "Waiting for a request" << std::endl;
+        newFd = checkErr(
+            "accept", accept(this->sockFd, (sockaddr *) &their_addr, &addr_size));
+        handleConnection(newFd);
+    }
 }
 
 Server::~Server()
 {
+    std::cout << "Server destructor called" << std::endl;
     freeaddrinfo(servInfo);
     if (sockFd != -1)
         close(sockFd);
