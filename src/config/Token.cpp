@@ -8,7 +8,7 @@
  *
  */
 
-#include "Token.hpp"
+#include "config/Token.hpp"
 #include "config/Tokenizer.hpp"
 #include <iostream>
 

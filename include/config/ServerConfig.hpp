@@ -56,6 +56,14 @@ class ServerConfig
   private:
     ServerConfig(const ServerConfig &config);
     ServerConfig &operator=(const ServerConfig &config);
+
+    bool validatePort(const std::string &portStr) const;
+    bool validateURL(const std::string &urlStr) const;
+    void validationTests(void) const;
+    bool validateDirectory(const std::string &dirPath) const;
+    bool validateHTMLFile(const std::string &htmlFile) const;
+    bool validateErrorResponse(const std::string &response) const;
+    bool validateHostName(const std::string &hostname) const;
 };
 
 #endif

@@ -8,7 +8,7 @@
  *
  */
 
-#include "Tokenizer.hpp"
+#include "config/Tokenizer.hpp"
 #include <fstream>
 #include <iostream>
 

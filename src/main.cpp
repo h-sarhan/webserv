@@ -8,21 +8,21 @@
  *
  */
 
-#include "ServerConfig.hpp"
-#include "Tokenizer.hpp"
+#include "config/ServerConfig.hpp"
+#include "config/Tokenizer.hpp"
 #include <fstream>
 #include <iostream>
 #include <vector>
 
-/**
- * @brief Static helper function to print a token
- *
- * @param token Token to be printed
- */
-static void printToken(const Token &token)
-{
-    std::cout << "|" << token << "|" << std::endl;
-}
+// /**
+//  * @brief Static helper function to print a token
+//  *
+//  * @param token Token to be printed
+//  */
+// static void printToken(const Token &token)
+// {
+//     std::cout << "|" << token << "|" << std::endl;
+// }
 
 /**
  * @brief Entrypoint to our program
@@ -41,11 +41,7 @@ int main(int argc, char **argv)
         filename = argv[1];
     try
     {
-        ConfigTokenizer tokenizer(filename);
-        std::vector<Token> tokens = tokenizer.tokens();
-
-        // Printing tokens for debugging
-        std::for_each(tokens.begin(), tokens.end(), printToken);
+        ServerConfig config;
     }
     catch (const std::runtime_error &e)
     {
