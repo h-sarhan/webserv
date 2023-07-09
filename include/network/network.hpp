@@ -26,6 +26,7 @@
 
 #define QUEUE_LIMIT 10
 #define PORT        "1234"
+#define HW_HTML "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: 100\r\n\r\n<!DOCTYPE html><html><head><title>Hello World</title></head><body><h1>Hello World</h1></body></html>"
 #define LONG_MSG                                                               \
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean \
 venenatis dolor neque. Maecenas vel magna id nibh tristique aliquam.\

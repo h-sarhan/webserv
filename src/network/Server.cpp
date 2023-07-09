@@ -94,49 +94,60 @@ void Server::bindSocket()
     fdCount++;
 }
 
-// just a sample connection handler for now
-void Server::handleConnection(int fdNum)
+// change this to use fd directly and close stuff in caller func
+bool Server::readRequest(int fdNum)
 {
     int bytes_rec;
     char *buf = new char[2000];
 
     // receiving request
+    std::cout << "Received a request: " << std::endl;
     bytes_rec = recv(clients[fdNum].fd, buf, 2000, 0);
     if (bytes_rec < 0)
-    {
         std::cout << "Failed to receive request" << std::endl;
-        close(clients[fdNum].fd);
-        clients[fdNum].fd = -1;   // poll will ignore this element now
-        fdCount--;
-    }
     else if (bytes_rec == 0)
-    {
         std::cout << "Connection closed by client" << std::endl;
+    if (bytes_rec <= 0)
+    {
         close(clients[fdNum].fd);
         clients[fdNum].fd = -1;   // poll will ignore this element now
+        clients[fdNum].events = 0;
+        clients[fdNum].revents = 0;
         fdCount--;
+        delete[] buf;
+        return (false);
     }
-    else
-    {
-        buf[bytes_rec] = 0;
-        std::cout << "bytes = " << bytes_rec << ", msg: " << std::endl;
-        std::cout << "---------------------------------------------------------\n";
-        std::cout << buf << std::endl;
-        std::cout << "---------------------------------------------------------\n";
-        // close(clients[fdNum].fd);
-        // clients[fdNum].fd = -1;   // poll will ignore this element now
-        // fdCount--;
-    }
-
-   
+    buf[bytes_rec] = 0;
+    std::cout << "bytes = " << bytes_rec << ", msg: " << std::endl;
+    std::cout << "---------------------------------------------------------\n";
+    std::cout << buf << std::endl;
+    std::cout << "---------------------------------------------------------\n";
+    // close(clients[fdNum].fd);
+    // clients[fdNum].fd = -1;   // poll will ignore this element now
+    // fdCount--;
     delete[] buf;
+    return (true);
+}
+
+void Server::sendResponse(int fdNum)
+{
+    std::string msg = HW_HTML;                    
+    std::cout << "Sending a response: " << std::endl;
+    if (send(clients[fdNum].fd, msg.c_str(), msg.length(), 0) < 0)
+        std::cout << "Sending response failed" << std::endl;
+    else
+        std::cout << "Response sent!" << std::endl;
+    close(clients[fdNum].fd);
+    clients[fdNum].fd = -1;
+    clients[fdNum].events = 0;
+    clients[fdNum].revents = 0;
+    fdCount--;
 }
 
 static void sig_int_handler(int sigNo)
 {
     (void) sigNo;
     quit = true;
-    // close(quit);
 }
 
 int Server::find_empty_slot()
@@ -148,6 +159,68 @@ int Server::find_empty_slot()
 }
 
 void Server::startListening()
+{
+    int newFd;
+    int slot;
+    int pollCount;
+    sockaddr_storage their_addr;
+    socklen_t addr_size;
+
+    signal(SIGINT, sig_int_handler);
+    checkErr("listen", listen(this->listener, QUEUE_LIMIT));
+    addr_size = sizeof(their_addr);
+    std::cout << "Listening on port " << this->port << std::endl;
+    while (true)
+    {
+        // -1 timeout means wait forever
+        std::cout << "Waiting for a request" << std::endl;
+        pollCount = checkErr("poll", poll(clients, fdCount, -1));
+        for (int i = 0; i < fdCount; i++)
+        {
+            if (clients[i].revents & POLLIN && clients[i].fd == listener)   // server listener got something new to read
+            {
+                // new incoming connection
+                std::cout << "New connection!" << std::endl;
+                // if accept fails here we dont necessarily have to exit, we
+                // could continue; the loop
+                newFd = checkErr("accept", accept(this->listener,
+                                                    (sockaddr *) &their_addr,
+                                                    &addr_size));
+                if (fdCount < MAX_CLIENTS)
+                {
+                    slot = find_empty_slot();
+                    std::cout << "empty slot = " << slot << std::endl;
+                    clients[slot].fd = newFd;
+                    clients[slot].events = POLLIN | POLLOUT;
+                    fdCount++;
+                }
+                else
+                {
+                    std::cout << "Maximum clients reached, dropping this "
+                                    "connection"
+                                << std::endl;
+                    close(newFd);
+                }
+            }
+            else if ((clients[i].revents & POLLIN) && (clients[i].revents & POLLOUT))  // one of the clients is ready to be read from
+            {
+                if (!readRequest(i))
+                    continue;
+                sendResponse(i);
+            }
+            else if (clients[i].revents & POLLERR) 
+            {
+                std::cout << "Socket error" << std::endl;
+                close(clients[i].fd);
+                clients[i].fd = -1;
+                clients[i].events = 0;
+                fdCount--;
+            }
+        }
+    }
+}
+
+/*void Server::startListening()
 {
     int newFd;
     int slot;
@@ -202,7 +275,7 @@ void Server::startListening()
                 else   // one of the clients is ready to be read from
                 {
                     std::cout << "Received a request: " << std::endl;
-                    handleConnection(i);
+                    readRequest(i);
                     clients[i].events |= POLLOUT;
                 }
             }
@@ -247,7 +320,7 @@ void Server::startListening()
             // }
         }
     }
-}
+}*/
 
 Server::~Server()
 {
