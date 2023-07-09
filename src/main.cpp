@@ -9,6 +9,7 @@
  */
 
 #include "Tokenizer.hpp"
+#include "Server.hpp"
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -45,8 +46,17 @@ int main(int argc, char **argv)
 
         // Printing tokens for debugging
         std::for_each(tokens.begin(), tokens.end(), printToken);
+
+        Server s("webserv.com", "1234");
+        s.bindSocket();
+        s.startListening();
     }
     catch (const std::runtime_error &e)
+    {
+        std::cerr << e.what() << std::endl;
+        return (EXIT_FAILURE);
+    }
+    catch (const std::exception &e)
     {
         std::cerr << e.what() << std::endl;
         return (EXIT_FAILURE);
