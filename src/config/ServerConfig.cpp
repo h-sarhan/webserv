@@ -9,6 +9,7 @@
  */
 
 #include "ServerConfig.hpp"
+#include <limits>
 
 /**
  * @brief Create a Default Route object

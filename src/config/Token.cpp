@@ -9,10 +9,11 @@
  */
 
 #include "Token.hpp"
+#include "config/Tokenizer.hpp"
 #include <iostream>
 
-Token::Token(const TokenType &type, const std::string &contents, uint32_t line,
-             uint32_t column)
+Token::Token(const TokenType &type, const std::string &contents,
+             unsigned int line, unsigned int column)
     : _type(type), _str(contents), _line(line), _column(column)
 {
 }
@@ -33,7 +34,7 @@ Token &Token::operator=(const Token &old)
     return *this;
 }
 
-Token::~Token()
+Token::~Token(void)
 {
 }
 
@@ -47,19 +48,20 @@ TokenType Token::type(void) const
     return this->_type;
 }
 
-uint32_t Token::line(void) const
+unsigned int Token::line(void) const
 {
     return this->_line;
 }
 
-uint32_t Token::column(void) const
+unsigned int Token::column(void) const
 {
     return this->_column;
 }
 
 std::ostream &operator<<(std::ostream &os, const Token &tkn)
 {
-    std::cout << "{type: " << tkn.type() << ", str: " << tkn.contents()
-              << ", line: " << tkn.line() << ", col: " << tkn.column() << "}";
+    std::cout << "{type: " << ConfigTokenizer::tokenToStr[tkn.type()]
+              << ", str: " << tkn.contents() << ", line: " << tkn.line()
+              << ", col: " << tkn.column() << "}";
     return os;
 }

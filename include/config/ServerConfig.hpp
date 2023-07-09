@@ -33,10 +33,10 @@ struct Route
  */
 struct ServerBlock
 {
-    uint32_t port;                                      // Required
-    std::string hostname;                               // Optional
-    std::map<uint32_t, const std::string> errorPages;   // Optional
-    std::map<std::string, const Route> routes;          // At least one route
+    unsigned int port;                                      // Required
+    std::string hostname;                                   // Optional
+    std::map<unsigned int, const std::string> errorPages;   // Optional
+    std::map<std::string, const Route> routes;   // At least one route
 };
 
 /**
@@ -46,7 +46,7 @@ struct ServerBlock
 class ServerConfig
 {
   private:
-    std::vector<const ServerBlock> _serverBlocks;
+    std::vector<ServerBlock> _serverBlocks;
 
   public:
     ServerConfig(void);

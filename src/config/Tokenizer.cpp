@@ -13,16 +13,6 @@
 #include <iostream>
 
 /**
- * @brief Static helper function to print a token
- *
- * @param token Token to be printed
- */
-static void printToken(const Token &token)
-{
-    std::cout << "|" << token << "|" << std::endl;
-}
-
-/**
  * @brief Construct a new Tokenizer object
  *
  * @param filename The path to the config file
@@ -34,16 +24,13 @@ ConfigTokenizer::ConfigTokenizer(const std::string &filename) : _line(0)
     std::ifstream configStream;
 
     // Load file
-    configStream.open(filename);
+    configStream.open(filename.c_str());
 
     // Check if the file opened correctly
     if (!configStream)
         throw std::runtime_error("Could not open config file");
 
     tokenizeFile(configStream);
-
-    // Printing tokens for debugging
-    std::for_each(_tokens.begin(), _tokens.end(), printToken);
 }
 
 /**
@@ -56,7 +43,7 @@ ConfigTokenizer::ConfigTokenizer(const std::string &filename) : _line(0)
 void ConfigTokenizer::tokenizeFile(std::ifstream &configStream)
 {
     std::string lineStr;
-    uint32_t lineNum = 1;
+    unsigned int lineNum = 1;
     while (std::getline(configStream, lineStr))
     {
         if (!configStream)
@@ -74,7 +61,8 @@ void ConfigTokenizer::tokenizeFile(std::ifstream &configStream)
  * @param lineStr The string containing the line
  * @param lineNum
  */
-void ConfigTokenizer::tokenizeLine(std::string &lineStr, const uint32_t lineNum)
+void ConfigTokenizer::tokenizeLine(std::string &lineStr,
+                                   const unsigned int lineNum)
 {
     // Trim out comments
     size_t commentPos = lineStr.find('#');
@@ -87,11 +75,11 @@ void ConfigTokenizer::tokenizeLine(std::string &lineStr, const uint32_t lineNum)
     for (tokenIterator it = wordsStart; it != tokenIterator(); it++)
     {
         std::string wordStr = *it;
-        uint32_t wordPos;
+        unsigned int wordPos;
         if (lineStream.tellg() == -1)
             wordPos = lineStr.length() - wordStr.length();
         else
-            wordPos = (uint32_t) lineStream.tellg() - wordStr.length();
+            wordPos = (unsigned int) lineStream.tellg() - wordStr.length();
         tokenizeWord(wordStr, wordPos, lineNum);
     }
 }
@@ -101,7 +89,7 @@ void ConfigTokenizer::tokenizeLine(std::string &lineStr, const uint32_t lineNum)
  *
  * @return const std::vector<Token>& The token list
  */
-const std::vector<const Token> &ConfigTokenizer::tokens(void) const
+const std::vector<Token> &ConfigTokenizer::tokens(void) const
 {
     return _tokens;
 }
@@ -128,15 +116,16 @@ bool ConfigTokenizer::isSingleCharToken(const char c) const
  * @param lineNum The line number we are currently in
  * @param column The column we are currently in
  */
-void ConfigTokenizer::addWord(uint32_t &wordIdx, const std::string &wordStr,
-                              const uint32_t lineNum, const uint32_t column)
+void ConfigTokenizer::addWord(unsigned int &wordIdx, const std::string &wordStr,
+                              const unsigned int lineNum,
+                              const unsigned int column)
 {
-    const uint32_t wordStart = wordIdx;
+    const unsigned int wordStart = wordIdx;
 
     while (wordIdx < wordStr.length() && !isSingleCharToken(wordStr[wordIdx]))
         wordIdx++;
 
-    const uint32_t wordEnd = wordIdx;
+    const unsigned int wordEnd = wordIdx;
     if (wordIdx < wordStr.length() && isSingleCharToken(wordStr[wordIdx]) &&
         wordIdx > 0)
         wordIdx--;
@@ -161,16 +150,16 @@ void ConfigTokenizer::addWord(uint32_t &wordIdx, const std::string &wordStr,
  * @param lineNum The line number we are in
  */
 void ConfigTokenizer::tokenizeWord(const std::string &wordStr,
-                                   const uint32_t wordPos,
-                                   const uint32_t lineNum)
+                                   const unsigned int wordPos,
+                                   const unsigned int lineNum)
 {
-    uint32_t wordIdx = 0;
+    unsigned int wordIdx = 0;
     while (wordIdx < wordStr.length())
     {
         const char c = wordStr[wordIdx];
         if (c == '#')
             return;
-        uint32_t column = wordPos + wordIdx + 1;
+        unsigned int column = wordPos + wordIdx + 1;
         if (isSingleCharToken(c))
         {
             const std::string tokenStr(1, c);
@@ -200,6 +189,9 @@ static const std::map<std::string, const TokenType> createStrToToken(void)
     tokenMap.insert(std::make_pair("directory_listing_file", DIRECTORY_FILE));
     tokenMap.insert(std::make_pair("cgi_extensions", CGI_EXTENSION));
     tokenMap.insert(std::make_pair("redirect", REDIRECT));
+    tokenMap.insert(std::make_pair("location", LOCATION));
+    tokenMap.insert(std::make_pair("try_files", TRY_FILES));
+    tokenMap.insert(std::make_pair("body_size", BODY_SIZE));
     tokenMap.insert(std::make_pair("{", LEFT_BRACE));
     tokenMap.insert(std::make_pair("}", RIGHT_BRACE));
     tokenMap.insert(std::make_pair("#", POUND));
@@ -217,12 +209,16 @@ static const std::map<TokenType, const std::string> createTokenToStr(void)
     tokenMap.insert(std::make_pair(SERVER, "SERVER"));
     tokenMap.insert(std::make_pair(LISTEN, "LISTEN"));
     tokenMap.insert(std::make_pair(SERVER_NAME, "SERVER_NAME"));
-    tokenMap.insert(std::make_pair(ERROR_PAGE, "ERROR_PAFE"));
+    tokenMap.insert(std::make_pair(ERROR_PAGE, "ERROR_PAGE"));
     tokenMap.insert(std::make_pair(METHODS, "METHODS"));
     tokenMap.insert(std::make_pair(DIRECTORY_TOGGLE, "DIRECTORY_LISTING"));
     tokenMap.insert(std::make_pair(DIRECTORY_FILE, "DIRECTORY_LISTING_FILE"));
     tokenMap.insert(std::make_pair(CGI_EXTENSION, "CGI_EXTENSIONS"));
     tokenMap.insert(std::make_pair(REDIRECT, "REDIRECT"));
+    tokenMap.insert(std::make_pair(LOCATION, "LOCATION"));
+    tokenMap.insert(std::make_pair(TRY_FILES, "TRY_FILES"));
+    tokenMap.insert(std::make_pair(BODY_SIZE, "BODY_SIZE"));
+
     tokenMap.insert(std::make_pair(LEFT_BRACE, "LEFT_BRACE"));
     tokenMap.insert(std::make_pair(RIGHT_BRACE, "RIGHT_BRACE"));
     tokenMap.insert(std::make_pair(POUND, "POUND"));
