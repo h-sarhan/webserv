@@ -3,11 +3,11 @@ CXX = clang++
 
 # Source files
 SRC_DIR = ./src
-SHAPE_SRC = Rectangle.cpp
-SHAPE_SRC := $(addprefix /shapes/, $(SHAPE_SRC))
-SRC := $(addprefix $(SRC_DIR)/, $(SHAPE_SRC))
-SRC += $(SRC_DIR)/main.cpp
-SRC += $(SRC_DIR)/Server.cpp
+NETWORK_DIR = $(SRC_DIR)/network
+NETWORK_SRC = Server.cpp
+NETWORK_SRC := $(addprefix $(NETWORK_DIR)/, $(NETWORK_SRC))
+
+SRC = $(SRC_DIR)/main.cpp $(NETWORK_SRC)
 
 # Release and debug object files
 OBJ_DIR = .build
@@ -17,7 +17,7 @@ DBG_OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=_dbg.o))
 # Warning and include flags
 WRN = -Wall -Wextra -Werror -Wpedantic -Wcast-align -Wunused -Wshadow \
 			-Wcast-qual -Wmissing-prototypes -Wno-missing-braces -std=c++98
-INC = -Iinclude -Iinclude/math -Iinclude/shapes -Iinclude/Network -Itests
+INC = -Iinclude -Iinclude/network -Itests
 CXXFLAGS = $(WRN) $(INC)
 
 # Release and debug flags
