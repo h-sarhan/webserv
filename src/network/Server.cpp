@@ -113,6 +113,7 @@ static void handleConnection(int newFd)
               << std::endl;
 
     char *buf = new char[2000];
+	bzero(buf, 2000);
     checkErr("recv", bytes_sent = recv(newFd, buf, 2000, 0));
     std::cout << "bytes rec = " << bytes_sent << ", msg = " << std::endl
               << buf << std::endl;

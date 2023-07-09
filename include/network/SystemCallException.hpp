@@ -14,7 +14,6 @@
 #include <iostream>
 #include <string>
 
-
 class SystemCallException : public std::exception
 {
   private:

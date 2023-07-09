@@ -1,9 +1,4 @@
 /**
- * @mainpage webserv Documentation
- * @section intro_sec Introduction
- * This is the documentation page for webserv
- */
-/**
  * @file common.hpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
  * @brief This file defines common includes and typedefs that are used by many
@@ -18,5 +13,17 @@
 #define COMMON_HPP
 #include <algorithm>
 #include <cstddef>
+#include <cstdlib>
+#include <iterator>
+#include <sstream>
+#include <string>
+#include <vector>
 
 #endif
+
+/**
+ * @mainpage webserv Documentation
+ * @section intro_sec Introduction
+ * This is the documentation page for webserv
+ *
+ */
