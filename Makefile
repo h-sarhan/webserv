@@ -10,7 +10,7 @@ NETWORK_SRC = Server.cpp
 CONFIG_SRC := $(addprefix $(CONFIG_DIR)/, $(CONFIG_SRC))
 NETWORK_SRC := $(addprefix $(NETWORK_DIR)/, $(NETWORK_SRC))
 
-SRC = $(SRC_DIR)/main.cpp $(CONFIG_SRC) $(NETWORK_SRC)
+SRC := $(SRC_DIR)/main.cpp $(SRC_DIR)/InputValidators.cpp $(CONFIG_SRC) $(NETWORK_SRC)
 
 # Release and debug object files
 OBJ_DIR = .build

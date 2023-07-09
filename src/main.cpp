@@ -8,22 +8,13 @@
  *
  */
 
+#include "InputValidators.hpp"
 #include "Server.hpp"
 #include "ServerConfig.hpp"
 #include "Tokenizer.hpp"
 #include <fstream>
 #include <iostream>
 #include <vector>
-
-// /**
-//  * @brief Static helper function to print a token
-//  *
-//  * @param token Token to be printed
-//  */
-// static void printToken(const Token &token)
-// {
-//     std::cout << "|" << token << "|" << std::endl;
-// }
 
 /**
  * @brief Entrypoint to our program
@@ -45,6 +36,7 @@ int main(int argc, char **argv)
         ConfigTokenizer tokenizer(filename);
         std::vector<Token> tokens = tokenizer.tokens();
 
+        inputValidatorTests();
         Server s("webserv.com", "1234");
         s.bindSocket();
         s.startListening();
