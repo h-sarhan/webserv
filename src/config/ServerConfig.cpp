@@ -9,6 +9,8 @@
  */
 
 #include "config/ServerConfig.hpp"
+#include "InputValidators.hpp"
+#include "config/ConfigParseError.hpp"
 #include "config/Tokenizer.hpp"
 #include <limits>
 
@@ -60,6 +62,8 @@ ServerConfig::ServerConfig(const std::string &configFile)
 
     const std::vector<Token> &tokens = tokenizer.tokens();
     (void) tokens;
+
+    throw ConfigParseError("jk no error lollers!!!", tokens[5], configFile);
 }
 
 // * Config file Grammar
