@@ -8,26 +8,48 @@
  *
  */
 
-#include "Rectangle.hpp"
+#include "Tokenizer.hpp"
+#include <fstream>
 #include <iostream>
+#include <vector>
+
+/**
+ * @brief Static helper function to print a token
+ *
+ * @param token Token to be printed
+ */
+static void printToken(const Token &token)
+{
+    std::cout << "|" << token << "|" << std::endl;
+}
 
 /**
  * @brief Entrypoint to our program
  *
  * @return int Exit code
  */
-int main(void)
+int main(int argc, char **argv)
 {
-    const Point a = {99.0, 0};
-    const Rectangle rect1(100, 100, a);
-    const Point b = {0, -1};
-    const Rectangle rect2(100, 100, b);
-    if (rect1.overlap(rect2))
+    if (argc > 2)
     {
-        std::cout << "The two rectangles overlap" << std::endl;
+        std::cerr << "" << std::endl;
+        return (EXIT_FAILURE);
     }
-    else
+    std::string filename = "./example.conf";
+    if (argc == 2)
+        filename = argv[1];
+    try
     {
-        std::cout << "The two rectangles do not overlap" << std::endl;
+        ConfigTokenizer tokenizer(filename);
+        std::vector<Token> tokens = tokenizer.tokens();
+
+        // Printing tokens for debugging
+        std::for_each(tokens.begin(), tokens.end(), printToken);
     }
+    catch (const std::runtime_error &e)
+    {
+        std::cerr << e.what() << std::endl;
+        return (EXIT_FAILURE);
+    }
+    return (EXIT_SUCCESS);
 }
