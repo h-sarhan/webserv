@@ -1,11 +1,11 @@
 /**
- * @file main.cpp
- * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief The entrypoint to our program
- * @date 2023-05-04
- *
+ * @file nw_test.cpp
+ * @author Mehrin Firdousi (mehrinfirdousi@gmail.com)
+ * @brief Just testing network functions - remove later
+ * @date 2023-07-09
+ * 
  * @copyright Copyright (c) 2023
- *
+ * 
  */
 
 #include <iostream>

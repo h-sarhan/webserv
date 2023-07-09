@@ -1,14 +1,12 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   network.hpp                                        :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2023/07/07 19:52:21 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/07 21:15:19 by mfirdous         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+/**
+ * @file network.hpp
+ * @author Mehrin Firdousi (mehrinfirdousi@gmail.com)
+ * @brief This file contains all the necessary headers for networking
+ * @date 2023-07-09
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
 
 #ifndef NETWORK_HPP
 # define NETWORK_HPP
@@ -22,9 +20,6 @@
 # include <cstring>
 # include <errno.h>
 # include <unistd.h>
-// # include "Server.hpp"
-# include "SystemCallException.hpp"
-
 
 # define QUEUE_LIMIT 10
 # define PORT "1234"

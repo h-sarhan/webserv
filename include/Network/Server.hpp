@@ -15,20 +15,23 @@
 # include <map>
 # include <exception>
 # include <string>
+# include "SystemCallException.hpp"
 
 class Server
 {
 	private:
 		std::string	name;
-		int	port;
+		std::string	port;
+		addrinfo *servInfo;
 		int	sockFd;
 		// std::map<std::string route, Location location> locations;
 		// std::map<int errCode, std::string pageLocation>	errorPages;
 
 	public:
 		Server();
-		Server(std::string name, int port, int sockFd);
-		Server(const Server &s);
+		Server(std::string name, std::string port);
+		void	bindSocket();
+		void	startListening();
 		~Server();
 };
 

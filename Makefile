@@ -7,6 +7,7 @@ SHAPE_SRC = Rectangle.cpp
 SHAPE_SRC := $(addprefix /shapes/, $(SHAPE_SRC))
 SRC := $(addprefix $(SRC_DIR)/, $(SHAPE_SRC))
 SRC += $(SRC_DIR)/main.cpp
+SRC += $(SRC_DIR)/Server.cpp
 
 # Release and debug object files
 OBJ_DIR = .build
