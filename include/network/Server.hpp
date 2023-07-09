@@ -18,13 +18,17 @@
 #include <map>
 #include <string>
 
+#define MAX_CLIENTS 10
+
 class Server
 {
   private:
     std::string name;
     std::string port;
     addrinfo *servInfo;
-    int sockFd;
+    int listener;
+    pollfd clients[MAX_CLIENTS];
+    int fdCount;
     // std::map<std::string route, Location location> locations;
     // std::map<int errCode, std::string pageLocation>	errorPages;
 
@@ -33,6 +37,8 @@ class Server
     Server(std::string name, std::string port);
     void bindSocket();
     void startListening();
+    void handleConnection(int newFd);
+    int find_empty_slot();
     ~Server();
 };
 
