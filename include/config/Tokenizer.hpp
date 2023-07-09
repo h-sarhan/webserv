@@ -8,8 +8,8 @@
  *
  */
 
-#ifndef CONFIG_TOKENIZER_HPP
-#define CONFIG_TOKENIZER_HPP
+#ifndef TOKENIZER_HPP
+#define TOKENIZER_HPP
 
 #include "Token.hpp"
 #include "common.hpp"
@@ -24,15 +24,15 @@ typedef std::istream_iterator<std::string> tokenIterator;
 class ConfigTokenizer
 {
   private:
-    std::vector<const Token> _tokens;
-    uint32_t _line;
+    std::vector<Token> _tokens;
+    unsigned int _line;
 
   public:
     ConfigTokenizer(const std::string &filename);
 
     ~ConfigTokenizer(void);
 
-    const std::vector<const Token> &tokens(void) const;
+    const std::vector<Token> &tokens(void) const;
 
     // Map from token to str
     static std::map<const std::string, const TokenType> strToToken;
@@ -45,11 +45,11 @@ class ConfigTokenizer
     ConfigTokenizer &operator=(const ConfigTokenizer &old);
 
     void tokenizeFile(std::ifstream &configStream);
-    void tokenizeLine(std::string &lineStr, const uint32_t lineNum);
-    void tokenizeWord(const std::string &wordStr, const uint32_t wordPos,
-                      const uint32_t lineNum);
+    void tokenizeLine(std::string &lineStr, const unsigned int lineNum);
+    void tokenizeWord(const std::string &wordStr, const unsigned int wordPos,
+                      const unsigned int lineNum);
     bool isSingleCharToken(const char c) const;
-    void addWord(uint32_t &wordIdx, const std::string &wordStr,
-                 const uint32_t lineNum, const uint32_t column);
+    void addWord(unsigned int &wordIdx, const std::string &wordStr,
+                 const unsigned int lineNum, const unsigned int column);
 };
 #endif

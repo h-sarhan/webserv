@@ -8,8 +8,8 @@
  *
  */
 
-#ifndef TOKEN
-#define TOKEN
+#ifndef TOKEN_HPP
+#define TOKEN_HPP
 
 #include "TokenTypes.hpp"
 #include "common.hpp"
@@ -23,10 +23,10 @@
 class Token
 {
   private:
-    const TokenType _type;
-    const std::string _str;
-    const uint32_t _line;
-    const uint32_t _column;
+    TokenType _type;
+    std::string _str;
+    unsigned int _line;
+    unsigned int _column;
 
   public:
     /**
@@ -37,8 +37,16 @@ class Token
      * @param line The line the token was found on
      * @param column The column number the token was found on
      */
-    Token(const TokenType &type, const std::string &contents, uint32_t lineNum,
-          uint32_t column);
+    Token(const TokenType &type, const std::string &contents,
+          unsigned int lineNum, unsigned int column);
+
+    /**
+     * @brief Token copy assignment operator
+     *
+     * @param old Old token
+     * @return Token& Token reference
+     */
+    Token &operator=(const Token &old);
 
     /**
      * @brief Token copy constructor
@@ -70,19 +78,16 @@ class Token
     /**
      * @brief The line the token was found on
      *
-     * @return uint32_t
+     * @return unsigned int
      */
-    uint32_t line(void) const;
+    unsigned int line(void) const;
 
     /**
      * @brief The column number of the token
      *
-     * @return uint32_t Column number
+     * @return unsigned int Column number
      */
-    uint32_t column(void) const;
-
-  private:
-    Token &operator=(const Token &old);
+    unsigned int column(void) const;
 };
 
 std::ostream &operator<<(std::ostream &os, const Token &tkn);
