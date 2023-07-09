@@ -26,14 +26,24 @@ static const std::string getLine(const std::string &filename,
 ConfigParseError::ConfigParseError(const std::string &errorMsg,
                                    const Token &token,
                                    const std::string &filename)
-    : _token(token)
+
 {
     std::stringstream msg;
-    msg << BOLD << filename << ":" << _token.line() << ":" << _token.column()
-        << RED << " error: " << RESET << BOLD << errorMsg << RESET "\n"
-        << "\n" RESET << getLine(filename, _token.line()) << "\n"
-        << std::string(_token.column() - 1, ' ') << GREEN
-        << std::string(_token.contents().length(), '^') << std::endl;
+    msg << BOLD << filename << ":" << token.line() << ":" << token.column()
+        << RED << " error: " << RESET BOLD << errorMsg << RESET "\n"
+        << "\n" RESET << getLine(filename, token.line()) << "\n"
+        << std::string(token.column() - 1, ' ') << GREEN
+        << std::string(token.contents().length(), '^') << std::endl;
+    _errorMsg = msg.str();
+}
+
+ConfigParseError::ConfigParseError(const std::string &errorMsg,
+                                   const std::string &filename)
+
+{
+    std::stringstream msg;
+    msg << BOLD << filename << ":" << RED << " error: " << RESET BOLD
+        << errorMsg << RESET << std::endl;
     _errorMsg = msg.str();
 }
 

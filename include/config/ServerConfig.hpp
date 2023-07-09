@@ -11,6 +11,7 @@
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
 
+#include "Token.hpp"
 #include "common.hpp"
 #include "enums/HTTPMethods.hpp"
 
@@ -47,6 +48,9 @@ class ServerConfig
 {
   private:
     std::vector<ServerBlock> _serverBlocks;
+    std::vector<Token>::const_iterator _currToken;
+    std::vector<Token>::const_iterator _tokenEnd;
+    const std::string _configFile;
 
   public:
     ServerConfig(void);
@@ -56,6 +60,9 @@ class ServerConfig
   private:
     ServerConfig(const ServerConfig &config);
     ServerConfig &operator=(const ServerConfig &config);
+    void parseConfigFile(void);
+    void parseServerBlock(void);
+    void parseListenRule(void);
 };
 
 #endif

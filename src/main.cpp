@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     {
         // ConfigTokenizer tokenizer(filename);
         // std::vector<Token> tokens = tokenizer.tokens();
-        ServerConfig config("./example.conf");
+        ServerConfig config("./parsing_test.conf");
 
         inputValidatorTests();
         // Server s("webserv.com", "1234");

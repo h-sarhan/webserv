@@ -14,6 +14,8 @@
 #include "config/Tokenizer.hpp"
 #include <limits>
 
+// ! TODO Create peek() and atEnd() functions for refactoring
+
 /**
  * @brief Create a Default Route object
  *
@@ -51,26 +53,94 @@ static ServerBlock createDefaultServerBlock(void)
     return defaultServerBlock;
 }
 
-ServerConfig::ServerConfig(void)
+ServerConfig::ServerConfig(void) : _configFile("")
 {
     _serverBlocks.push_back(createDefaultServerBlock());
 }
 
 ServerConfig::ServerConfig(const std::string &configFile)
+    : _configFile(configFile)
 {
     ConfigTokenizer tokenizer(configFile);
 
     const std::vector<Token> &tokens = tokenizer.tokens();
-    (void) tokens;
+    if (tokens.empty())
+        throw ConfigParseError("empty file", _configFile);
 
-    throw ConfigParseError("jk no error lollers!!!", tokens[5], configFile);
+    _currToken = tokens.begin();
+    _tokenEnd = tokens.end();
+    parseConfigFile();
+}
+
+// buggy implementation use recursion instead of loops
+void ServerConfig::parseConfigFile(void)
+{
+    // * CONFIG_FILE := SERVER [SERVER]...
+    const char serverBlockError[33] = "expected top level `server` rule";
+    if (_currToken->type() != SERVER)
+        throw ConfigParseError(serverBlockError, *_currToken, _configFile);
+    parseServerBlock();
+    if (_currToken != _tokenEnd && _currToken->type() != SERVER)
+        throw ConfigParseError(serverBlockError, *_currToken, _configFile);
+    while (_currToken != _tokenEnd && _currToken->type() == SERVER)
+        parseServerBlock();
+    if (_currToken != _tokenEnd)
+        throw ConfigParseError(serverBlockError, *_currToken, _configFile);
+}
+
+void ServerConfig::parseListenRule(void)
+{
+    // LISTEN := "listen" valid_port SEMICOLON
+    _currToken++;
+    if (_currToken == _tokenEnd)
+        throw ConfigParseError("expected port number after `listen` rule",
+                               *(--_currToken), _configFile);
+    if (_currToken->type() != WORD)
+        throw ConfigParseError("expected port number after `listen` rule",
+                               *(_currToken), _configFile);
+    if (validatePort(_currToken->contents()) == false)
+        throw ConfigParseError("invalid port number", *(_currToken),
+                               _configFile);
+    _currToken++;
+    if (_currToken == _tokenEnd)
+        throw ConfigParseError("expected semicolon", *(--_currToken),
+                               _configFile);
+    if (_currToken->type() != SEMICOLON)
+        throw ConfigParseError("expected semicolon", *(_currToken),
+                               _configFile);
+    _currToken++;
+}
+
+void ServerConfig::parseServerBlock(void)
+{
+    // * SERVER := "server" LEFT_BRACE [SRV_OPTION]... LISTEN  [SRV_OPTION]...\
+    // LOCATION [SRV_OPTION]... RIGHT_BRACE
+    _currToken++;
+    if (_currToken == _tokenEnd)
+        throw ConfigParseError("expected `{` after `server` rule",
+                               *(--_currToken), _configFile);
+    if (_currToken->type() != LEFT_BRACE)
+        throw ConfigParseError("expected `{` after `server` rule", *_currToken,
+                               _configFile);
+    while (_currToken != _tokenEnd && _currToken->type() != LISTEN)
+        _currToken++;
+    if (_currToken == _tokenEnd)
+        throw ConfigParseError("enclosing server block requires `listen` rule",
+                               *(--_currToken), _configFile);
+    // at this point we reached LISTEN
+    parseListenRule();
+    while (_currToken != _tokenEnd && _currToken->type() != RIGHT_BRACE)
+        _currToken++;
+    if (_currToken == _tokenEnd)
+        throw ConfigParseError("expected `}` to close server block",
+                               *(--_currToken), _configFile);
+    _currToken++;
 }
 
 // * Config file Grammar
-// CONFIG_FILE := SERVER [SERVER]...
+// * CONFIG_FILE := SERVER [SERVER]...
 
 // SERVER := "server" LEFT_BRACE [SRV_OPTION]... LISTEN  [SRV_OPTION]...\
-// LOCATION [SRV_OPTION]... RIGHT_BRACE
 
 // LISTEN := "listen" valid_port SEMICOLON
 // SRV_OPTION := SERVER_NAME | ERROR_PAGE

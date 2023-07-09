@@ -8,6 +8,7 @@
  *
  */
 
+// ! USE ITERATORS INSTEAD OF ARRAY INDICES
 #include "config/Tokenizer.hpp"
 #include <fstream>
 #include <iostream>

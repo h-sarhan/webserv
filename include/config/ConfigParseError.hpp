@@ -27,11 +27,11 @@ class ConfigParseError : public std::exception
 {
   private:
     std::string _errorMsg;
-    const Token &_token;
 
   public:
     ConfigParseError(const std::string &errorMsg, const Token &token,
                      const std::string &filename);
+    ConfigParseError(const std::string &errorMsg, const std::string &filename);
     virtual const char *what() const throw();
     ~ConfigParseError() throw();
 };
