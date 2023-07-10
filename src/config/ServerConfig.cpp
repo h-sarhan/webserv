@@ -272,10 +272,34 @@ void ServerConfig::parseRedirect(void)
     _redirectSet = true;
 }
 
-void ServerConfig::parseLocationOption(void)
+void ServerConfig::parseDirectoryToggle(void)
 {
     // DIR_LISTING := "directory_listing" ("true" | "false") SEMICOLON
+    if (_directoryToggleSet)
+        throwParseError("multiple `directory_listing` rules not allowed");
 
+    advanceToken();
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected a `true` or `false`");
+    assert(currentToken() == WORD);
+
+    bool toggle;
+    (void) toggle;
+    if (_currToken->contents() == "true")
+        toggle = true;
+    else if (_currToken->contents() == "false")
+        toggle = false;
+    else
+        throwParseError("expected a `true` or `false`");
+    advanceToken();
+
+    if (atEnd() || currentToken() != SEMICOLON)
+        throwParseError("expected `;`");
+    assert(currentToken() == SEMICOLON);
+}
+
+void ServerConfig::parseLocationOption(void)
+{
     // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path SEMICOLON
     // CGI := "cgi_extensions" ("php" | "python")... SEMICOLON
     switch (currentToken())
@@ -293,7 +317,7 @@ void ServerConfig::parseLocationOption(void)
         parseHTTPMethods();
         break;
     case DIRECTORY_TOGGLE:
-        throwParseError("I did not handle this yet");
+        parseDirectoryToggle();
         break;
     case DIRECTORY_FILE:
         throwParseError("I did not handle this yet");

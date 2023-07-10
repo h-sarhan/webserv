@@ -82,6 +82,7 @@ class ServerConfig
     void parseBodySize(void);
     void parseHTTPMethods(void);
     void parseRedirect(void);
+    void parseDirectoryToggle(void);
 
     bool _serverNameSet;
     bool _listenSet;
