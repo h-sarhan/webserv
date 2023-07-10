@@ -10,6 +10,7 @@
 
 #include "Server.hpp"
 
+bool quit = false;
 Server::Server() : name("webserv.com"), port("1234"), listener(-1)
 {
     addrinfo hints;
@@ -87,7 +88,7 @@ void Server::bindSocket()
     }
     if (!p)
         throw SystemCallException("failed to bind");
-    clients.push_back(createPollFd(this->listener, POLLIN | POLL_OUT));
+    clients.push_back(createPollFd(this->listener, POLLIN));
 }
 
 // change this to use fd directly and close stuff in caller func
@@ -107,10 +108,6 @@ bool Server::readRequest(size_t clientNo)
     {
         close(clients[clientNo].fd);
         clients.erase(clients.begin() + clientNo);
-        // clients[fdNum].fd = -1;   // poll will ignore this element now
-        // clients[fdNum].events = 0;
-        // clients[fdNum].revents = 0;
-        // fdCount--;
         delete[] buf;
         return (false);
     }
@@ -141,13 +138,17 @@ void Server::sendResponse(size_t clientNo)
         std::cout << "Sending response failed" << std::endl;
     else
         std::cout << "Response sent! bytesSent = " << bytesSent << std::endl;
+    std::cout << "been responding to fd = " << clientNo << ", " << clients[clientNo].fd << std::endl;
     close(clients[clientNo].fd);
+    std::cout << "clients len b= " << clients.size() << std::endl;
     clients.erase(clients.begin() + clientNo);
+    std::cout << "clients len a= " << clients.size() << std::endl;
 }
 
 static void sigInthandler(int sigNo)
 {
     (void) sigNo;
+    quit = true;
 }
 
 void Server::startListening()
@@ -191,7 +192,13 @@ void Server::startListening()
                     continue;
                 sendResponse(i);
             }
+            else if ((clients[i].revents & POLLIN) && !(clients[i].revents & POLLOUT))
+                std::cout << "ready to read, not write, fd = " << i << ", " << clients[i].fd << std::endl;
+            else if (!(clients[i].revents & POLLIN) && (clients[i].revents & POLLOUT))
+                std::cout << "ready to write, not read, fd = " << i << ", " << clients[i].fd << std::endl;
         }
+        if (quit)
+            break;
     }
 }
 
