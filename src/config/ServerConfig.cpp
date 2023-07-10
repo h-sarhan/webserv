@@ -168,8 +168,8 @@ void ServerConfig::parseTryFiles(void)
     if (_tryFilesSet)
         throwParseError("multiple `try_files` rules not allowed");
     if (_redirectSet)
-        throwParseError(
-            "a location block cannot have both a `try_files` and a `redirect`");
+        throwParseError("a location block cannot have both a `try_files` and a "
+                        "`redirect` rule");
     // TRY_FILES := "try_files" valid_dir SEMICOLON
     advanceToken();
     if (atEnd() || currentToken() != WORD)
@@ -248,6 +248,30 @@ void ServerConfig::parseHTTPMethods(void)
     _methodsSet = true;
 }
 
+void ServerConfig::parseRedirect(void)
+{
+    // REDIRECT := "redirect" valid_URL SEMICOLON
+    if (_redirectSet)
+        throwParseError("multiple `redirect` rules not allowed");
+    if (_tryFilesSet)
+        throwParseError("a location block cannot have both a `try_files` and a "
+                        "`redirect` rule");
+
+    advanceToken();
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected a valid URL");
+    assert(currentToken() == WORD);
+
+    if (validateURL(_currToken->contents()) == false)
+        throwParseError("expected a valid URL");
+
+    advanceToken();
+    if (atEnd() || currentToken() != SEMICOLON)
+        throwParseError("expected a `;`");
+
+    _redirectSet = true;
+}
+
 void ServerConfig::parseLocationOption(void)
 {
     // DIR_LISTING := "directory_listing" ("true" | "false") SEMICOLON
@@ -259,6 +283,9 @@ void ServerConfig::parseLocationOption(void)
     case TRY_FILES:
         parseTryFiles();
         break;
+    case REDIRECT:
+        parseRedirect();
+        break;
     case BODY_SIZE:
         parseBodySize();
         break;
@@ -267,12 +294,13 @@ void ServerConfig::parseLocationOption(void)
         break;
     case DIRECTORY_TOGGLE:
         throwParseError("I did not handle this yet");
+        break;
     case DIRECTORY_FILE:
         throwParseError("I did not handle this yet");
+        break;
     case CGI_EXTENSION:
         throwParseError("I did not handle this yet");
-    case REDIRECT:
-        throwParseError("I did not handle this yet");
+        break;
     default:
         throwParseError("unexpected token");
         break;
@@ -287,6 +315,9 @@ void ServerConfig::parseLocationBlock(void)
     _redirectSet = false;
     _bodySizeSet = false;
     _methodsSet = false;
+    _directoryToggleSet = false;
+    _directoryFileSet = false;
+    _cgiSet = false;
 
     advanceToken();
     if (atEnd() || currentToken() != WORD)

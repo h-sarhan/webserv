@@ -81,6 +81,7 @@ class ServerConfig
     void parseTryFiles(void);
     void parseBodySize(void);
     void parseHTTPMethods(void);
+    void parseRedirect(void);
 
     bool _serverNameSet;
     bool _listenSet;
@@ -89,6 +90,9 @@ class ServerConfig
     bool _redirectSet;
     bool _bodySizeSet;
     bool _methodsSet;
+    bool _directoryToggleSet;
+    bool _directoryFileSet;
+    bool _cgiSet;
 };
 
 #endif
