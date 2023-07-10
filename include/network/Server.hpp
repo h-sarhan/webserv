@@ -38,9 +38,9 @@ class Server
     Server(std::string name, std::string port);
     void bindSocket();
     void startListening();
+    void acceptNewConnection();
     bool readRequest(size_t it);
     void sendResponse(size_t it);
-    int findEmptySlot();
     ~Server();
 };
 

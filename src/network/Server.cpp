@@ -114,7 +114,7 @@ bool Server::readRequest(size_t clientNo)
     buf[bytes_rec] = 0;
     std::cout << "bytes = " << bytes_rec << ", msg: " << std::endl;
     std::cout << "---------------------------------------------------------\n";
-    std::cout << buf << std::endl;
+    std::cout << buf;
     std::cout << "---------------------------------------------------------\n";
     delete[] buf;
     return (true);
@@ -132,17 +132,17 @@ void Server::sendResponse(size_t clientNo)
     buffer << file.rdbuf();
     fileContents = buffer.str();
     msg.append(fileContents);
+    file.close();
     // std::string msg = HW_HTML;
-    std::cout << "Sending a response: " << std::endl;
+    std::cout << "Sending a response... " << std::endl;
     if ((bytesSent = send(clients[clientNo].fd, msg.c_str(), msg.length(), 0)) < 0)
         std::cout << "Sending response failed" << std::endl;
     else
-        std::cout << "Response sent! bytesSent = " << bytesSent << std::endl;
-    std::cout << "been responding to fd = " << clientNo << ", " << clients[clientNo].fd << std::endl;
+        std::cout << "Response sent to fd " << clientNo << ", " << clients[clientNo].fd << ", bytesSent = " << bytesSent << std::endl;
+    std::cout << "---------------------------------------------------------\n";
+    
     close(clients[clientNo].fd);
-    std::cout << "clients len b= " << clients.size() << std::endl;
     clients.erase(clients.begin() + clientNo);
-    std::cout << "clients len a= " << clients.size() << std::endl;
 }
 
 static void sigInthandler(int sigNo)
@@ -151,51 +151,48 @@ static void sigInthandler(int sigNo)
     quit = true;
 }
 
-void Server::startListening()
+void Server::acceptNewConnection()
 {
     int newFd;
-    int pollCount;
     sockaddr_storage their_addr;
     socklen_t addr_size;
 
+    addr_size = sizeof(their_addr);
+    newFd = accept(this->listener, (sockaddr *) &their_addr, &addr_size);
+    if (newFd == -1)
+    {
+        std::cout << "Accept failed" << std::endl;
+        return ;
+    }
+    std::cout << "New connection! fd = " << newFd << std::endl;
+    if (clients.size() < MAX_CLIENTS)
+        clients.push_back(createPollFd(newFd, POLLIN | POLLOUT));
+    else
+    {
+        std::cout << "Maximum clients reached, dropping this connection" << std::endl;
+        close(newFd);
+    }
+}
+
+void Server::startListening()
+{
+    int pollCount;
+
     signal(SIGINT, sigInthandler);
     checkErr("listen", listen(this->listener, QUEUE_LIMIT));
-    addr_size = sizeof(their_addr);
     std::cout << "Listening on port " << this->port << std::endl;
     while (true)
     {
-        // -1 timeout means wait forever
-        std::cout << "Waiting for a request" << std::endl;
         pollCount = checkErr("poll", poll(&clients[0], clients.size(), -1));
 		for (size_t i = 0; i < clients.size(); i++)
         {
-            if ((clients[i].revents & POLLIN) && (clients[i].fd == listener))   // server listener got something new to read
+            if ((clients[i].fd == listener) && (clients[i].revents & POLLIN))   // server listener got something new to read
+                acceptNewConnection();
+            else if ((clients[i].revents & POLLIN) && (clients[i].revents & POLLOUT))  // one of the clients is ready to send and recv
             {
-                std::cout << "New connection!" << std::endl;
-                newFd = accept(this->listener, (sockaddr *) &their_addr, &addr_size);
-                if (newFd == -1)
-                {
-                    std::cout << "Accept failed" << std::endl;
-                    continue;
-                }
-                if (clients.size() < MAX_CLIENTS)
-                    clients.push_back(createPollFd(newFd, POLLIN | POLLOUT));
-                else
-                {
-                    std::cout << "Maximum clients reached, dropping this connection" << std::endl;
-                    close(newFd);
-                }
+                if (readRequest(i)) // try to read request
+                    sendResponse(i); // send response only if request got read and is valid
             }
-            else if ((clients[i].revents & POLLIN) && (clients[i].revents & POLLOUT))  // one of the clients is ready to be read from
-            {
-                if (!readRequest(i))
-                    continue;
-                sendResponse(i);
-            }
-            else if ((clients[i].revents & POLLIN) && !(clients[i].revents & POLLOUT))
-                std::cout << "ready to read, not write, fd = " << i << ", " << clients[i].fd << std::endl;
-            else if (!(clients[i].revents & POLLIN) && (clients[i].revents & POLLOUT))
-                std::cout << "ready to write, not read, fd = " << i << ", " << clients[i].fd << std::endl;
         }
         if (quit)
             break;
@@ -206,8 +203,7 @@ Server::~Server()
 {
     std::cout << "Server destructor called" << std::endl;
     freeaddrinfo(servInfo);
-    // close all open connection fds
-    // delete[] clients;
-    if (listener != -1)
-        close(listener);
+    std::cout << "clients size = " << clients.size() << std::endl;
+    for (size_t i = 0; i < clients.size(); i++)
+        close(clients[i].fd);
 }
