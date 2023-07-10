@@ -34,7 +34,7 @@ struct Route
  */
 struct ServerBlock
 {
-    unsigned int port;                                      // Required
+    int port;                                               // Required
     std::string hostname;                                   // Optional
     std::map<unsigned int, const std::string> errorPages;   // Optional
     std::map<std::string, const Route> routes;   // At least one route
@@ -66,7 +66,12 @@ class ServerConfig
     TokenType currentToken(void) const;
     void advanceToken(void);
     bool atEnd(void) const;
-    void parseError(const std::string &str);
+    void throwParseError(const std::string &str) const;
+    void parseServerOption(void);
+    bool atServerOption(void) const;
+    void parseServerName(void);
+    void parseErrorPage(void);
+    void parseListenBlock(void);
 };
 
 #endif

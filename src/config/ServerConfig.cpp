@@ -14,8 +14,6 @@
 #include "config/Tokenizer.hpp"
 #include <limits>
 
-// ! TODO Create peek() and atEnd() functions for refactoring
-
 /**
  * @brief Create a Default Route object
  *
@@ -86,39 +84,159 @@ void ServerConfig::parseConfigFile(void)
         advanceToken();
     }
     if (!atEnd())
-        parseError("expected top level `server` rule");
-
-    // if (_currToken != _tokenEnd)
-    //     throw ConfigParseError(serverBlockError, *_currToken, _configFile);
+        throwParseError("expected top level `server` rule");
 }
 
 void ServerConfig::parseListenRule(void)
 {
+    static bool set = false;
     // LISTEN := "listen" valid_port SEMICOLON
+    if (set)
+        throwParseError("duplicate `listen` rule not allowed");
+    advanceToken();
+
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected a valid port number");
+    assert(currentToken() == WORD);
+
+    if (validatePort(_currToken->contents()) == false)
+        throwParseError("expected a valid port number");
+    advanceToken();
+
+    if (atEnd() || currentToken() != SEMICOLON)
+        throwParseError("expected a semicolon");
+
+    set = true;
 }
 
-void ServerConfig::parseError(const std::string &msg)
+void ServerConfig::parseServerName(void)
 {
-    const Token token = atEnd() ? *--_currToken : *_currToken;
+    // SERVER_NAME := "server_name" valid_hostname SEMICOLON
+    static bool set = false;
+    if (set)
+        throwParseError("duplicate `server_name` rule not allowed");
+    advanceToken();
+
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected a valid host name");
+    assert(currentToken() == WORD);
+
+    if (validateHostName(_currToken->contents()) == false)
+        throwParseError("expected a valid host name");
+    advanceToken();
+
+    if (atEnd() || currentToken() != SEMICOLON)
+        throwParseError("expected a semicolon");
+    set = true;
+}
+
+void ServerConfig::parseErrorPage(void)
+{
+    // ERROR_PAGE := "error_page" valid_error_response valid_HTML_path SEMICOLON
+
+    static std::set<int> set = std::set<int>();
+    int response;
+    std::string htmlPath;
+
+    advanceToken();
+
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected a 4XX or 5XX response code");
+    assert(currentToken() == WORD);
+
+    if (validateErrorResponse(_currToken->contents()) == false)
+        throwParseError("expected a 4XX or 5XX response code");
+    std::stringstream responseStream(_currToken->contents());
+    responseStream >> response;
+    if (set.count(response) != 0)
+        throwParseError("duplicate response code not allowed");
+    set.insert(response);
+    advanceToken();
+
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected a valid path to an HTML file");
+    assert(currentToken() == WORD);
+    if (validateHTMLFile(_currToken->contents()) == false)
+        throwParseError("expected a valid path to an HTML file");
+
+    std::stringstream htmlStream(_currToken->contents());
+    htmlStream >> htmlPath;
+
+    advanceToken();
+    if (atEnd() || currentToken() != SEMICOLON)
+        throwParseError("expected a semicolon");
+}
+
+void ServerConfig::parseListenBlock(void)
+{
+}
+
+void ServerConfig::parseServerOption(void)
+{
+    switch (currentToken())
+    {
+    case LISTEN:
+        parseListenRule();
+        break;
+    case SERVER_NAME:
+        parseServerName();
+        break;
+    case ERROR_PAGE:
+        parseErrorPage();
+        break;
+    case LOCATION:
+        // throwParseError("I still did not handle this");
+        parseListenBlock();
+        break;
+    default:
+        throwParseError("expected a valid server option");
+    }
+}
+
+bool ServerConfig::atServerOption(void) const
+{
+    return (currentToken() == SERVER_NAME || currentToken() == ERROR_PAGE ||
+            currentToken() == LISTEN || currentToken() == LOCATION);
+}
+
+void ServerConfig::throwParseError(const std::string &msg) const
+{
+    const Token token = atEnd() ? *(_currToken - 1) : *_currToken;
     throw ConfigParseError(msg, token, _configFile);
 }
 
 void ServerConfig::parseServerBlock(void)
 {
+    // ? I will have to manually check if there was a listen rule
+    // To check this I will give the port a default value of -1
+    // ! I will have to manually check if there are duplicates
+    // I am doing this with static variables
     // * SERVER := "server" LEFT_BRACE [SRV_OPTION]... LISTEN  [SRV_OPTION]...\
     // LOCATION [SRV_OPTION]... RIGHT_BRACE
     if (atEnd() || currentToken() != SERVER)
-        parseError("expected top level `server` rule");
+        throwParseError("expected top level `server` rule");
     assert(currentToken() == SERVER);
     advanceToken();
 
     if (atEnd() || currentToken() != LEFT_BRACE)
-        parseError("expected '{' to start server block");
+        throwParseError("expected '{' to start server block");
     assert(currentToken() == LEFT_BRACE);
     advanceToken();
 
+    if (atEnd() || !atServerOption())
+        throwParseError("expected a valid server option");
+    assert(atServerOption());
+
+    while (atServerOption())
+    {
+        parseServerOption();
+        advanceToken();
+    }
+
+    // ? Check for server option
+
     if (atEnd() || currentToken() != RIGHT_BRACE)
-        parseError("expected '}' to close server block");
+        throwParseError("expected '}' to close server block");
     assert(currentToken() == RIGHT_BRACE);
 }
 
