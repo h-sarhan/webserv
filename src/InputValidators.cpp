@@ -177,7 +177,8 @@ bool validateBodySize(const std::string &bodySizeStr)
         return false;
 
     // Very arbitrary
-    return bodySize >= 10 && bodySize <= (UINT_MAX);
+    return bodySize >= 10 &&
+           bodySize <= std::numeric_limits<unsigned int>::max();
 }
 
 /**

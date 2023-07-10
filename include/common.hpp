@@ -12,9 +12,11 @@
 #ifndef COMMON_HPP
 #define COMMON_HPP
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdlib>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <set>
 #include <sstream>
