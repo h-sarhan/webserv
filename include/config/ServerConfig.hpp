@@ -63,6 +63,10 @@ class ServerConfig
     void parseConfigFile(void);
     void parseServerBlock(void);
     void parseListenRule(void);
+    TokenType currentToken(void) const;
+    void advanceToken(void);
+    bool atEnd(void) const;
+    void parseError(const std::string &str);
 };
 
 #endif

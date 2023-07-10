@@ -65,7 +65,7 @@ ServerConfig::ServerConfig(const std::string &configFile)
 
     const std::vector<Token> &tokens = tokenizer.tokens();
     if (tokens.empty())
-        throw ConfigParseError("empty file", _configFile);
+        throw ConfigParseError("config file cannot be empty", _configFile);
 
     _currToken = tokens.begin();
     _tokenEnd = tokens.end();
@@ -76,65 +76,66 @@ ServerConfig::ServerConfig(const std::string &configFile)
 void ServerConfig::parseConfigFile(void)
 {
     // * CONFIG_FILE := SERVER [SERVER]...
-    const char serverBlockError[33] = "expected top level `server` rule";
-    if (_currToken->type() != SERVER)
-        throw ConfigParseError(serverBlockError, *_currToken, _configFile);
     parseServerBlock();
-    if (_currToken != _tokenEnd && _currToken->type() != SERVER)
-        throw ConfigParseError(serverBlockError, *_currToken, _configFile);
-    while (_currToken != _tokenEnd && _currToken->type() == SERVER)
+    assert(currentToken() == RIGHT_BRACE);
+    advanceToken();
+    while (!atEnd() && currentToken() == SERVER)
+    {
         parseServerBlock();
-    if (_currToken != _tokenEnd)
-        throw ConfigParseError(serverBlockError, *_currToken, _configFile);
+        assert(currentToken() == RIGHT_BRACE);
+        advanceToken();
+    }
+    if (!atEnd())
+        parseError("expected top level `server` rule");
+
+    // if (_currToken != _tokenEnd)
+    //     throw ConfigParseError(serverBlockError, *_currToken, _configFile);
 }
 
 void ServerConfig::parseListenRule(void)
 {
     // LISTEN := "listen" valid_port SEMICOLON
-    _currToken++;
-    if (_currToken == _tokenEnd)
-        throw ConfigParseError("expected port number after `listen` rule",
-                               *(--_currToken), _configFile);
-    if (_currToken->type() != WORD)
-        throw ConfigParseError("expected port number after `listen` rule",
-                               *(_currToken), _configFile);
-    if (validatePort(_currToken->contents()) == false)
-        throw ConfigParseError("invalid port number", *(_currToken),
-                               _configFile);
-    _currToken++;
-    if (_currToken == _tokenEnd)
-        throw ConfigParseError("expected semicolon", *(--_currToken),
-                               _configFile);
-    if (_currToken->type() != SEMICOLON)
-        throw ConfigParseError("expected semicolon", *(_currToken),
-                               _configFile);
-    _currToken++;
+}
+
+void ServerConfig::parseError(const std::string &msg)
+{
+    const Token token = atEnd() ? *--_currToken : *_currToken;
+    throw ConfigParseError(msg, token, _configFile);
 }
 
 void ServerConfig::parseServerBlock(void)
 {
     // * SERVER := "server" LEFT_BRACE [SRV_OPTION]... LISTEN  [SRV_OPTION]...\
     // LOCATION [SRV_OPTION]... RIGHT_BRACE
+    if (atEnd() || currentToken() != SERVER)
+        parseError("expected top level `server` rule");
+    assert(currentToken() == SERVER);
+    advanceToken();
+
+    if (atEnd() || currentToken() != LEFT_BRACE)
+        parseError("expected '{' to start server block");
+    assert(currentToken() == LEFT_BRACE);
+    advanceToken();
+
+    if (atEnd() || currentToken() != RIGHT_BRACE)
+        parseError("expected '}' to close server block");
+    assert(currentToken() == RIGHT_BRACE);
+}
+
+TokenType ServerConfig::currentToken(void) const
+{
+    // ! protect this somehow
+    return (_currToken)->type();
+}
+
+void ServerConfig::advanceToken(void)
+{
     _currToken++;
-    if (_currToken == _tokenEnd)
-        throw ConfigParseError("expected `{` after `server` rule",
-                               *(--_currToken), _configFile);
-    if (_currToken->type() != LEFT_BRACE)
-        throw ConfigParseError("expected `{` after `server` rule", *_currToken,
-                               _configFile);
-    while (_currToken != _tokenEnd && _currToken->type() != LISTEN)
-        _currToken++;
-    if (_currToken == _tokenEnd)
-        throw ConfigParseError("enclosing server block requires `listen` rule",
-                               *(--_currToken), _configFile);
-    // at this point we reached LISTEN
-    parseListenRule();
-    while (_currToken != _tokenEnd && _currToken->type() != RIGHT_BRACE)
-        _currToken++;
-    if (_currToken == _tokenEnd)
-        throw ConfigParseError("expected `}` to close server block",
-                               *(--_currToken), _configFile);
-    _currToken++;
+}
+
+bool ServerConfig::atEnd(void) const
+{
+    return _currToken >= _tokenEnd;
 }
 
 // * Config file Grammar
