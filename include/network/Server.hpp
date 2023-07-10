@@ -14,9 +14,11 @@
 
 #include "SystemCallException.hpp"
 #include "network.hpp"
+#include "common.hpp"
 #include <exception>
 #include <map>
 #include <string>
+#include <fstream>
 
 #define MAX_CLIENTS 10
 
@@ -27,8 +29,7 @@ class Server
     std::string port;
     addrinfo *servInfo;
     int listener;
-    pollfd clients[MAX_CLIENTS];
-    int fdCount;
+    std::vector<pollfd> clients;
     // std::map<std::string route, Location location> locations;
     // std::map<int errCode, std::string pageLocation>	errorPages;
 
@@ -37,9 +38,9 @@ class Server
     Server(std::string name, std::string port);
     void bindSocket();
     void startListening();
-    bool readRequest(int fdNum);
-    void sendResponse(int fdNum);
-    int find_empty_slot();
+    bool readRequest(size_t it);
+    void sendResponse(size_t it);
+    int findEmptySlot();
     ~Server();
 };
 

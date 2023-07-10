@@ -9,7 +9,6 @@
  */
 
 #include "Server.hpp"
-bool quit = false;
 
 Server::Server() : name("webserv.com"), port("1234"), listener(-1)
 {
@@ -24,11 +23,6 @@ Server::Server() : name("webserv.com"), port("1234"), listener(-1)
     hints.ai_flags = AI_PASSIVE;
     if ((status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo)) != 0)
         throw SystemCallException("getaddrinfo", gai_strerror(status));
-    // clients = new pollfd[MAX_CLIENTS];
-    memset(clients, 0, sizeof(clients));
-    for (int i = 0; i < MAX_CLIENTS; i++)
-        clients[i].fd = -1;
-    fdCount = 0;
 }
 
 Server::Server(std::string name, std::string port)
@@ -43,15 +37,8 @@ Server::Server(std::string name, std::string port)
     hints.ai_family = AF_UNSPEC;        // don't care IPv4 or IPv6
     hints.ai_socktype = SOCK_STREAM;    // TCP stream sockets
     hints.ai_flags = AI_PASSIVE;        // fill in my IP for me
-    if ((status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo)) !=
-        0)   // first param is host IP/name and its null because we set ai_flags
-             // as AI_PASSIVE
+    if ((status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo)) != 0)   // first param is host IP/name and its null because we set ai_flags
         throw SystemCallException("getaddrinfo", gai_strerror(status));
-    // clients = new pollfd[MAX_CLIENTS];
-    memset(clients, 0, sizeof(clients));
-    for (int i = 0; i < MAX_CLIENTS; i++)
-        clients[i].fd = -1;
-    fdCount = 0;
 }
 
 static int checkErr(std::string funcName, int retValue)
@@ -59,6 +46,17 @@ static int checkErr(std::string funcName, int retValue)
     if (retValue == -1)
         throw SystemCallException(funcName, strerror(errno));
     return (retValue);
+}
+
+static pollfd createPollFd(int fd, short events)
+{
+    pollfd socket;
+
+    socket.fd = fd;
+    socket.events = events;
+    socket.revents = 0;
+
+    return socket;
 }
 
 void Server::bindSocket()
@@ -89,31 +87,31 @@ void Server::bindSocket()
     }
     if (!p)
         throw SystemCallException("failed to bind");
-    clients[0].fd = this->listener;
-    clients[0].events = POLLIN | POLL_OUT;
-    fdCount++;
+    clients.push_back(createPollFd(this->listener, POLLIN | POLL_OUT));
 }
 
 // change this to use fd directly and close stuff in caller func
-bool Server::readRequest(int fdNum)
+bool Server::readRequest(size_t clientNo)
 {
     int bytes_rec;
     char *buf = new char[2000];
 
     // receiving request
     std::cout << "Received a request: " << std::endl;
-    bytes_rec = recv(clients[fdNum].fd, buf, 2000, 0);
+    std::cout << "reading from fd "<< clients[clientNo].fd << std::endl;
+    bytes_rec = recv(clients[clientNo].fd, buf, 2000, 0);
     if (bytes_rec < 0)
         std::cout << "Failed to receive request" << std::endl;
     else if (bytes_rec == 0)
         std::cout << "Connection closed by client" << std::endl;
     if (bytes_rec <= 0)
     {
-        close(clients[fdNum].fd);
-        clients[fdNum].fd = -1;   // poll will ignore this element now
-        clients[fdNum].events = 0;
-        clients[fdNum].revents = 0;
-        fdCount--;
+        close(clients[clientNo].fd);
+        clients.erase(clients.begin() + clientNo);
+        // clients[fdNum].fd = -1;   // poll will ignore this element now
+        // clients[fdNum].events = 0;
+        // clients[fdNum].revents = 0;
+        // fdCount--;
         delete[] buf;
         return (false);
     }
@@ -122,51 +120,35 @@ bool Server::readRequest(int fdNum)
     std::cout << "---------------------------------------------------------\n";
     std::cout << buf << std::endl;
     std::cout << "---------------------------------------------------------\n";
-    // close(clients[fdNum].fd);
-    // clients[fdNum].fd = -1;   // poll will ignore this element now
-    // fdCount--;
     delete[] buf;
     return (true);
 }
 
-void Server::sendResponse(int fdNum)
+void Server::sendResponse(size_t clientNo)
 {
-    std::string msg = HW_HTML;                    
+    std::string msg = HW_HTML;
     std::cout << "Sending a response: " << std::endl;
-    if (send(clients[fdNum].fd, msg.c_str(), msg.length(), 0) < 0)
+    if (send(clients[clientNo].fd, msg.c_str(), msg.length(), 0) < 0)
         std::cout << "Sending response failed" << std::endl;
     else
         std::cout << "Response sent!" << std::endl;
-    close(clients[fdNum].fd);
-    clients[fdNum].fd = -1;
-    clients[fdNum].events = 0;
-    clients[fdNum].revents = 0;
-    fdCount--;
+    close(clients[clientNo].fd);
+    clients.erase(clients.begin() + clientNo);
 }
 
-static void sig_int_handler(int sigNo)
+static void sigInthandler(int sigNo)
 {
     (void) sigNo;
-    quit = true;
-}
-
-int Server::find_empty_slot()
-{
-    int i;
-    for (i = 0; i < MAX_CLIENTS && clients[i].fd > 0; i++)
-        ;
-    return (i);
 }
 
 void Server::startListening()
 {
     int newFd;
-    int slot;
     int pollCount;
     sockaddr_storage their_addr;
     socklen_t addr_size;
 
-    signal(SIGINT, sig_int_handler);
+    signal(SIGINT, sigInthandler);
     checkErr("listen", listen(this->listener, QUEUE_LIMIT));
     addr_size = sizeof(their_addr);
     std::cout << "Listening on port " << this->port << std::endl;
@@ -174,31 +156,23 @@ void Server::startListening()
     {
         // -1 timeout means wait forever
         std::cout << "Waiting for a request" << std::endl;
-        pollCount = checkErr("poll", poll(clients, fdCount, -1));
-        for (int i = 0; i < fdCount; i++)
+        pollCount = checkErr("poll", poll(&clients[0], clients.size(), -1));
+		for (size_t i = 0; i < clients.size(); i++)
         {
-            if (clients[i].revents & POLLIN && clients[i].fd == listener)   // server listener got something new to read
+            if ((clients[i].revents & POLLIN) && (clients[i].fd == listener))   // server listener got something new to read
             {
-                // new incoming connection
                 std::cout << "New connection!" << std::endl;
-                // if accept fails here we dont necessarily have to exit, we
-                // could continue; the loop
-                newFd = checkErr("accept", accept(this->listener,
-                                                    (sockaddr *) &their_addr,
-                                                    &addr_size));
-                if (fdCount < MAX_CLIENTS)
+                newFd = accept(this->listener, (sockaddr *) &their_addr, &addr_size);
+                if (newFd == -1)
                 {
-                    slot = find_empty_slot();
-                    std::cout << "empty slot = " << slot << std::endl;
-                    clients[slot].fd = newFd;
-                    clients[slot].events = POLLIN | POLLOUT;
-                    fdCount++;
+                    std::cout << "Accept failed" << std::endl;
+                    continue;
                 }
+                if (clients.size() < MAX_CLIENTS)
+                    clients.push_back(createPollFd(newFd, POLLIN | POLLOUT));
                 else
                 {
-                    std::cout << "Maximum clients reached, dropping this "
-                                    "connection"
-                                << std::endl;
+                    std::cout << "Maximum clients reached, dropping this connection" << std::endl;
                     close(newFd);
                 }
             }
@@ -207,14 +181,6 @@ void Server::startListening()
                 if (!readRequest(i))
                     continue;
                 sendResponse(i);
-            }
-            else if (clients[i].revents & POLLERR) 
-            {
-                std::cout << "Socket error" << std::endl;
-                close(clients[i].fd);
-                clients[i].fd = -1;
-                clients[i].events = 0;
-                fdCount--;
             }
         }
     }
