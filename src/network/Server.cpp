@@ -98,7 +98,6 @@ bool Server::readRequest(size_t clientNo)
 
     // receiving request
     std::cout << "Received a request: " << std::endl;
-    std::cout << "reading from fd "<< clients[clientNo].fd << std::endl;
     bytes_rec = recv(clients[clientNo].fd, buf, 2000, 0);
     if (bytes_rec < 0)
         std::cout << "Failed to receive request" << std::endl;
@@ -126,12 +125,22 @@ bool Server::readRequest(size_t clientNo)
 
 void Server::sendResponse(size_t clientNo)
 {
-    std::string msg = HW_HTML;
+    std::ifstream file;
+    std::stringstream buffer;
+    std::string fileContents;
+    std::string msg = HTTP_HEADERS;
+    int bytesSent;
+
+    file.open("artgallery.html");
+    buffer << file.rdbuf();
+    fileContents = buffer.str();
+    msg.append(fileContents);
+    // std::string msg = HW_HTML;
     std::cout << "Sending a response: " << std::endl;
-    if (send(clients[clientNo].fd, msg.c_str(), msg.length(), 0) < 0)
+    if ((bytesSent = send(clients[clientNo].fd, msg.c_str(), msg.length(), 0)) < 0)
         std::cout << "Sending response failed" << std::endl;
     else
-        std::cout << "Response sent!" << std::endl;
+        std::cout << "Response sent! bytesSent = " << bytesSent << std::endl;
     close(clients[clientNo].fd);
     clients.erase(clients.begin() + clientNo);
 }
@@ -185,108 +194,6 @@ void Server::startListening()
         }
     }
 }
-
-/*void Server::startListening()
-{
-    int newFd;
-    int slot;
-    int pollCount;
-    sockaddr_storage their_addr;
-    socklen_t addr_size;
-    int temp;
-
-    signal(SIGINT, sig_int_handler);
-    checkErr("listen", listen(this->listener, QUEUE_LIMIT));
-    addr_size = sizeof(their_addr);
-    std::cout << "Listening on port " << this->port << std::endl;
-    while (true)
-    {
-        // -1 timeout means wait forever
-        std::cout << "Waiting for a request" << std::endl;
-        pollCount = checkErr("poll", poll(clients, fdCount, -1));
-        for (int i = 0; i < fdCount; i++)
-        {
-            if (i > 0) {
-                std::cout << "++++++++++++ events is " << clients[i].events << "++++++++++++" << std::endl; 
-                std::cout << "++++++++++++ revents is " << clients[i].revents << "++++++++++++" << std::endl; 
-            }
-            if (clients[i].revents & POLLIN)
-            {
-                if (clients[i].fd ==
-                    listener)   // server listener got something new to read
-                {
-                    // new incoming connection
-                    std::cout << "New connection!" << std::endl;
-                    // if accept fails here we dont necessarily have to exit, we
-                    // could continue; the loop
-                    newFd = checkErr("accept", accept(this->listener,
-                                                      (sockaddr *) &their_addr,
-                                                      &addr_size));
-                    if (fdCount < MAX_CLIENTS)
-                    {
-                        slot = find_empty_slot();
-                        std::cout << "empty slot = " << slot << std::endl;
-                        clients[slot].fd = newFd;
-                        clients[slot].events = POLLIN | POLLOUT;
-                        fdCount++;
-                    }
-                    else
-                    {
-                        std::cout << "Maximum clients reached, dropping this "
-                                     "connection"
-                                  << std::endl;
-                        close(newFd);
-                    }
-                }
-                else   // one of the clients is ready to be read from
-                {
-                    std::cout << "Received a request: " << std::endl;
-                    readRequest(i);
-                    clients[i].events |= POLLOUT;
-                }
-            }
-            else if (clients[i].revents & POLLOUT)
-            {
-                std::cout << "socket " << clients[i].fd << " is ready to be written to" << std::endl;
-                if (i == 0)
-                {
-                    std::cout << "this is the server" << std::endl;
-                    continue;
-                }
-                std::string msg =
-                    "HTTP/1.1 200 OK\r\nContent-Type: text/html; "
-                    "charset=UTF-8\r\nContent-Length: 100\r\n\r\n<!DOCTYPE "
-                    "html><html><head><title>Hello World</title></head><body><h1>Hello "
-                    "World</h1></body></html>";
-                std::cout << "Sending a response: " << std::endl;
-                checkErr("send", temp = send(clients[i].fd, msg.c_str(), msg.length(), 0));
-                std::cout << "bytes = " << temp << ", msg len = " << msg.length()
-                        << std::endl
-                        << std::endl;
-                close(clients[i].fd);
-                clients[i].fd = -1;
-                clients[i].events = 0;
-                clients[i].revents = 0;
-                fdCount--;
-            }
-            else if (clients[i].revents & POLLERR) 
-            {
-                std::cout << "Socket error" << std::endl;
-                close(clients[i].fd);
-                clients[i].fd = -1;
-                clients[i].events = 0;
-                fdCount--;
-            }
-           
-                        
-            // else if (quit)
-            // {
-            //     std::cout << "ctrl c" << std::endl;
-            //     break;
-            // }
-        }
-    }
-}*/
 
 Server::~Server()
 {
