@@ -185,17 +185,86 @@ void ServerConfig::parseTryFiles(void)
     _tryFilesSet = true;
 }
 
+void ServerConfig::parseBodySize(void)
+{
+    // BODY_SIZE := "body_size" positive_number SEMICOLON
+    if (_bodySizeSet)
+        throwParseError("multiple `body_size` rules not allowed");
+    advanceToken();
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected a valid body size in bytes [10 - 2^32]");
+    assert(currentToken() == WORD);
+
+    if (validateBodySize(_currToken->contents()) == false)
+        throwParseError("expected a valid body size in bytes [10 - 2^32]");
+
+    advanceToken();
+    if (atEnd() || currentToken() != SEMICOLON)
+        throwParseError("expected `;`");
+    assert(currentToken() == SEMICOLON);
+
+    _bodySizeSet = true;
+}
+
+static HTTPMethod strToMethod(const std::string &str)
+{
+    if (str == "GET")
+        return GET;
+    if (str == "POST")
+        return POST;
+    if (str == "DELETE")
+        return DELETE;
+    if (str == "PUT")
+        return PUT;
+    return ERROR;
+}
+
+void ServerConfig::parseHTTPMethods(void)
+{
+    // METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT")... SEMICOLON
+    std::set<HTTPMethod> methods;
+    if (_methodsSet)
+        throwParseError("multiple `method` rules not allowed");
+    advanceToken();
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("Expected HTTP method");
+    assert(currentToken() == WORD);
+
+    while (!atEnd() && currentToken() == WORD)
+    {
+        const HTTPMethod method = strToMethod(_currToken->contents());
+        if (method == ERROR)
+            throwParseError("invalid HTTP `method` specified");
+
+        if (methods.count(method) != 0)
+            throwParseError("duplicate method specified");
+
+        methods.insert(method);
+        advanceToken();
+    }
+    if (atEnd() || currentToken() != SEMICOLON)
+        throwParseError("expected `;`");
+
+    _methodsSet = true;
+}
+
 void ServerConfig::parseLocationOption(void)
 {
+    // DIR_LISTING := "directory_listing" ("true" | "false") SEMICOLON
+
+    // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path SEMICOLON
+    // CGI := "cgi_extensions" ("php" | "python")... SEMICOLON
     switch (currentToken())
     {
     case TRY_FILES:
         parseTryFiles();
         break;
     case BODY_SIZE:
-        throwParseError("I did not handle this yet");
+        parseBodySize();
+        break;
     case METHODS:
-        throwParseError("I did not handle this yet");
+        parseHTTPMethods();
+        break;
     case DIRECTORY_TOGGLE:
         throwParseError("I did not handle this yet");
     case DIRECTORY_FILE:
@@ -216,6 +285,8 @@ void ServerConfig::parseLocationBlock(void)
     // REDIRECT) [LOC_OPTION]...RIGHT_BRACE
     _tryFilesSet = false;
     _redirectSet = false;
+    _bodySizeSet = false;
+    _methodsSet = false;
 
     advanceToken();
     if (atEnd() || currentToken() != WORD)

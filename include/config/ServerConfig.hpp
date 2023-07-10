@@ -61,12 +61,15 @@ class ServerConfig
   private:
     ServerConfig(const ServerConfig &config);
     ServerConfig &operator=(const ServerConfig &config);
+
     TokenType currentToken(void) const;
     void advanceToken(void);
     bool atEnd(void) const;
     void throwParseError(const std::string &str) const;
     bool atServerOption(void) const;
     bool atLocationOption(void) const;
+
+    // Rule parsing functions
     void parseServerName(void);
     void parseErrorPage(void);
     void parseLocationBlock(void);
@@ -76,11 +79,16 @@ class ServerConfig
     void parseServerOption(void);
     void parseLocationOption(void);
     void parseTryFiles(void);
+    void parseBodySize(void);
+    void parseHTTPMethods(void);
+
     bool _serverNameSet;
     bool _listenSet;
     std::set<int> _errorPageSet;
     bool _tryFilesSet;
     bool _redirectSet;
+    bool _bodySizeSet;
+    bool _methodsSet;
 };
 
 #endif

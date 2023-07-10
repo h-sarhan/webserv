@@ -159,6 +159,28 @@ bool validateDirectory(const std::string &dirPath)
 }
 
 /**
+ * @brief Checks if the body size is valid
+ *
+ * @param bodySizeStr Body size as a string
+ * @return true if the body size is valid
+ */
+bool validateBodySize(const std::string &bodySizeStr)
+{
+    // Check if the string is empty
+    std::stringstream bodySizeStream(bodySizeStr);
+    size_t bodySize = 0;
+
+    bodySizeStream >> bodySize;
+
+    // Checks if the conversion failed
+    if (bodySizeStr.empty() || !bodySizeStream || !bodySizeStream.eof())
+        return false;
+
+    // Very arbitrary
+    return bodySize >= 10 && bodySize <= (UINT_MAX);
+}
+
+/**
  * @brief Checks if a port is valid
  *
  * @param portStr Port to validate

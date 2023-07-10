@@ -20,6 +20,8 @@ bool validateHTMLFile(const std::string &htmlFile);
 bool validateDirectory(const std::string &dirPath);
 bool validatePort(const std::string &portStr);
 bool validateURL(const std::string &urlStr);
+bool validateBodySize(const std::string &bodySizeStr);
+bool validateHTMLMethod(const std::string &bodySizeStr);
 
 // A function that tests out all the input validators
 void inputValidatorTests(void);

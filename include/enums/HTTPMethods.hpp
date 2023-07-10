@@ -19,7 +19,8 @@ typedef enum
     GET,
     POST,
     PUT,
-    DELETE
+    DELETE,
+    ERROR
 } HTTPMethod;
 
 #endif
