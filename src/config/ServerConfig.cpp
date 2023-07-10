@@ -296,12 +296,63 @@ void ServerConfig::parseDirectoryToggle(void)
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected `;`");
     assert(currentToken() == SEMICOLON);
+    _directoryToggleSet = true;
+}
+
+void ServerConfig::parseDirectoryFile(void)
+{
+    // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path SEMICOLON
+    if (_directoryFileSet)
+        throwParseError("multiple `directory_listing_file` rules not allowed");
+
+    advanceToken();
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected valid path to HTML file");
+    assert(currentToken() == WORD);
+
+    if (validateHTMLFile(_currToken->contents()) == false)
+        throwParseError("expected valid path to HTML file");
+
+    advanceToken();
+    if (atEnd() || currentToken() != SEMICOLON)
+        throwParseError("expected `;`");
+    assert(currentToken() == SEMICOLON);
+
+    _directoryFileSet = true;
+}
+
+void ServerConfig::parseCGI(void)
+{
+    // CGI := "cgi_extensions" ("php" | "python")... SEMICOLON
+    if (_cgiSet)
+        throwParseError("multiple `cgi_extensions` rules not allowed");
+
+    advanceToken();
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected valid cgi");
+    assert(currentToken() == WORD);
+
+    std::set<std::string> cgis;
+    while (!atEnd() && currentToken() == WORD)
+    {
+        const std::string cgi = _currToken->contents();
+        if (cgi != "php" && cgi != "python")
+            throwParseError("expected valid cgi");
+
+        if (cgis.count(cgi) != 0)
+            throwParseError("duplicate cgi specified");
+
+        cgis.insert(cgi);
+        advanceToken();
+    }
+    if (atEnd() || currentToken() != SEMICOLON)
+        throwParseError("expected `;`");
+
+    _cgiSet = true;
 }
 
 void ServerConfig::parseLocationOption(void)
 {
-    // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path SEMICOLON
-    // CGI := "cgi_extensions" ("php" | "python")... SEMICOLON
     switch (currentToken())
     {
     case TRY_FILES:
@@ -320,10 +371,10 @@ void ServerConfig::parseLocationOption(void)
         parseDirectoryToggle();
         break;
     case DIRECTORY_FILE:
-        throwParseError("I did not handle this yet");
+        parseDirectoryFile();
         break;
     case CGI_EXTENSION:
-        throwParseError("I did not handle this yet");
+        parseCGI();
         break;
     default:
         throwParseError("unexpected token");

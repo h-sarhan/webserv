@@ -119,7 +119,7 @@ bool validateHTMLFile(const std::string &htmlFile)
         return false;
 
     // Check if the filename has a dot
-    size_t dotPos = htmlFile.find_first_of('.');
+    size_t dotPos = htmlFile.find_last_of('.');
     if (dotPos == std::string::npos)
         return false;
 

@@ -83,6 +83,8 @@ class ServerConfig
     void parseHTTPMethods(void);
     void parseRedirect(void);
     void parseDirectoryToggle(void);
+    void parseDirectoryFile(void);
+    void parseCGI(void);
 
     bool _serverNameSet;
     bool _listenSet;
