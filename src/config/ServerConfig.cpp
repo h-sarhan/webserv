@@ -89,9 +89,8 @@ void ServerConfig::parseConfigFile(void)
 
 void ServerConfig::parseListenRule(void)
 {
-    static bool set = false;
     // LISTEN := "listen" valid_port SEMICOLON
-    if (set)
+    if (_listenSet)
         throwParseError("duplicate `listen` rule not allowed");
     advanceToken();
 
@@ -104,16 +103,15 @@ void ServerConfig::parseListenRule(void)
     advanceToken();
 
     if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected a semicolon");
+        throwParseError("expected a `;`");
 
-    set = true;
+    _listenSet = true;
 }
 
 void ServerConfig::parseServerName(void)
 {
     // SERVER_NAME := "server_name" valid_hostname SEMICOLON
-    static bool set = false;
-    if (set)
+    if (_serverNameSet)
         throwParseError("duplicate `server_name` rule not allowed");
     advanceToken();
 
@@ -126,15 +124,13 @@ void ServerConfig::parseServerName(void)
     advanceToken();
 
     if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected a semicolon");
-    set = true;
+        throwParseError("expected a `;`");
+    _serverNameSet = true;
 }
 
 void ServerConfig::parseErrorPage(void)
 {
     // ERROR_PAGE := "error_page" valid_error_response valid_HTML_path SEMICOLON
-
-    static std::set<int> set = std::set<int>();
     int response;
     std::string htmlPath;
 
@@ -148,9 +144,9 @@ void ServerConfig::parseErrorPage(void)
         throwParseError("expected a 4XX or 5XX response code");
     std::stringstream responseStream(_currToken->contents());
     responseStream >> response;
-    if (set.count(response) != 0)
+    if (_errorPageSet.count(response) != 0)
         throwParseError("duplicate response code not allowed");
-    set.insert(response);
+    _errorPageSet.insert(response);
     advanceToken();
 
     if (atEnd() || currentToken() != WORD)
@@ -164,11 +160,87 @@ void ServerConfig::parseErrorPage(void)
 
     advanceToken();
     if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected a semicolon");
+        throwParseError("expected a `;`");
 }
 
-void ServerConfig::parseListenBlock(void)
+void ServerConfig::parseTryFiles(void)
 {
+    if (_tryFilesSet)
+        throwParseError("multiple `try_files` rules not allowed");
+    if (_redirectSet)
+        throwParseError(
+            "a location block cannot have both a `try_files` and a `redirect`");
+    // TRY_FILES := "try_files" valid_dir SEMICOLON
+    advanceToken();
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected a valid directory");
+    assert(currentToken() == WORD);
+
+    if (validateDirectory(_currToken->contents()) == false)
+        throwParseError("invalid directory");
+
+    advanceToken();
+    if (atEnd() || currentToken() != SEMICOLON)
+        throwParseError("expected a `;`");
+    _tryFilesSet = true;
+}
+
+void ServerConfig::parseLocationOption(void)
+{
+    switch (currentToken())
+    {
+    case TRY_FILES:
+        parseTryFiles();
+        break;
+    case BODY_SIZE:
+        throwParseError("I did not handle this yet");
+    case METHODS:
+        throwParseError("I did not handle this yet");
+    case DIRECTORY_TOGGLE:
+        throwParseError("I did not handle this yet");
+    case DIRECTORY_FILE:
+        throwParseError("I did not handle this yet");
+    case CGI_EXTENSION:
+        throwParseError("I did not handle this yet");
+    case REDIRECT:
+        throwParseError("I did not handle this yet");
+    default:
+        throwParseError("unexpected token");
+        break;
+    }
+}
+
+void ServerConfig::parseLocationBlock(void)
+{
+    // LOCATION := "location" valid_URL LEFT_BRACE [LOC_OPTION]... (TRY_FILES | \
+    // REDIRECT) [LOC_OPTION]...RIGHT_BRACE
+    _tryFilesSet = false;
+    _redirectSet = false;
+
+    advanceToken();
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected valid URL");
+    assert(currentToken() == WORD);
+
+    advanceToken();
+    if (atEnd() || currentToken() != LEFT_BRACE)
+        throwParseError("expected `{` to start location block");
+    assert(currentToken() == LEFT_BRACE);
+    advanceToken();
+
+    if (atEnd() || !atLocationOption())
+        throwParseError("expected a valid location option");
+    assert(atLocationOption());
+
+    while (!atEnd() && atLocationOption())
+    {
+        parseLocationOption();
+        advanceToken();
+    }
+    if (atEnd())
+        throwParseError("unexpected end of file");
+    if (currentToken() != RIGHT_BRACE)
+        throwParseError("unexpected token");
 }
 
 void ServerConfig::parseServerOption(void)
@@ -185,8 +257,7 @@ void ServerConfig::parseServerOption(void)
         parseErrorPage();
         break;
     case LOCATION:
-        // throwParseError("I still did not handle this");
-        parseListenBlock();
+        parseLocationBlock();
         break;
     default:
         throwParseError("expected a valid server option");
@@ -199,6 +270,14 @@ bool ServerConfig::atServerOption(void) const
             currentToken() == LISTEN || currentToken() == LOCATION);
 }
 
+bool ServerConfig::atLocationOption(void) const
+{
+    return (currentToken() == TRY_FILES || currentToken() == BODY_SIZE ||
+            currentToken() == METHODS || currentToken() == DIRECTORY_TOGGLE ||
+            currentToken() == CGI_EXTENSION || currentToken() == REDIRECT ||
+            currentToken() == DIRECTORY_FILE);
+}
+
 void ServerConfig::throwParseError(const std::string &msg) const
 {
     const Token token = atEnd() ? *(_currToken - 1) : *_currToken;
@@ -207,6 +286,9 @@ void ServerConfig::throwParseError(const std::string &msg) const
 
 void ServerConfig::parseServerBlock(void)
 {
+    _serverNameSet = false;
+    _listenSet = false;
+    _errorPageSet.clear();
     // ? I will have to manually check if there was a listen rule
     // To check this I will give the port a default value of -1
     // ! I will have to manually check if there are duplicates
@@ -227,16 +309,14 @@ void ServerConfig::parseServerBlock(void)
         throwParseError("expected a valid server option");
     assert(atServerOption());
 
-    while (atServerOption())
+    while (!atEnd() && atServerOption())
     {
         parseServerOption();
         advanceToken();
     }
 
-    // ? Check for server option
-
     if (atEnd() || currentToken() != RIGHT_BRACE)
-        throwParseError("expected '}' to close server block");
+        throwParseError("unexpected token");
     assert(currentToken() == RIGHT_BRACE);
 }
 
@@ -260,7 +340,6 @@ bool ServerConfig::atEnd(void) const
 // * CONFIG_FILE := SERVER [SERVER]...
 
 // SERVER := "server" LEFT_BRACE [SRV_OPTION]... LISTEN  [SRV_OPTION]...\
-
 // LISTEN := "listen" valid_port SEMICOLON
 // SRV_OPTION := SERVER_NAME | ERROR_PAGE
 // SERVER_NAME := "server_name" valid_hostname SEMICOLON

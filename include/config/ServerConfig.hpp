@@ -40,6 +40,7 @@ struct ServerBlock
     std::map<std::string, const Route> routes;   // At least one route
 };
 
+// TODO: Refactor this to be a ConfigParser class
 /**
  * @brief This class defines the overall configuration of our web server.
  * If no configuration file is provided then a default one will be created.
@@ -60,18 +61,26 @@ class ServerConfig
   private:
     ServerConfig(const ServerConfig &config);
     ServerConfig &operator=(const ServerConfig &config);
-    void parseConfigFile(void);
-    void parseServerBlock(void);
-    void parseListenRule(void);
     TokenType currentToken(void) const;
     void advanceToken(void);
     bool atEnd(void) const;
     void throwParseError(const std::string &str) const;
-    void parseServerOption(void);
     bool atServerOption(void) const;
+    bool atLocationOption(void) const;
     void parseServerName(void);
     void parseErrorPage(void);
-    void parseListenBlock(void);
+    void parseLocationBlock(void);
+    void parseConfigFile(void);
+    void parseServerBlock(void);
+    void parseListenRule(void);
+    void parseServerOption(void);
+    void parseLocationOption(void);
+    void parseTryFiles(void);
+    bool _serverNameSet;
+    bool _listenSet;
+    std::set<int> _errorPageSet;
+    bool _tryFilesSet;
+    bool _redirectSet;
 };
 
 #endif
