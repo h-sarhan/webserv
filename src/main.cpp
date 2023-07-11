@@ -26,28 +26,32 @@ int main(int argc, char **argv)
         std::cerr << "" << std::endl;
         return (EXIT_FAILURE);
     }
-    std::string filename = "./example.conf";
+
+    // Test that validators work
+    inputValidatorTests();
     if (argc == 2)
-        filename = argv[1];
-    try
     {
-        // ConfigTokenizer tokenizer(filename);
-        // std::vector<Token> tokens = tokenizer.tokens();
-        Parser parser(filename);
+        std::string filename = argv[1];
+        try
+        {
+            // ConfigTokenizer tokenizer(filename);
+            // std::vector<Token> tokens = tokenizer.tokens();
+            Parser parser(filename);
 
-        inputValidatorTests();
-        // Server s("webserv.com", "1234");
-        // s.bindSocket();
-        // s.startListening();
-        const std::vector<ServerBlock> config = parser.getConfig();
-
-        std::cout << config;
+            // Server s("webserv.com", "1234");
+            // s.bindSocket();
+            // s.startListening();
+            const std::vector<ServerBlock> &config = parser.getConfig();
+            std::cout << config;
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << e.what() << std::endl;
+            return (EXIT_FAILURE);
+        }
     }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << std::endl;
-        return (EXIT_FAILURE);
-    }
+    const ServerBlock &config = createDefaultServerBlock();
+    std::cout << config;
 
     return (EXIT_SUCCESS);
 }
