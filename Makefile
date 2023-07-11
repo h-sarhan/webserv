@@ -5,12 +5,12 @@ CXX = clang++
 SRC_DIR = ./src
 CONFIG_DIR = $(SRC_DIR)/config
 NETWORK_DIR = $(SRC_DIR)/network
-CONFIG_SRC = Tokenizer.cpp Token.cpp
+CONFIG_SRC = Tokenizer.cpp Token.cpp Parser.cpp ParseError.cpp Validators.cpp ServerBlock.cpp
 NETWORK_SRC = Server.cpp
 CONFIG_SRC := $(addprefix $(CONFIG_DIR)/, $(CONFIG_SRC))
 NETWORK_SRC := $(addprefix $(NETWORK_DIR)/, $(NETWORK_SRC))
 
-SRC = $(SRC_DIR)/main.cpp $(CONFIG_SRC) $(NETWORK_SRC)
+SRC := $(SRC_DIR)/main.cpp $(CONFIG_SRC) $(NETWORK_SRC)
 
 # Release and debug object files
 OBJ_DIR = .build
@@ -20,7 +20,7 @@ DBG_OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=_dbg.o))
 # Warning and include flags
 WRN = -Wall -Wextra -Werror -Wpedantic -Wcast-align -Wunused -Wshadow \
 			-Wcast-qual -Wmissing-prototypes -Wno-missing-braces -std=c++98
-INC = -Iinclude -Iinclude/config -Iinclude/network -Itests
+INC = -Iinclude
 CXXFLAGS = $(WRN) $(INC)
 
 # Release and debug flags
@@ -41,13 +41,11 @@ COMPILE_DB = compile_commands.json
 # Dependency files needed for recompiling with header file changes
 DEPENDS := $(RELEASE_OBJ:.o=.d) $(DBG_OBJ:.o=.d)
 
-# Unit tests
-TEST_SRC := $(filter-out $(SRC_DIR)/main.cpp, $(SRC)) tests/shape_tests.cpp
-TEST_OBJ := $(addprefix $(OBJ_DIR)/, $(TEST_SRC:.cpp=.o))
-TEST = run_tests
-
 # Build debug and release executables
-all: $(RELEASE_BUILD) $(DBG_BUILD) db
+all:
+	make -j 10 build
+
+build: $(RELEASE_BUILD) $(DBG_BUILD) db
 
 # Run release build
 run: $(RELEASE_BUILD) db
@@ -78,14 +76,6 @@ $(DBG_BUILD): $(DBG_OBJ) Makefile
 # Include dependencies needed to recompile on header file changes
 -include $(DEPENDS)
 
-# Create test executable
-$(TEST): $(TEST_OBJ)
-	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) $(TEST_OBJ) $(LINK_FLAGS) -o $(TEST)
-
-# Run unit tests
-test: $(TEST)
-	./$(TEST)
-
 # Create compile db
 db: $(COMPILE_DB)
 
@@ -98,7 +88,7 @@ clean:
 
 # Remove object files and builds
 fclean: clean
-	rm -f $(RELEASE_BUILD) $(DBG_BUILD) $(TEST)
+	rm -f $(RELEASE_BUILD) $(DBG_BUILD)
 
 # Creates and hosts doxygen documentation
 docs:
@@ -108,6 +98,7 @@ docs:
 	python3 -m http.server --directory docs/sphinx/build/html
 
 # Remove object files and builds and re-compile release and debug builds
-re: fclean $(RELEASE_BUILD) $(DBG_BUILD) db
+re: fclean
+	make -j 10 build
 
-.PHONY: all re fclean clean run dbg db docs test
+.PHONY: all re fclean clean run dbg db docs build

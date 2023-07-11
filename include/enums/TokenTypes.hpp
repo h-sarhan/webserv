@@ -13,7 +13,6 @@
 
 /**
  * @brief The tokens that will be produced after tokenizing the config file
- *
  */
 typedef enum
 {
@@ -38,9 +37,8 @@ typedef enum
     DIRECTORY_TOGGLE,
     DIRECTORY_FILE,
     CGI_EXTENSION,
-    REDIRECT,
+    REDIRECT
 
-    EOF
 } TokenType;
 
 #endif

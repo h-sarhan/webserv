@@ -1,0 +1,17 @@
+Diagnostics:
+  UnusedIncludes: Strict
+  ClangTidy:
+    Add: [modernize-*,
+        # Additional checks
+        # bugprone-*,
+        # clang-analyzer-*,
+        # cppcoreguidelines-*,
+       ]
+    Remove: [modernize-use-nullptr, modernize-use-auto, modernize-loop-convert]
+    CheckOptions:
+      readability-identifier-naming.VariableCase: CamelCase
+Hover:
+  ShowAKA: Yes
+Index:
+  Background: Build
+  StandardLibrary: Yes

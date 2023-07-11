@@ -12,14 +12,15 @@
 #define NETWORK_HPP
 
 #include <arpa/inet.h>
+#include <cerrno>
+#include <cstdlib>
 #include <cstring>
-#include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
 
 #define QUEUE_LIMIT 10
 #define PORT        "1234"
