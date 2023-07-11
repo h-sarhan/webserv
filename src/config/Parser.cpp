@@ -36,7 +36,7 @@
 // TODO: I use `(atEnd() || currentToken() != TOKEN)` a lot to check if the next
 // TODO: token matches the grammar. I should encapsulate this into a function
 
-static HTTPMethod strToHTTPMethod(const std::string &str)
+HTTPMethod strToHTTPMethod(const std::string &str)
 {
     if (str == "GET")
         return GET;
@@ -47,6 +47,19 @@ static HTTPMethod strToHTTPMethod(const std::string &str)
     if (str == "PUT")
         return PUT;
     return ERROR;
+}
+
+std::string httpMethodtoStr(HTTPMethod tkn)
+{
+    if (tkn == GET)
+        return "GET";
+    if (tkn == POST)
+        return "POST";
+    if (tkn == DELETE)
+        return "DELETE";
+    if (tkn == PUT)
+        return "PUT";
+    return "ERROR";
 }
 
 Parser::Parser(const std::string &configFile) : _filename(configFile)
@@ -116,6 +129,9 @@ void Parser::parseServerBlock()
 
     if (_parsedAttributes.count(LOCATION) == 0)
         throwParseError("server block missing `location` block");
+
+    if (_currServerBlock->hostname.empty())
+        _currServerBlock->hostname = "localhost";
 }
 
 void Parser::parseServerOption()
@@ -272,6 +288,11 @@ void Parser::parseLocationBlock()
     if (_parsedAttributes.count(REDIRECT) == 0 && _parsedAttributes.count(TRY_FILES) == 0)
         throwParseError("location block requires either a `try_files` or a `redirect` rule");
     _parsedAttributes.insert(LOCATION);
+
+    if (_currRoute->second.bodySize == 0)
+        _currRoute->second.bodySize = std::numeric_limits<unsigned int>::max();
+    if (_currRoute->second.methodsAllowed.empty())
+        _currRoute->second.methodsAllowed.insert(GET);
 }
 
 void Parser::parseLocationOption()

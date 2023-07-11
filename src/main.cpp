@@ -33,12 +33,15 @@ int main(int argc, char **argv)
     {
         // ConfigTokenizer tokenizer(filename);
         // std::vector<Token> tokens = tokenizer.tokens();
-        Parser config(filename);
+        Parser parser(filename);
 
         inputValidatorTests();
         // Server s("webserv.com", "1234");
         // s.bindSocket();
         // s.startListening();
+        const std::vector<ServerBlock> config = parser.getConfig();
+
+        std::cout << config;
     }
     catch (const std::exception &e)
     {

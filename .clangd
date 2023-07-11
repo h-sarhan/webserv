@@ -7,7 +7,7 @@ Diagnostics:
         # clang-analyzer-*,
         # cppcoreguidelines-*,
        ]
-    Remove: [modernize-use-nullptr]
+    Remove: [modernize-use-nullptr, modernize-use-auto, modernize-loop-convert]
     CheckOptions:
       readability-identifier-naming.VariableCase: CamelCase
 Hover:

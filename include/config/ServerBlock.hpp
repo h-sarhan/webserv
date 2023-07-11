@@ -44,4 +44,10 @@ struct ServerBlock
 
 const ServerBlock createDefaultServerBlock();
 
+// Print ServerBlock
+std::ostream &operator<<(std::ostream &os, const ServerBlock &block);
+
+// Print entire configuration
+std::ostream &operator<<(std::ostream &os, const std::vector<ServerBlock> &config);
+
 #endif
