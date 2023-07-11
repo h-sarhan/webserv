@@ -9,6 +9,7 @@
  */
 
 #include "Server.hpp"
+#include <cstddef>
 
 bool quit = false;
 Server::Server() : name("webserv.com"), port("1234"), listener(-1)
@@ -141,6 +142,21 @@ std::string static createResponse(std::string filename, std::string headers)
     return responseBuffer.str();
 }
 
+static int sendAll(int clientFd, std::string& msg, size_t msgLen)
+{
+    ssize_t bytesLeft = msgLen;
+    ssize_t bytesSent = 0;
+
+    while (bytesLeft > 0)
+    {
+        bytesSent = send(clientFd, msg.c_str(), bytesLeft, 0);
+        if (bytesSent == -1)
+            return (-1);
+        bytesLeft -= bytesSent;
+    }
+    return (bytesSent);
+}
+
 void Server::sendResponse(size_t clientNo, std::string request)
 {
     std::string msg;
@@ -153,7 +169,7 @@ void Server::sendResponse(size_t clientNo, std::string request)
     else
         msg = createResponse("artgallery.html", HTTP_HEADERS);
     std::cout << "Sending a response... " << std::endl;
-    bytesSent = send(clients[clientNo].fd, msg.c_str(), msg.length(), 0);
+    bytesSent = sendAll(clients[clientNo].fd, msg, msg.length());
     if (bytesSent < 0)
         std::cout << "Sending response failed" << std::endl;
     else
