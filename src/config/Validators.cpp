@@ -45,8 +45,7 @@ static bool validateLabel(const std::string &label)
         return false;
 
     // Get the number of valid characters
-    const size_t numValidChars =
-        std::count_if(label.begin(), label.end(), isValidLabelChar);
+    const size_t numValidChars = std::count_if(label.begin(), label.end(), isValidLabelChar);
 
     return numValidChars == label.size();
 }
@@ -73,14 +72,12 @@ bool validateHostName(const std::string &hostname)
 
     // Check if the label count is correct.
     // This will invalidate labels like "weeb..server" and alan.poe.
-    const size_t numLabels =
-        std::count(hostname.begin(), hostname.end(), '.') + 1;
+    const size_t numLabels = std::count(hostname.begin(), hostname.end(), '.') + 1;
     if (labels.size() != numLabels)
         return false;
 
     // Validate hostname labels
-    const size_t numValidLabels =
-        std::count_if(labels.begin(), labels.end(), validateLabel);
+    const size_t numValidLabels = std::count_if(labels.begin(), labels.end(), validateLabel);
 
     return numValidLabels == numLabels;
 }
@@ -98,8 +95,7 @@ bool validateErrorResponse(const std::string &respCode)
         return false;
 
     // Check the number of digits
-    const size_t numDigits =
-        std::count_if(respCode.begin(), respCode.end(), ::isdigit);
+    const size_t numDigits = std::count_if(respCode.begin(), respCode.end(), ::isdigit);
 
     if (numDigits != 3)
         return false;
@@ -180,8 +176,7 @@ bool validateBodySize(const std::string &bodySizeStr)
         return false;
 
     // Very arbitrary
-    return bodySize >= 10 &&
-           bodySize <= std::numeric_limits<unsigned int>::max();
+    return bodySize >= 10 && bodySize <= std::numeric_limits<unsigned int>::max();
 }
 
 /**

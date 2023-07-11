@@ -1,8 +1,7 @@
 /**
  * @file Parser.hpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file defines the ServerConfig class and the ServerBlock and Route
- * config structs
+ * @brief This file defines the config Parser class
  * @date 2023-07-07
  *
  * @copyright Copyright (c) 2023
@@ -11,59 +10,31 @@
 #ifndef PARSER_HPP
 #define PARSER_HPP
 
+#include "ServerBlock.hpp"
 #include "Token.hpp"
-#include "enums/HTTPMethods.hpp"
-#include <map>
-#include <set>
-#include <vector>
 
 /**
- * @brief This struct holds the configuration of a single route
- */
-struct Route
-{
-    std::string serveDir;                     // Required
-    size_t bodySize;                          // Optional
-    bool listDirectories;                     // Optional, false by default
-    std::string directoryFile;                // Optional
-    std::vector<std::string> cgiExtensions;   // Optional
-    std::string redirectTo;   // Required if serveDir is not provided
-    std::set<HTTPMethod> methodsAllowed;   // Methods allowed on this route
-};
-
-/**
- * @brief This struct holds the configuration of a single server block
- */
-struct ServerBlock
-{
-    int port;                                               // Required
-    std::string hostname;                                   // Optional
-    std::map<unsigned int, const std::string> errorPages;   // Optional
-    std::map<std::string, const Route> routes;   // At least one route
-};
-
-// TODO: Refactor this to be a ConfigParser class
-/**
- * @brief This class defines the overall configuration of our web server.
- * If no configuration file is provided then a default one will be created.
+ * @brief This class is responsible for parsing the config file
  */
 class Parser
 {
   private:
-    std::vector<ServerBlock> _serverBlocks;
+    std::string _filename;
+    std::vector<ServerBlock> _serverConfig;
     std::vector<Token>::const_iterator _currToken;
-    std::vector<Token>::const_iterator _tokenEnd;
-    const std::string _configFile;
+    std::vector<Token>::const_iterator _lastToken;
 
   public:
-    Parser();
-    Parser(const std::string &configFile);
+    Parser(const std::string &fileName);
     ~Parser();
+
+    const std::vector<ServerBlock> &getConfig() const;
 
   private:
     Parser(const Parser &config);
     Parser &operator=(const Parser &config);
 
+    // Functions to check and increment current token
     TokenType currentToken() const;
     void advanceToken();
     bool atEnd() const;
@@ -72,13 +43,13 @@ class Parser
     bool atLocationOption() const;
 
     // Rule parsing functions
-    void parseServerName();
-    void parseErrorPage();
-    void parseLocationBlock();
-    void parseConfigFile();
+    void parseConfig();
     void parseServerBlock();
     void parseListenRule();
+    void parseServerName();
+    void parseErrorPage();
     void parseServerOption();
+    void parseLocationBlock();
     void parseLocationOption();
     void parseTryFiles();
     void parseBodySize();
@@ -88,16 +59,9 @@ class Parser
     void parseDirectoryFile();
     void parseCGI();
 
-    bool _serverNameSet;
-    bool _listenSet;
-    std::set<int> _errorPageSet;
-    bool _tryFilesSet;
-    bool _redirectSet;
-    bool _bodySizeSet;
-    bool _methodsSet;
-    bool _directoryToggleSet;
-    bool _directoryFileSet;
-    bool _cgiSet;
+    // Kepping track of the parsed attributes
+    std::set<int> _parsedAttributes;
+    std::set<int> _parsedErrorPages;
 };
 
 #endif

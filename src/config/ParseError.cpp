@@ -12,8 +12,7 @@
 #include <sstream>
 
 // ! DUMB IMPLEMENTATION: Consider storing the line somewhere
-static const std::string getLine(const std::string &filename,
-                                 const unsigned int errLine)
+static const std::string getLine(const std::string &filename, const unsigned int errLine)
 {
     std::ifstream file(filename.c_str());
 
@@ -24,13 +23,12 @@ static const std::string getLine(const std::string &filename,
     return line;
 }
 
-ParseError::ParseError(const std::string &errorMsg, const Token &token,
-                       const std::string &filename)
+ParseError::ParseError(const std::string &errorMsg, const Token &token, const std::string &filename)
 
 {
     std::stringstream msg;
-    msg << BOLD << filename << ":" << token.line() << ":" << token.column()
-        << RED << " error: " << RESET BOLD << errorMsg << RESET "\n"
+    msg << BOLD << filename << ":" << token.line() << ":" << token.column() << RED
+        << " error: " << RESET BOLD << errorMsg << RESET "\n"
         << "\n" RESET << getLine(filename, token.line()) << "\n"
         << std::string(token.column() - 1, ' ') << GREEN
         << std::string(token.contents().length(), '^') << std::endl;
@@ -41,8 +39,8 @@ ParseError::ParseError(const std::string &errorMsg, const std::string &filename)
 
 {
     std::stringstream msg;
-    msg << BOLD << filename << ":" << RED << " error: " << RESET BOLD
-        << errorMsg << RESET << std::endl;
+    msg << BOLD << filename << ":" << RED << " error: " << RESET BOLD << errorMsg << RESET
+        << std::endl;
     _errorMsg = msg.str();
 }
 

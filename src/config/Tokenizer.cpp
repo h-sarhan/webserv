@@ -126,8 +126,7 @@ void Tokenizer::addWord(unsigned int &wordIdx, const std::string &wordStr,
         wordIdx++;
 
     const unsigned int wordEnd = wordIdx;
-    if (wordIdx < wordStr.length() && isSingleCharToken(wordStr[wordIdx]) &&
-        wordIdx > 0)
+    if (wordIdx < wordStr.length() && isSingleCharToken(wordStr[wordIdx]) && wordIdx > 0)
         wordIdx--;
 
     const std::string tokenStr = wordStr.substr(wordStart, wordEnd);
@@ -149,8 +148,7 @@ void Tokenizer::addWord(unsigned int &wordIdx, const std::string &wordStr,
  * @param wordPos Where the word is in the line
  * @param lineNum The line number we are in
  */
-void Tokenizer::tokenizeWord(const std::string &wordStr,
-                             const unsigned int wordPos,
+void Tokenizer::tokenizeWord(const std::string &wordStr, const unsigned int wordPos,
                              const unsigned int lineNum)
 {
     unsigned int wordIdx = 0;
@@ -235,7 +233,5 @@ Tokenizer::~Tokenizer()
 }
 
 // Assigning the static maps
-std::map<std::string, const TokenType> Tokenizer::strToToken =
-    createStrToToken();
-std::map<TokenType, const std::string> Tokenizer::tokenToStr =
-    createTokenToStr();
+std::map<std::string, const TokenType> Tokenizer::strToToken = createStrToToken();
+std::map<TokenType, const std::string> Tokenizer::tokenToStr = createTokenToStr();

@@ -12,8 +12,8 @@
 #include "config/Tokenizer.hpp"
 #include <iostream>
 
-Token::Token(const TokenType &type, const std::string &contents,
-             unsigned int line, unsigned int column)
+Token::Token(const TokenType &type, const std::string &contents, unsigned int line,
+             unsigned int column)
     : _type(type), _str(contents), _line(line), _column(column)
 {
 }
@@ -60,8 +60,7 @@ unsigned int Token::column() const
 
 std::ostream &operator<<(std::ostream &os, const Token &tkn)
 {
-    std::cout << "{type: " << Tokenizer::tokenToStr[tkn.type()]
-              << ", str: " << tkn.contents() << ", line: " << tkn.line()
-              << ", col: " << tkn.column() << "}";
+    std::cout << "{type: " << Tokenizer::tokenToStr[tkn.type()] << ", str: " << tkn.contents()
+              << ", line: " << tkn.line() << ", col: " << tkn.column() << "}";
     return os;
 }

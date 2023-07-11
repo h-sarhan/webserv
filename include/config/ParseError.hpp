@@ -19,9 +19,6 @@
 #define BOLD   "\x1b[1m"
 
 #include "Token.hpp"
-#include <exception>
-#include <iostream>
-#include <string>
 
 class ParseError : public std::exception
 {
@@ -29,8 +26,7 @@ class ParseError : public std::exception
     std::string _errorMsg;
 
   public:
-    ParseError(const std::string &errorMsg, const Token &token,
-               const std::string &filename);
+    ParseError(const std::string &errorMsg, const Token &token, const std::string &filename);
     ParseError(const std::string &errorMsg, const std::string &filename);
     virtual const char *what() const throw();
     ~ParseError() throw();

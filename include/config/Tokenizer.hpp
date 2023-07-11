@@ -49,7 +49,7 @@ class Tokenizer
     void tokenizeWord(const std::string &wordStr, const unsigned int wordPos,
                       const unsigned int lineNum);
     bool isSingleCharToken(const char c) const;
-    void addWord(unsigned int &wordIdx, const std::string &wordStr,
-                 const unsigned int lineNum, const unsigned int column);
+    void addWord(unsigned int &wordIdx, const std::string &wordStr, const unsigned int lineNum,
+                 const unsigned int column);
 };
 #endif

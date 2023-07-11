@@ -14,63 +14,42 @@
 #include "config/Validators.hpp"
 #include <sstream>
 
-/**
- * @brief Create a Default Route object
- *
- * @return Route
- */
-static Route createDefaultRoute()
-{
-    Route defaultRoute;
-    defaultRoute.serveDir = "./assets/web";
-    // Max body size is unlimited by default
-    defaultRoute.bodySize = std::numeric_limits<size_t>::max();
-    defaultRoute.listDirectories = true;
-    defaultRoute.directoryFile = "";
-    defaultRoute.redirectTo = "";
-    // Only GET is allowed by default
-    defaultRoute.methodsAllowed.insert(GET);
-    return defaultRoute;
-}
+// * Config file Grammar
 
-/**
- * @brief Create a Default Server Block object
- *
- * @return ServerBlock
- */
-static ServerBlock createDefaultServerBlock()
-{
-    ServerBlock defaultServerBlock;
-    defaultServerBlock.port = 80;
-    defaultServerBlock.hostname = "";
-    defaultServerBlock.errorPages.insert(
-        std::make_pair(404, "./assets/404.html"));
-    defaultServerBlock.errorPages.insert(
-        std::make_pair(502, "./assets/502.html"));
-    defaultServerBlock.routes.insert(std::make_pair("/", createDefaultRoute()));
-    return defaultServerBlock;
-}
+// CONFIG_FILE := SERVER [SERVER]...
+// SERVER := "server" { [SRV_OPTION]... LISTEN  [SRV_OPTION]...}
+// LISTEN := "listen" valid_port ;
+// SRV_OPTION := SERVER_NAME | ERROR_PAGE
+// SERVER_NAME := "server_name" valid_hostname ;
+// ERROR_PAGE := "error_page" valid_error_response valid_HTML_path ;
+// LOCATION := "location" valid_URL {
+//                      [LOC_OPTION]... (TRY_FILES | REDIRECT) [LOC_OPTION]...}
+// TRY_FILES := "try_files" valid_dir ;
+// REDIRECT := "redirect" valid_URL ;
+// LOC_OPTION := BODY_SIZE | METHODS | DIR_LISTING | DIR_LISTING_FILE | CGI
+// BODY_SIZE := "body_size" positive_number ;
+// METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT")... ;
+// DIR_LISTING := "directory_listing" ("true" | "false") ;
+// DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path ;
+// CGI := "cgi_extensions" ("php" | "python")... ;
 
-Parser::Parser() : _configFile("")
-{
-    _serverBlocks.push_back(createDefaultServerBlock());
-}
+// TODO: I use `(atEnd() || currentToken() != TOKEN)` a lot to check if the next
+// TODO: token matches the grammar. I should encapsulate this into a function
 
-Parser::Parser(const std::string &configFile) : _configFile(configFile)
+Parser::Parser(const std::string &configFile) : _filename(configFile)
 {
     Tokenizer tokenizer(configFile);
 
     const std::vector<Token> &tokens = tokenizer.tokens();
     if (tokens.empty())
-        throw ParseError("config file cannot be empty", _configFile);
+        throw ParseError("config file cannot be empty", _filename);
 
     _currToken = tokens.begin();
-    _tokenEnd = tokens.end();
-    parseConfigFile();
+    _lastToken = tokens.end();
+    parseConfig();
 }
 
-// buggy implementation use recursion instead of loops
-void Parser::parseConfigFile()
+void Parser::parseConfig()
 {
     // * CONFIG_FILE := SERVER [SERVER]...
     parseServerBlock();
@@ -89,7 +68,7 @@ void Parser::parseConfigFile()
 void Parser::parseListenRule()
 {
     // LISTEN := "listen" valid_port SEMICOLON
-    if (_listenSet)
+    if (_parsedAttributes.count(LISTEN) != 0)
         throwParseError("duplicate `listen` rule not allowed");
     advanceToken();
 
@@ -102,20 +81,20 @@ void Parser::parseListenRule()
 
     std::stringstream portStream(_currToken->contents());
 
-    portStream >> (_serverBlocks.end() - 1)->port;
+    portStream >> (_serverConfig.end() - 1)->port;
 
     advanceToken();
-
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected a `;`");
 
-    _listenSet = true;
+    // _listenSet = true;
+    _parsedAttributes.insert(LISTEN);
 }
 
 void Parser::parseServerName()
 {
     // SERVER_NAME := "server_name" valid_hostname SEMICOLON
-    if (_serverNameSet)
+    if (_parsedAttributes.count(SERVER_NAME) != 0)
         throwParseError("duplicate `server_name` rule not allowed");
     advanceToken();
 
@@ -129,7 +108,7 @@ void Parser::parseServerName()
 
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected a `;`");
-    _serverNameSet = true;
+    _parsedAttributes.insert(SERVER_NAME);
 }
 
 void Parser::parseErrorPage()
@@ -148,9 +127,9 @@ void Parser::parseErrorPage()
         throwParseError("expected a 4XX or 5XX response code");
     std::stringstream responseStream(_currToken->contents());
     responseStream >> response;
-    if (_errorPageSet.count(response) != 0)
+    if (_parsedErrorPages.count(response) != 0)
         throwParseError("duplicate response code not allowed");
-    _errorPageSet.insert(response);
+    _parsedErrorPages.insert(response);
     advanceToken();
 
     if (atEnd() || currentToken() != WORD)
@@ -169,9 +148,9 @@ void Parser::parseErrorPage()
 
 void Parser::parseTryFiles()
 {
-    if (_tryFilesSet)
+    if (_parsedAttributes.count(TRY_FILES) != 0)
         throwParseError("multiple `try_files` rules not allowed");
-    if (_redirectSet)
+    if (_parsedAttributes.count(REDIRECT) != 0)
         throwParseError("a location block cannot have both a `try_files` and a "
                         "`redirect` rule");
     // TRY_FILES := "try_files" valid_dir SEMICOLON
@@ -186,13 +165,14 @@ void Parser::parseTryFiles()
     advanceToken();
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected a `;`");
-    _tryFilesSet = true;
+    // _tryFilesSet = true;
+    _parsedAttributes.insert(TRY_FILES);
 }
 
 void Parser::parseBodySize()
 {
     // BODY_SIZE := "body_size" positive_number SEMICOLON
-    if (_bodySizeSet)
+    if (_parsedAttributes.count(BODY_SIZE) != 0)
         throwParseError("multiple `body_size` rules not allowed");
     advanceToken();
     if (atEnd() || currentToken() != WORD)
@@ -207,7 +187,7 @@ void Parser::parseBodySize()
         throwParseError("expected `;`");
     assert(currentToken() == SEMICOLON);
 
-    _bodySizeSet = true;
+    _parsedAttributes.insert(BODY_SIZE);
 }
 
 static HTTPMethod strToMethod(const std::string &str)
@@ -227,7 +207,7 @@ void Parser::parseHTTPMethods()
 {
     // METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT")... SEMICOLON
     std::set<HTTPMethod> methods;
-    if (_methodsSet)
+    if (_parsedAttributes.count(METHODS) != 0)
         throwParseError("multiple `method` rules not allowed");
     advanceToken();
     if (atEnd() || currentToken() != WORD)
@@ -249,15 +229,16 @@ void Parser::parseHTTPMethods()
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected `;`");
 
-    _methodsSet = true;
+    // _methodsSet = true;
+    _parsedAttributes.insert(METHODS);
 }
 
 void Parser::parseRedirect()
 {
     // REDIRECT := "redirect" valid_URL SEMICOLON
-    if (_redirectSet)
+    if (_parsedAttributes.count(REDIRECT) != 0)
         throwParseError("multiple `redirect` rules not allowed");
-    if (_tryFilesSet)
+    if (_parsedAttributes.count(TRY_FILES) != 0)
         throwParseError("a location block cannot have both a `try_files` and a "
                         "`redirect` rule");
 
@@ -273,13 +254,13 @@ void Parser::parseRedirect()
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected a `;`");
 
-    _redirectSet = true;
+    _parsedAttributes.insert(REDIRECT);
 }
 
 void Parser::parseDirectoryToggle()
 {
     // DIR_LISTING := "directory_listing" ("true" | "false") SEMICOLON
-    if (_directoryToggleSet)
+    if (_parsedAttributes.count(DIRECTORY_TOGGLE) != 0)
         throwParseError("multiple `directory_listing` rules not allowed");
 
     advanceToken();
@@ -300,13 +281,14 @@ void Parser::parseDirectoryToggle()
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected `;`");
     assert(currentToken() == SEMICOLON);
-    _directoryToggleSet = true;
+    // _directoryToggleSet = true;
+    _parsedAttributes.insert(DIRECTORY_TOGGLE);
 }
 
 void Parser::parseDirectoryFile()
 {
     // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path SEMICOLON
-    if (_directoryFileSet)
+    if (_parsedAttributes.count(DIRECTORY_FILE) != 0)
         throwParseError("multiple `directory_listing_file` rules not allowed");
 
     advanceToken();
@@ -322,13 +304,13 @@ void Parser::parseDirectoryFile()
         throwParseError("expected `;`");
     assert(currentToken() == SEMICOLON);
 
-    _directoryFileSet = true;
+    _parsedAttributes.insert(DIRECTORY_FILE);
 }
 
 void Parser::parseCGI()
 {
     // CGI := "cgi_extensions" ("php" | "python")... SEMICOLON
-    if (_cgiSet)
+    if (_parsedAttributes.count(CGI_EXTENSION) != 0)
         throwParseError("multiple `cgi_extensions` rules not allowed");
 
     advanceToken();
@@ -352,7 +334,7 @@ void Parser::parseCGI()
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected `;`");
 
-    _cgiSet = true;
+    _parsedAttributes.insert(CGI_EXTENSION);
 }
 
 void Parser::parseLocationOption()
@@ -390,13 +372,14 @@ void Parser::parseLocationBlock()
 {
     // LOCATION := "location" valid_URL LEFT_BRACE [LOC_OPTION]... (TRY_FILES | \
     // REDIRECT) [LOC_OPTION]...RIGHT_BRACE
-    _tryFilesSet = false;
-    _redirectSet = false;
-    _bodySizeSet = false;
-    _methodsSet = false;
-    _directoryToggleSet = false;
-    _directoryFileSet = false;
-    _cgiSet = false;
+
+    _parsedAttributes.erase(TRY_FILES);
+    _parsedAttributes.erase(REDIRECT);
+    _parsedAttributes.erase(BODY_SIZE);
+    _parsedAttributes.erase(METHODS);
+    _parsedAttributes.erase(DIRECTORY_TOGGLE);
+    _parsedAttributes.erase(DIRECTORY_FILE);
+    _parsedAttributes.erase(CGI_EXTENSION);
 
     advanceToken();
     if (atEnd() || currentToken() != WORD)
@@ -422,6 +405,9 @@ void Parser::parseLocationBlock()
         throwParseError("unexpected end of file");
     if (currentToken() != RIGHT_BRACE)
         throwParseError("unexpected token");
+
+    if (_parsedAttributes.count(REDIRECT) == 0 && _parsedAttributes.count(TRY_FILES) == 0)
+        throwParseError("location block requires either a `try_files` or a `redirect` rule");
 }
 
 void Parser::parseServerOption()
@@ -462,18 +448,16 @@ bool Parser::atLocationOption() const
 void Parser::throwParseError(const std::string &msg) const
 {
     const Token token = atEnd() ? *(_currToken - 1) : *_currToken;
-    throw ParseError(msg, token, _configFile);
+    throw ParseError(msg, token, _filename);
 }
 
 void Parser::parseServerBlock()
 {
-    _serverNameSet = false;
-    _listenSet = false;
-    _errorPageSet.clear();
+    _parsedAttributes.erase(SERVER_NAME);
+    _parsedAttributes.erase(LISTEN);
+    _parsedErrorPages.clear();
 
-    // ? I will have to manually check if there was a listen rule
-    // ? To check this I will give the port a default value of -1
-    _serverBlocks.push_back(ServerBlock());
+    _serverConfig.push_back(ServerBlock());
     if (atEnd() || currentToken() != SERVER)
         throwParseError("expected top level `server` rule");
     assert(currentToken() == SERVER);
@@ -497,11 +481,18 @@ void Parser::parseServerBlock()
     if (atEnd() || currentToken() != RIGHT_BRACE)
         throwParseError("unexpected token");
     assert(currentToken() == RIGHT_BRACE);
+
+    if (_parsedAttributes.count(LISTEN) == 0)
+        throwParseError("server block missing `listen` rule");
+
+    if (_parsedAttributes.count(LOCATION) == 0)
+        throwParseError("server block missing `location` block");
 }
 
 TokenType Parser::currentToken() const
 {
-    // ! protect this somehow
+    if (atEnd())
+        throwParseError("unexpected end of file");
     return (_currToken)->type();
 }
 
@@ -512,36 +503,14 @@ void Parser::advanceToken()
 
 bool Parser::atEnd() const
 {
-    return _currToken >= _tokenEnd;
+    return _currToken >= _lastToken;
 }
-
-// * Config file Grammar
-// * CONFIG_FILE := SERVER [SERVER]...
-
-// SERVER := "server" LEFT_BRACE [SRV_OPTION]... LISTEN  [SRV_OPTION]...\
-// LISTEN := "listen" valid_port SEMICOLON
-// SRV_OPTION := SERVER_NAME | ERROR_PAGE
-// SERVER_NAME := "server_name" valid_hostname SEMICOLON
-// ERROR_PAGE := "error_page" valid_error_response valid_HTML_path SEMICOLON
-// SEMICOLON := ";"
-// LEFT_BRACE := "{"
-// RIGHT_BRACE := "}"
-
-// LOCATION := "location" valid_URL LEFT_BRACE [LOC_OPTION]... (TRY_FILES | \
-// REDIRECT) [LOC_OPTION]...RIGHT_BRACE
-
-// TRY_FILES := "try_files" valid_dir SEMICOLON
-// REDIRECT := "redirect" valid_URL SEMICOLON
-
-// LOC_OPTION := BODY_SIZE | METHODS | DIR_LISTING | DIR_LISTING_FILE | CGI
-
-// BODY_SIZE := "body_size" positive_number SEMICOLON
-// METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT")... SEMICOLON
-// DIR_LISTING := "directory_listing" ("true" | "false") SEMICOLON
-
-// DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path SEMICOLON
-// CGI := "cgi_extensions" ("php" | "python")... SEMICOLON
 
 Parser::~Parser()
 {
+}
+
+const std::vector<ServerBlock> &Parser::getConfig() const
+{
+    return _serverConfig;
 }
