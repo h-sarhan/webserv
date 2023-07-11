@@ -12,6 +12,7 @@
 #define TOKENIZER_HPP
 
 #include "Token.hpp"
+#include <iterator>
 #include <map>
 #include <vector>
 

@@ -10,6 +10,7 @@
 
 #include "config/Parser.hpp"
 #include "config/Validators.hpp"
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <vector>

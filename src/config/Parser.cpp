@@ -12,6 +12,8 @@
 #include "config/ParseError.hpp"
 #include "config/Tokenizer.hpp"
 #include "config/Validators.hpp"
+#include <cassert>
+#include <limits>
 #include <sstream>
 
 // * Config file Grammar

@@ -10,7 +10,9 @@
  */
 
 #include "config/Validators.hpp"
+#include <algorithm>
 #include <cassert>
+#include <limits>
 #include <map>
 #include <sstream>
 #include <sys/stat.h>

@@ -9,6 +9,7 @@
  */
 
 #include "config/ServerBlock.hpp"
+#include <limits>
 #include <sstream>
 
 /**
