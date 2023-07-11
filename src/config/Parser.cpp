@@ -36,6 +36,19 @@
 // TODO: I use `(atEnd() || currentToken() != TOKEN)` a lot to check if the next
 // TODO: token matches the grammar. I should encapsulate this into a function
 
+static HTTPMethod strToHTTPMethod(const std::string &str)
+{
+    if (str == "GET")
+        return GET;
+    if (str == "POST")
+        return POST;
+    if (str == "DELETE")
+        return DELETE;
+    if (str == "PUT")
+        return PUT;
+    return ERROR;
+}
+
 Parser::Parser(const std::string &configFile) : _filename(configFile)
 {
     Tokenizer tokenizer(configFile);
@@ -63,6 +76,65 @@ void Parser::parseConfig()
     }
     if (!atEnd())
         throwParseError("expected top level `server` rule");
+}
+
+void Parser::parseServerBlock()
+{
+    _parsedAttributes.erase(SERVER_NAME);
+    _parsedAttributes.erase(LISTEN);
+    _parsedErrorPages.clear();
+
+    _serverConfig.push_back(ServerBlock());
+    if (atEnd() || currentToken() != SERVER)
+        throwParseError("expected top level `server` rule");
+    assert(currentToken() == SERVER);
+    advanceToken();
+
+    if (atEnd() || currentToken() != LEFT_BRACE)
+        throwParseError("expected '{' to start server block");
+    assert(currentToken() == LEFT_BRACE);
+    advanceToken();
+
+    if (atEnd() || !atServerOption())
+        throwParseError("expected a valid server option");
+    assert(atServerOption());
+
+    while (!atEnd() && atServerOption())
+    {
+        parseServerOption();
+        advanceToken();
+    }
+
+    if (atEnd() || currentToken() != RIGHT_BRACE)
+        throwParseError("unexpected token");
+    assert(currentToken() == RIGHT_BRACE);
+
+    if (_parsedAttributes.count(LISTEN) == 0)
+        throwParseError("server block missing `listen` rule");
+
+    if (_parsedAttributes.count(LOCATION) == 0)
+        throwParseError("server block missing `location` block");
+}
+
+void Parser::parseServerOption()
+{
+    switch (currentToken())
+    {
+    case LISTEN:
+        parseListenRule();
+        break;
+    case SERVER_NAME:
+        parseServerName();
+        break;
+    case ERROR_PAGE:
+        parseErrorPage();
+        break;
+    case LOCATION:
+        parseLocationBlock();
+        break;
+    default:
+        throwParseError("expected a valid server option");
+    }
 }
 
 void Parser::parseListenRule()
@@ -109,6 +181,79 @@ void Parser::parseServerName()
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected a `;`");
     _parsedAttributes.insert(SERVER_NAME);
+}
+
+void Parser::parseLocationBlock()
+{
+    // LOCATION := "location" valid_URL LEFT_BRACE [LOC_OPTION]... (TRY_FILES | \
+    // REDIRECT) [LOC_OPTION]...RIGHT_BRACE
+
+    _parsedAttributes.erase(TRY_FILES);
+    _parsedAttributes.erase(REDIRECT);
+    _parsedAttributes.erase(BODY_SIZE);
+    _parsedAttributes.erase(METHODS);
+    _parsedAttributes.erase(DIRECTORY_TOGGLE);
+    _parsedAttributes.erase(DIRECTORY_FILE);
+    _parsedAttributes.erase(CGI_EXTENSION);
+
+    advanceToken();
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected valid URL");
+    assert(currentToken() == WORD);
+
+    advanceToken();
+    if (atEnd() || currentToken() != LEFT_BRACE)
+        throwParseError("expected `{` to start location block");
+    assert(currentToken() == LEFT_BRACE);
+    advanceToken();
+
+    if (atEnd() || !atLocationOption())
+        throwParseError("expected a valid location option");
+    assert(atLocationOption());
+
+    while (!atEnd() && atLocationOption())
+    {
+        parseLocationOption();
+        advanceToken();
+    }
+    if (atEnd())
+        throwParseError("unexpected end of file");
+    if (currentToken() != RIGHT_BRACE)
+        throwParseError("unexpected token");
+
+    if (_parsedAttributes.count(REDIRECT) == 0 && _parsedAttributes.count(TRY_FILES) == 0)
+        throwParseError("location block requires either a `try_files` or a `redirect` rule");
+}
+
+void Parser::parseLocationOption()
+{
+    switch (currentToken())
+    {
+    case TRY_FILES:
+        parseTryFiles();
+        break;
+    case REDIRECT:
+        parseRedirect();
+        break;
+    case BODY_SIZE:
+        parseBodySize();
+        break;
+    case METHODS:
+        parseHTTPMethods();
+        break;
+    case DIRECTORY_TOGGLE:
+        parseDirectoryToggle();
+        break;
+    case DIRECTORY_FILE:
+        parseDirectoryFile();
+        break;
+    case CGI_EXTENSION:
+        parseCGI();
+        break;
+    default:
+        throwParseError("unexpected token");
+        break;
+    }
 }
 
 void Parser::parseErrorPage()
@@ -190,19 +335,6 @@ void Parser::parseBodySize()
     _parsedAttributes.insert(BODY_SIZE);
 }
 
-static HTTPMethod strToMethod(const std::string &str)
-{
-    if (str == "GET")
-        return GET;
-    if (str == "POST")
-        return POST;
-    if (str == "DELETE")
-        return DELETE;
-    if (str == "PUT")
-        return PUT;
-    return ERROR;
-}
-
 void Parser::parseHTTPMethods()
 {
     // METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT")... SEMICOLON
@@ -216,7 +348,7 @@ void Parser::parseHTTPMethods()
 
     while (!atEnd() && currentToken() == WORD)
     {
-        const HTTPMethod method = strToMethod(_currToken->contents());
+        const HTTPMethod method = strToHTTPMethod(_currToken->contents());
         if (method == ERROR)
             throwParseError("invalid HTTP `method` specified");
 
@@ -337,100 +469,6 @@ void Parser::parseCGI()
     _parsedAttributes.insert(CGI_EXTENSION);
 }
 
-void Parser::parseLocationOption()
-{
-    switch (currentToken())
-    {
-    case TRY_FILES:
-        parseTryFiles();
-        break;
-    case REDIRECT:
-        parseRedirect();
-        break;
-    case BODY_SIZE:
-        parseBodySize();
-        break;
-    case METHODS:
-        parseHTTPMethods();
-        break;
-    case DIRECTORY_TOGGLE:
-        parseDirectoryToggle();
-        break;
-    case DIRECTORY_FILE:
-        parseDirectoryFile();
-        break;
-    case CGI_EXTENSION:
-        parseCGI();
-        break;
-    default:
-        throwParseError("unexpected token");
-        break;
-    }
-}
-
-void Parser::parseLocationBlock()
-{
-    // LOCATION := "location" valid_URL LEFT_BRACE [LOC_OPTION]... (TRY_FILES | \
-    // REDIRECT) [LOC_OPTION]...RIGHT_BRACE
-
-    _parsedAttributes.erase(TRY_FILES);
-    _parsedAttributes.erase(REDIRECT);
-    _parsedAttributes.erase(BODY_SIZE);
-    _parsedAttributes.erase(METHODS);
-    _parsedAttributes.erase(DIRECTORY_TOGGLE);
-    _parsedAttributes.erase(DIRECTORY_FILE);
-    _parsedAttributes.erase(CGI_EXTENSION);
-
-    advanceToken();
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected valid URL");
-    assert(currentToken() == WORD);
-
-    advanceToken();
-    if (atEnd() || currentToken() != LEFT_BRACE)
-        throwParseError("expected `{` to start location block");
-    assert(currentToken() == LEFT_BRACE);
-    advanceToken();
-
-    if (atEnd() || !atLocationOption())
-        throwParseError("expected a valid location option");
-    assert(atLocationOption());
-
-    while (!atEnd() && atLocationOption())
-    {
-        parseLocationOption();
-        advanceToken();
-    }
-    if (atEnd())
-        throwParseError("unexpected end of file");
-    if (currentToken() != RIGHT_BRACE)
-        throwParseError("unexpected token");
-
-    if (_parsedAttributes.count(REDIRECT) == 0 && _parsedAttributes.count(TRY_FILES) == 0)
-        throwParseError("location block requires either a `try_files` or a `redirect` rule");
-}
-
-void Parser::parseServerOption()
-{
-    switch (currentToken())
-    {
-    case LISTEN:
-        parseListenRule();
-        break;
-    case SERVER_NAME:
-        parseServerName();
-        break;
-    case ERROR_PAGE:
-        parseErrorPage();
-        break;
-    case LOCATION:
-        parseLocationBlock();
-        break;
-    default:
-        throwParseError("expected a valid server option");
-    }
-}
-
 bool Parser::atServerOption() const
 {
     return (currentToken() == SERVER_NAME || currentToken() == ERROR_PAGE ||
@@ -449,44 +487,6 @@ void Parser::throwParseError(const std::string &msg) const
 {
     const Token token = atEnd() ? *(_currToken - 1) : *_currToken;
     throw ParseError(msg, token, _filename);
-}
-
-void Parser::parseServerBlock()
-{
-    _parsedAttributes.erase(SERVER_NAME);
-    _parsedAttributes.erase(LISTEN);
-    _parsedErrorPages.clear();
-
-    _serverConfig.push_back(ServerBlock());
-    if (atEnd() || currentToken() != SERVER)
-        throwParseError("expected top level `server` rule");
-    assert(currentToken() == SERVER);
-    advanceToken();
-
-    if (atEnd() || currentToken() != LEFT_BRACE)
-        throwParseError("expected '{' to start server block");
-    assert(currentToken() == LEFT_BRACE);
-    advanceToken();
-
-    if (atEnd() || !atServerOption())
-        throwParseError("expected a valid server option");
-    assert(atServerOption());
-
-    while (!atEnd() && atServerOption())
-    {
-        parseServerOption();
-        advanceToken();
-    }
-
-    if (atEnd() || currentToken() != RIGHT_BRACE)
-        throwParseError("unexpected token");
-    assert(currentToken() == RIGHT_BRACE);
-
-    if (_parsedAttributes.count(LISTEN) == 0)
-        throwParseError("server block missing `listen` rule");
-
-    if (_parsedAttributes.count(LOCATION) == 0)
-        throwParseError("server block missing `location` block");
 }
 
 TokenType Parser::currentToken() const
