@@ -11,24 +11,37 @@
 #ifndef NETWORK_HPP
 #define NETWORK_HPP
 
+#include <algorithm>
 #include <arpa/inet.h>
+#include <cerrno>
+#include <cstddef>
+#include <cstdlib>
 #include <cstring>
-#include <errno.h>
+#include <exception>
+#include <fcntl.h>
+#include <fstream>
+#include <iterator>
+#include <map>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <signal.h>
+#include <sstream>
 #include <stdlib.h>
+#include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <poll.h>
-#include <fcntl.h>
+#include <vector>
 
-#define QUEUE_LIMIT 10
-#define PORT        "1234"
-#define IMG_HEADERS "HTTP/1.1 200 OK\r\nContent-Type: image/jpg\r\nContent-Length: "
+#define QUEUE_LIMIT  10
+#define PORT         "1234"
+#define IMG_HEADERS  "HTTP/1.1 200 OK\r\nContent-Type: image/jpg\r\nContent-Length: "
 #define HTTP_HEADERS "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: "
-#define HW_HTML "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: 100\r\n\r\n<!DOCTYPE html><html><head><title>Hello World</title></head><body><h1>Hello World</h1></body></html>"
+#define HW_HTML                                                                                    \
+    "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: "                \
+    "100\r\n\r\n<!DOCTYPE html><html><head><title>Hello World</title></head><body><h1>Hello "      \
+    "World</h1></body></html>"
 
 // extern bool quit;
 

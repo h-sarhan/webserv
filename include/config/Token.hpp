@@ -11,8 +11,8 @@
 #ifndef TOKEN_HPP
 #define TOKEN_HPP
 
-#include "TokenTypes.hpp"
-#include "common.hpp"
+#include "enums/TokenTypes.hpp"
+#include <string>
 
 /**
  * @brief This class represents a single token. A token refers to a single
@@ -34,11 +34,11 @@ class Token
      *
      * @param type Type of the token
      * @param contents The string that makes up the token
-     * @param line The line the token was found on
+     * @param lineNum The line the token was found on
      * @param column The column number the token was found on
      */
-    Token(const TokenType &type, const std::string &contents,
-          unsigned int lineNum, unsigned int column);
+    Token(const TokenType &type, const std::string &contents, unsigned int lineNum,
+          unsigned int column);
 
     /**
      * @brief Token copy assignment operator
@@ -59,35 +59,35 @@ class Token
      * @brief Destroy the Token object
      *
      */
-    ~Token(void);
+    ~Token();
 
     /**
      * @brief Get the contents of the token
      *
      * @return std::string Token contents
      */
-    std::string contents(void) const;
+    std::string contents() const;
 
     /**
      * @brief Get the token type
      *
      * @return TokenType token type
      */
-    TokenType type(void) const;
+    TokenType type() const;
 
     /**
      * @brief The line the token was found on
      *
      * @return unsigned int
      */
-    unsigned int line(void) const;
+    unsigned int line() const;
 
     /**
      * @brief The column number of the token
      *
      * @return unsigned int Column number
      */
-    unsigned int column(void) const;
+    unsigned int column() const;
 };
 
 std::ostream &operator<<(std::ostream &os, const Token &tkn);

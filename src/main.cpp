@@ -8,21 +8,13 @@
  *
  */
 
-#include "Tokenizer.hpp"
-#include "Server.hpp"
+#include "config/Parser.hpp"
+#include "config/Validators.hpp"
+#include "network/Server.hpp"
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <vector>
-
-/**
- * @brief Static helper function to print a token
- *
- * @param token Token to be printed
- */
-static void printToken(const Token &token)
-{
-    std::cout << "|" << token << "|" << std::endl;
-}
 
 /**
  * @brief Entrypoint to our program
@@ -36,30 +28,32 @@ int main(int argc, char **argv)
         std::cerr << "" << std::endl;
         return (EXIT_FAILURE);
     }
-    std::string filename = "./example.conf";
+
+    // Test that validators work
+    inputValidatorTests();
     if (argc == 2)
-        filename = argv[1];
-    try
     {
-        ConfigTokenizer tokenizer(filename);
-        std::vector<Token> tokens = tokenizer.tokens();
+        std::string filename = argv[1];
+        try
+        {
+            // ConfigTokenizer tokenizer(filename);
+            // std::vector<Token> tokens = tokenizer.tokens();
+            Parser parser(filename);
 
-        // Printing tokens for debugging
-        std::for_each(tokens.begin(), tokens.end(), printToken);
+            Server s("webserv.com", "1234");
+            s.bindSocket();
+            s.startListening();
+            const std::vector<ServerBlock> &config = parser.getConfig();
+            std::cout << config;
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << e.what() << std::endl;
+            return (EXIT_FAILURE);
+        }
+    }
+    const ServerBlock &config = createDefaultServerBlock();
+    std::cout << config;
 
-        Server s("webserv.com", "1234");
-        s.bindSocket();
-        s.startListening();
-    }
-    catch (const std::runtime_error &e)
-    {
-        std::cerr << e.what() << std::endl;
-        return (EXIT_FAILURE);
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << std::endl;
-        return (EXIT_FAILURE);
-    }
     return (EXIT_SUCCESS);
 }

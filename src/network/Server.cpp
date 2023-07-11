@@ -8,7 +8,8 @@
  *
  */
 
-#include "Server.hpp"
+#include "network/Server.hpp"
+#include "network/network.hpp"
 #include <cstddef>
 
 bool quit = false;
