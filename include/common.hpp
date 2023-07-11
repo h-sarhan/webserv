@@ -17,6 +17,7 @@
 #include <iterator>
 #include <sstream>
 #include <string>
+#include <cstring>
 #include <vector>
 
 #endif

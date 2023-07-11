@@ -30,6 +30,8 @@ class Server
     addrinfo *servInfo;
     int listener;
     std::vector<pollfd> clients;
+    // const std::vector<ServerBlock>& virtualServers;
+
     // std::map<std::string route, Location location> locations;
     // std::map<int errCode, std::string pageLocation>	errorPages;
 
@@ -39,8 +41,8 @@ class Server
     void bindSocket();
     void startListening();
     void acceptNewConnection();
-    bool readRequest(size_t it);
-    void sendResponse(size_t it);
+    std::string readRequest(size_t clientNo);
+    void sendResponse(size_t clientNo, std::string request);
     ~Server();
 };
 

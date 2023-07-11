@@ -13,33 +13,29 @@
 bool quit = false;
 Server::Server() : name("webserv.com"), port("1234"), listener(-1)
 {
-    addrinfo hints;
+    addrinfo hints = {};
     int status;
 
-    // std::fill(&hints, &hints + sizeof(hints), 0); // cpp alternative for
-    // memset, yet to test
-    memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
     if ((status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo)) != 0)
         throw SystemCallException("getaddrinfo", gai_strerror(status));
+    // virtualServers = getConfig();
 }
 
-Server::Server(std::string name, std::string port)
-    : name(name), port(port), listener(-1)
+Server::Server(std::string name, std::string port) : name(name), port(port), listener(-1)
 {
-    addrinfo hints;
+    addrinfo hints = {};
     int status;
 
-    // std::fill(&hints, &hints + sizeof(hints), 0); // cpp alternative for
-    // memset, yet to test
-    memset(&hints, 0, sizeof(hints));   // make sure the struct is empty
-    hints.ai_family = AF_UNSPEC;        // don't care IPv4 or IPv6
-    hints.ai_socktype = SOCK_STREAM;    // TCP stream sockets
-    hints.ai_flags = AI_PASSIVE;        // fill in my IP for me
-    if ((status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo)) != 0)   // first param is host IP/name and its null because we set ai_flags
+    hints.ai_family = AF_UNSPEC;       // don't care IPv4 or IPv6
+    hints.ai_socktype = SOCK_STREAM;   // TCP stream sockets
+    hints.ai_flags = AI_PASSIVE;       // fill in my IP for me
+    if ((status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo)) !=
+        0)   // first param is host IP/name and its null because we set ai_flags
         throw SystemCallException("getaddrinfo", gai_strerror(status));
+    // virtualServers = getConfig();
 }
 
 static int checkErr(std::string funcName, int retValue)
@@ -67,20 +63,19 @@ void Server::bindSocket()
 
     for (p = servInfo; p != NULL; p = p->ai_next)
     {
-        if ((this->listener = socket(servInfo->ai_family, servInfo->ai_socktype,
-                                     servInfo->ai_protocol)) == -1)
+        if ((this->listener =
+                 socket(servInfo->ai_family, servInfo->ai_socktype, servInfo->ai_protocol)) == -1)
             std::cout << "socket: " << strerror(errno) << std::endl;
         else
         {
             // fcntl(this->listener, F_SETFL, O_NONBLOCK); // Setting the socket
             // to be non-blocking
-            checkErr("setsockopt",
-                     setsockopt(this->listener, SOL_SOCKET, SO_REUSEADDR,
-                                &reusePort, sizeof(reusePort)));
-            if (bind(this->listener, servInfo->ai_addr, servInfo->ai_addrlen) !=
-                -1)   // binding the socket to a port means - the port number
-                      // will be used by the kernel to match an incoming packet
-                      // to webserv's process socket descriptor.
+            checkErr("setsockopt", setsockopt(this->listener, SOL_SOCKET, SO_REUSEADDR, &reusePort,
+                                              sizeof(reusePort)));
+            // binding the socket to a port means - the port number
+            // will be used by the kernel to match an incoming packet
+            // to webserv's process socket descriptor.
+            if (bind(this->listener, servInfo->ai_addr, servInfo->ai_addrlen) != -1)
                 break;
             std::cout << "bind: " << strerror(errno) << std::endl;
             close(this->listener);
@@ -92,14 +87,14 @@ void Server::bindSocket()
 }
 
 // change this to use fd directly and close stuff in caller func
-bool Server::readRequest(size_t clientNo)
+std::string Server::readRequest(size_t clientNo)
 {
     int bytes_rec;
-    char *buf = new char[2000];
+    char *buf = new char[2000000];
 
     // receiving request
     std::cout << "Received a request: " << std::endl;
-    bytes_rec = recv(clients[clientNo].fd, buf, 2000, 0);
+    bytes_rec = recv(clients[clientNo].fd, buf, 2000000, 0);
     if (bytes_rec < 0)
         std::cout << "Failed to receive request" << std::endl;
     else if (bytes_rec == 0)
@@ -109,38 +104,62 @@ bool Server::readRequest(size_t clientNo)
         close(clients[clientNo].fd);
         clients.erase(clients.begin() + clientNo);
         delete[] buf;
-        return (false);
+        return std::string();
     }
     buf[bytes_rec] = 0;
     std::cout << "bytes = " << bytes_rec << ", msg: " << std::endl;
     std::cout << "---------------------------------------------------------\n";
     std::cout << buf;
     std::cout << "---------------------------------------------------------\n";
+
+    // example of how to save an image from a post req or any file
+
+    // std::ofstream file("img.png", std::ios::binary);
+    // std::string req(buf);
+    // int index = req.find("\r\n\r\n");
+    // file.write(buf + index + 4, bytes_rec - index - 4);
+    // file.close();
+    
     delete[] buf;
-    return (true);
+    return (std::string(buf));
 }
 
-void Server::sendResponse(size_t clientNo)
+std::string static createResponse(std::string filename, std::string headers)
 {
     std::ifstream file;
-    std::stringstream buffer;
+    std::stringstream responseBuffer;
+    std::stringstream fileBuffer;
     std::string fileContents;
-    std::string msg = HTTP_HEADERS;
+
+    file.open(filename);
+    fileBuffer << file.rdbuf();
+    file.close();
+    fileContents = fileBuffer.str();
+    responseBuffer << headers;
+    responseBuffer << fileContents.length() << "\r\n\r\n";
+    responseBuffer << fileContents;
+    return responseBuffer.str();
+}
+
+void Server::sendResponse(size_t clientNo, std::string request)
+{
+    std::string msg;
     int bytesSent;
 
-    file.open("artgallery.html");
-    buffer << file.rdbuf();
-    fileContents = buffer.str();
-    msg.append(fileContents);
-    file.close();
-    // std::string msg = HW_HTML;
+    if (request.length() == 0)
+        return;
+    if (request.find("/artgallerycontent/2020_3.jpg") != std::string::npos)
+        msg = createResponse("artgallerycontent/2020_3.jpg", IMG_HEADERS);
+    else
+        msg = createResponse("artgallery.html", HTTP_HEADERS);
     std::cout << "Sending a response... " << std::endl;
-    if ((bytesSent = send(clients[clientNo].fd, msg.c_str(), msg.length(), 0)) < 0)
+    bytesSent = send(clients[clientNo].fd, msg.c_str(), msg.length(), 0);
+    if (bytesSent < 0)
         std::cout << "Sending response failed" << std::endl;
     else
-        std::cout << "Response sent to fd " << clientNo << ", " << clients[clientNo].fd << ", bytesSent = " << bytesSent << std::endl;
+        std::cout << "Response sent to fd " << clientNo << ", " << clients[clientNo].fd
+                  << ", bytesSent = " << bytesSent << std::endl;
     std::cout << "---------------------------------------------------------\n";
-    
     close(clients[clientNo].fd);
     clients.erase(clients.begin() + clientNo);
 }
@@ -162,7 +181,7 @@ void Server::acceptNewConnection()
     if (newFd == -1)
     {
         std::cout << "Accept failed" << std::endl;
-        return ;
+        return;
     }
     std::cout << "New connection! fd = " << newFd << std::endl;
     if (clients.size() < MAX_CLIENTS)
@@ -176,23 +195,20 @@ void Server::acceptNewConnection()
 
 void Server::startListening()
 {
-    int pollCount;
-
     signal(SIGINT, sigInthandler);
     checkErr("listen", listen(this->listener, QUEUE_LIMIT));
     std::cout << "Listening on port " << this->port << std::endl;
     while (true)
     {
-        pollCount = checkErr("poll", poll(&clients[0], clients.size(), -1));
-		for (size_t i = 0; i < clients.size(); i++)
+        checkErr("poll", poll(&clients[0], clients.size(), -1));
+        for (size_t i = 0; i < clients.size(); i++)
         {
-            if ((clients[i].fd == listener) && (clients[i].revents & POLLIN))   // server listener got something new to read
+            // server listener got something new to read
+            if ((clients[i].fd == listener) && (clients[i].revents & POLLIN))
                 acceptNewConnection();
-            else if ((clients[i].revents & POLLIN) && (clients[i].revents & POLLOUT))  // one of the clients is ready to send and recv
-            {
-                if (readRequest(i)) // try to read request
-                    sendResponse(i); // send response only if request got read and is valid
-            }
+            // one of the clients is ready to send and recv
+            else if ((clients[i].revents & POLLIN) && (clients[i].revents & POLLOUT))
+                sendResponse(i, readRequest(i));
         }
         if (quit)
             break;
@@ -203,7 +219,6 @@ Server::~Server()
 {
     std::cout << "Server destructor called" << std::endl;
     freeaddrinfo(servInfo);
-    std::cout << "clients size = " << clients.size() << std::endl;
     for (size_t i = 0; i < clients.size(); i++)
         close(clients[i].fd);
 }
