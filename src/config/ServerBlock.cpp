@@ -22,7 +22,7 @@ static Route createDefaultRoute()
     // Max body size is unlimited by default
     defaultRoute.bodySize = std::numeric_limits<size_t>::max();
     defaultRoute.listDirectories = true;
-    defaultRoute.directoryFile = "";
+    defaultRoute.listDirectoriesFile = "";
     defaultRoute.redirectTo = "";
     // Only GET is allowed by default
     defaultRoute.methodsAllowed.insert(GET);
@@ -34,7 +34,7 @@ static Route createDefaultRoute()
  *
  * @return ServerBlock
  */
-ServerBlock createDefaultServerBlock()
+const ServerBlock createDefaultServerBlock()
 {
     ServerBlock defaultServerBlock;
     defaultServerBlock.port = 80;

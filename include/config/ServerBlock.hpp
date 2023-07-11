@@ -22,13 +22,13 @@
  */
 struct Route
 {
-    std::string serveDir;                     // Required
-    size_t bodySize;                          // Optional
-    bool listDirectories;                     // Optional, false by default
-    std::string directoryFile;                // Optional
-    std::vector<std::string> cgiExtensions;   // Optional
-    std::string redirectTo;                   // Required if serveDir is not provided
-    std::set<HTTPMethod> methodsAllowed;      // Methods allowed on this route
+    std::string serveDir;                  // Required
+    size_t bodySize;                       // Optional
+    bool listDirectories;                  // Optional, false by default
+    std::string listDirectoriesFile;       // Optional
+    std::set<std::string> cgiExtensions;   // Optional
+    std::string redirectTo;                // Required if serveDir is not provided
+    std::set<HTTPMethod> methodsAllowed;   // Methods allowed on this route
 };
 
 /**
@@ -36,12 +36,12 @@ struct Route
  */
 struct ServerBlock
 {
-    int port;                                               // Required
-    std::string hostname;                                   // Optional
-    std::map<unsigned int, const std::string> errorPages;   // Optional
-    std::map<std::string, const Route> routes;              // At least one route
+    int port;                                         // Required
+    std::string hostname;                             // Optional
+    std::map<unsigned int, std::string> errorPages;   // Optional
+    std::map<std::string, Route> routes;              // At least one route
 };
 
-ServerBlock createDefaultServerBlock();
+const ServerBlock createDefaultServerBlock();
 
 #endif

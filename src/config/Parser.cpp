@@ -85,6 +85,8 @@ void Parser::parseServerBlock()
     _parsedErrorPages.clear();
 
     _serverConfig.push_back(ServerBlock());
+    _currServerBlock = _serverConfig.end() - 1;
+
     if (atEnd() || currentToken() != SERVER)
         throwParseError("expected top level `server` rule");
     assert(currentToken() == SERVER);
@@ -153,7 +155,7 @@ void Parser::parseListenRule()
 
     std::stringstream portStream(_currToken->contents());
 
-    portStream >> (_serverConfig.end() - 1)->port;
+    portStream >> _currServerBlock->port;
 
     advanceToken();
     if (atEnd() || currentToken() != SEMICOLON)
@@ -176,11 +178,53 @@ void Parser::parseServerName()
 
     if (validateHostName(_currToken->contents()) == false)
         throwParseError("expected a valid host name");
+
+    _currServerBlock->hostname = _currToken->contents();
+
     advanceToken();
 
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected a `;`");
     _parsedAttributes.insert(SERVER_NAME);
+}
+
+void Parser::parseErrorPage()
+{
+    // ERROR_PAGE := "error_page" valid_error_response valid_HTML_path SEMICOLON
+    int response;
+    std::string htmlPath;
+
+    advanceToken();
+
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected a 4XX or 5XX response code");
+    assert(currentToken() == WORD);
+
+    if (validateErrorResponse(_currToken->contents()) == false)
+        throwParseError("expected a 4XX or 5XX response code");
+
+    std::stringstream responseStream(_currToken->contents());
+    responseStream >> response;
+
+    if (_parsedErrorPages.count(response) != 0)
+        throwParseError("duplicate response code not allowed");
+    advanceToken();
+
+    if (atEnd() || currentToken() != WORD)
+        throwParseError("expected a valid path to an HTML file");
+    assert(currentToken() == WORD);
+
+    if (validateHTMLFile(_currToken->contents()) == false)
+        throwParseError("expected a valid path to an HTML file");
+
+    std::stringstream htmlStream(_currToken->contents());
+    htmlStream >> htmlPath;
+    _currServerBlock->errorPages.insert(std::make_pair(response, htmlPath));
+
+    _parsedErrorPages.insert(response);
+    advanceToken();
+    if (atEnd() || currentToken() != SEMICOLON)
+        throwParseError("expected a `;`");
 }
 
 void Parser::parseLocationBlock()
@@ -198,8 +242,12 @@ void Parser::parseLocationBlock()
 
     advanceToken();
     if (atEnd() || currentToken() != WORD)
-        throwParseError("expected valid URL");
+        throwParseError("expected valid path");
     assert(currentToken() == WORD);
+
+    const std::string &routePath = _currToken->contents();
+
+    _currRoute = _currServerBlock->routes.insert(std::make_pair(routePath, Route())).first;
 
     advanceToken();
     if (atEnd() || currentToken() != LEFT_BRACE)
@@ -223,6 +271,7 @@ void Parser::parseLocationBlock()
 
     if (_parsedAttributes.count(REDIRECT) == 0 && _parsedAttributes.count(TRY_FILES) == 0)
         throwParseError("location block requires either a `try_files` or a `redirect` rule");
+    _parsedAttributes.insert(LOCATION);
 }
 
 void Parser::parseLocationOption()
@@ -256,45 +305,11 @@ void Parser::parseLocationOption()
     }
 }
 
-void Parser::parseErrorPage()
-{
-    // ERROR_PAGE := "error_page" valid_error_response valid_HTML_path SEMICOLON
-    int response;
-    std::string htmlPath;
-
-    advanceToken();
-
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected a 4XX or 5XX response code");
-    assert(currentToken() == WORD);
-
-    if (validateErrorResponse(_currToken->contents()) == false)
-        throwParseError("expected a 4XX or 5XX response code");
-    std::stringstream responseStream(_currToken->contents());
-    responseStream >> response;
-    if (_parsedErrorPages.count(response) != 0)
-        throwParseError("duplicate response code not allowed");
-    _parsedErrorPages.insert(response);
-    advanceToken();
-
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected a valid path to an HTML file");
-    assert(currentToken() == WORD);
-    if (validateHTMLFile(_currToken->contents()) == false)
-        throwParseError("expected a valid path to an HTML file");
-
-    std::stringstream htmlStream(_currToken->contents());
-    htmlStream >> htmlPath;
-
-    advanceToken();
-    if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected a `;`");
-}
-
 void Parser::parseTryFiles()
 {
     if (_parsedAttributes.count(TRY_FILES) != 0)
         throwParseError("multiple `try_files` rules not allowed");
+
     if (_parsedAttributes.count(REDIRECT) != 0)
         throwParseError("a location block cannot have both a `try_files` and a "
                         "`redirect` rule");
@@ -306,6 +321,8 @@ void Parser::parseTryFiles()
 
     if (validateDirectory(_currToken->contents()) == false)
         throwParseError("invalid directory");
+
+    _currRoute->second.serveDir = _currToken->contents();
 
     advanceToken();
     if (atEnd() || currentToken() != SEMICOLON)
@@ -327,6 +344,10 @@ void Parser::parseBodySize()
     if (validateBodySize(_currToken->contents()) == false)
         throwParseError("expected a valid body size in bytes [10 - 2^32]");
 
+    std::stringstream bodySizeStream(_currToken->contents());
+
+    bodySizeStream >> _currRoute->second.bodySize;
+
     advanceToken();
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected `;`");
@@ -338,7 +359,7 @@ void Parser::parseBodySize()
 void Parser::parseHTTPMethods()
 {
     // METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT")... SEMICOLON
-    std::set<HTTPMethod> methods;
+    std::set<HTTPMethod> &methods = _currRoute->second.methodsAllowed;
     if (_parsedAttributes.count(METHODS) != 0)
         throwParseError("multiple `method` rules not allowed");
     advanceToken();
@@ -361,7 +382,6 @@ void Parser::parseHTTPMethods()
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected `;`");
 
-    // _methodsSet = true;
     _parsedAttributes.insert(METHODS);
 }
 
@@ -382,6 +402,8 @@ void Parser::parseRedirect()
     if (validateURL(_currToken->contents()) == false)
         throwParseError("expected a valid URL");
 
+    _currRoute->second.redirectTo = _currToken->contents();
+
     advanceToken();
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected a `;`");
@@ -400,8 +422,7 @@ void Parser::parseDirectoryToggle()
         throwParseError("expected a `true` or `false`");
     assert(currentToken() == WORD);
 
-    bool toggle;
-    (void) toggle;
+    bool &toggle = _currRoute->second.listDirectories;
     if (_currToken->contents() == "true")
         toggle = true;
     else if (_currToken->contents() == "false")
@@ -413,7 +434,7 @@ void Parser::parseDirectoryToggle()
     if (atEnd() || currentToken() != SEMICOLON)
         throwParseError("expected `;`");
     assert(currentToken() == SEMICOLON);
-    // _directoryToggleSet = true;
+
     _parsedAttributes.insert(DIRECTORY_TOGGLE);
 }
 
@@ -430,6 +451,8 @@ void Parser::parseDirectoryFile()
 
     if (validateHTMLFile(_currToken->contents()) == false)
         throwParseError("expected valid path to HTML file");
+
+    _currRoute->second.listDirectoriesFile = _currToken->contents();
 
     advanceToken();
     if (atEnd() || currentToken() != SEMICOLON)
@@ -450,7 +473,7 @@ void Parser::parseCGI()
         throwParseError("expected valid cgi");
     assert(currentToken() == WORD);
 
-    std::set<std::string> cgis;
+    std::set<std::string> &cgis = _currRoute->second.cgiExtensions;
     while (!atEnd() && currentToken() == WORD)
     {
         const std::string cgi = _currToken->contents();

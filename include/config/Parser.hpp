@@ -23,6 +23,8 @@ class Parser
     std::vector<ServerBlock> _serverConfig;
     std::vector<Token>::const_iterator _currToken;
     std::vector<Token>::const_iterator _lastToken;
+    std::vector<ServerBlock>::iterator _currServerBlock;
+    std::map<std::string, Route>::iterator _currRoute;
 
   public:
     Parser(const std::string &fileName);
