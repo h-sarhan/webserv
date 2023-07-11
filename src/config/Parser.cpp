@@ -1,25 +1,25 @@
 /**
- * @file ServerConfig.cpp
+ * @file Parser.cpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file implements the ServerConfig class
+ * @brief This file implements the config Parser class
  * @date 2023-07-07
  *
  * @copyright Copyright (c) 2023
  *
  */
 
-#include "config/ServerConfig.hpp"
-#include "InputValidators.hpp"
-#include "config/ConfigParseError.hpp"
+#include "config/Parser.hpp"
+#include "config/ParseError.hpp"
 #include "config/Tokenizer.hpp"
-#include <limits>
+#include "config/Validators.hpp"
+#include <sstream>
 
 /**
  * @brief Create a Default Route object
  *
  * @return Route
  */
-static Route createDefaultRoute(void)
+static Route createDefaultRoute()
 {
     Route defaultRoute;
     defaultRoute.serveDir = "./assets/web";
@@ -38,7 +38,7 @@ static Route createDefaultRoute(void)
  *
  * @return ServerBlock
  */
-static ServerBlock createDefaultServerBlock(void)
+static ServerBlock createDefaultServerBlock()
 {
     ServerBlock defaultServerBlock;
     defaultServerBlock.port = 80;
@@ -51,19 +51,18 @@ static ServerBlock createDefaultServerBlock(void)
     return defaultServerBlock;
 }
 
-ServerConfig::ServerConfig(void) : _configFile("")
+Parser::Parser() : _configFile("")
 {
     _serverBlocks.push_back(createDefaultServerBlock());
 }
 
-ServerConfig::ServerConfig(const std::string &configFile)
-    : _configFile(configFile)
+Parser::Parser(const std::string &configFile) : _configFile(configFile)
 {
-    ConfigTokenizer tokenizer(configFile);
+    Tokenizer tokenizer(configFile);
 
     const std::vector<Token> &tokens = tokenizer.tokens();
     if (tokens.empty())
-        throw ConfigParseError("config file cannot be empty", _configFile);
+        throw ParseError("config file cannot be empty", _configFile);
 
     _currToken = tokens.begin();
     _tokenEnd = tokens.end();
@@ -71,7 +70,7 @@ ServerConfig::ServerConfig(const std::string &configFile)
 }
 
 // buggy implementation use recursion instead of loops
-void ServerConfig::parseConfigFile(void)
+void Parser::parseConfigFile()
 {
     // * CONFIG_FILE := SERVER [SERVER]...
     parseServerBlock();
@@ -87,7 +86,7 @@ void ServerConfig::parseConfigFile(void)
         throwParseError("expected top level `server` rule");
 }
 
-void ServerConfig::parseListenRule(void)
+void Parser::parseListenRule()
 {
     // LISTEN := "listen" valid_port SEMICOLON
     if (_listenSet)
@@ -100,6 +99,11 @@ void ServerConfig::parseListenRule(void)
 
     if (validatePort(_currToken->contents()) == false)
         throwParseError("expected a valid port number");
+
+    std::stringstream portStream(_currToken->contents());
+
+    portStream >> (_serverBlocks.end() - 1)->port;
+
     advanceToken();
 
     if (atEnd() || currentToken() != SEMICOLON)
@@ -108,7 +112,7 @@ void ServerConfig::parseListenRule(void)
     _listenSet = true;
 }
 
-void ServerConfig::parseServerName(void)
+void Parser::parseServerName()
 {
     // SERVER_NAME := "server_name" valid_hostname SEMICOLON
     if (_serverNameSet)
@@ -128,7 +132,7 @@ void ServerConfig::parseServerName(void)
     _serverNameSet = true;
 }
 
-void ServerConfig::parseErrorPage(void)
+void Parser::parseErrorPage()
 {
     // ERROR_PAGE := "error_page" valid_error_response valid_HTML_path SEMICOLON
     int response;
@@ -163,7 +167,7 @@ void ServerConfig::parseErrorPage(void)
         throwParseError("expected a `;`");
 }
 
-void ServerConfig::parseTryFiles(void)
+void Parser::parseTryFiles()
 {
     if (_tryFilesSet)
         throwParseError("multiple `try_files` rules not allowed");
@@ -185,7 +189,7 @@ void ServerConfig::parseTryFiles(void)
     _tryFilesSet = true;
 }
 
-void ServerConfig::parseBodySize(void)
+void Parser::parseBodySize()
 {
     // BODY_SIZE := "body_size" positive_number SEMICOLON
     if (_bodySizeSet)
@@ -219,7 +223,7 @@ static HTTPMethod strToMethod(const std::string &str)
     return ERROR;
 }
 
-void ServerConfig::parseHTTPMethods(void)
+void Parser::parseHTTPMethods()
 {
     // METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT")... SEMICOLON
     std::set<HTTPMethod> methods;
@@ -248,7 +252,7 @@ void ServerConfig::parseHTTPMethods(void)
     _methodsSet = true;
 }
 
-void ServerConfig::parseRedirect(void)
+void Parser::parseRedirect()
 {
     // REDIRECT := "redirect" valid_URL SEMICOLON
     if (_redirectSet)
@@ -272,7 +276,7 @@ void ServerConfig::parseRedirect(void)
     _redirectSet = true;
 }
 
-void ServerConfig::parseDirectoryToggle(void)
+void Parser::parseDirectoryToggle()
 {
     // DIR_LISTING := "directory_listing" ("true" | "false") SEMICOLON
     if (_directoryToggleSet)
@@ -299,7 +303,7 @@ void ServerConfig::parseDirectoryToggle(void)
     _directoryToggleSet = true;
 }
 
-void ServerConfig::parseDirectoryFile(void)
+void Parser::parseDirectoryFile()
 {
     // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path SEMICOLON
     if (_directoryFileSet)
@@ -321,7 +325,7 @@ void ServerConfig::parseDirectoryFile(void)
     _directoryFileSet = true;
 }
 
-void ServerConfig::parseCGI(void)
+void Parser::parseCGI()
 {
     // CGI := "cgi_extensions" ("php" | "python")... SEMICOLON
     if (_cgiSet)
@@ -351,7 +355,7 @@ void ServerConfig::parseCGI(void)
     _cgiSet = true;
 }
 
-void ServerConfig::parseLocationOption(void)
+void Parser::parseLocationOption()
 {
     switch (currentToken())
     {
@@ -382,7 +386,7 @@ void ServerConfig::parseLocationOption(void)
     }
 }
 
-void ServerConfig::parseLocationBlock(void)
+void Parser::parseLocationBlock()
 {
     // LOCATION := "location" valid_URL LEFT_BRACE [LOC_OPTION]... (TRY_FILES | \
     // REDIRECT) [LOC_OPTION]...RIGHT_BRACE
@@ -420,7 +424,7 @@ void ServerConfig::parseLocationBlock(void)
         throwParseError("unexpected token");
 }
 
-void ServerConfig::parseServerOption(void)
+void Parser::parseServerOption()
 {
     switch (currentToken())
     {
@@ -441,13 +445,13 @@ void ServerConfig::parseServerOption(void)
     }
 }
 
-bool ServerConfig::atServerOption(void) const
+bool Parser::atServerOption() const
 {
     return (currentToken() == SERVER_NAME || currentToken() == ERROR_PAGE ||
             currentToken() == LISTEN || currentToken() == LOCATION);
 }
 
-bool ServerConfig::atLocationOption(void) const
+bool Parser::atLocationOption() const
 {
     return (currentToken() == TRY_FILES || currentToken() == BODY_SIZE ||
             currentToken() == METHODS || currentToken() == DIRECTORY_TOGGLE ||
@@ -455,23 +459,21 @@ bool ServerConfig::atLocationOption(void) const
             currentToken() == DIRECTORY_FILE);
 }
 
-void ServerConfig::throwParseError(const std::string &msg) const
+void Parser::throwParseError(const std::string &msg) const
 {
     const Token token = atEnd() ? *(_currToken - 1) : *_currToken;
-    throw ConfigParseError(msg, token, _configFile);
+    throw ParseError(msg, token, _configFile);
 }
 
-void ServerConfig::parseServerBlock(void)
+void Parser::parseServerBlock()
 {
     _serverNameSet = false;
     _listenSet = false;
     _errorPageSet.clear();
+
     // ? I will have to manually check if there was a listen rule
-    // To check this I will give the port a default value of -1
-    // ! I will have to manually check if there are duplicates
-    // I am doing this with static variables
-    // * SERVER := "server" LEFT_BRACE [SRV_OPTION]... LISTEN  [SRV_OPTION]...\
-    // LOCATION [SRV_OPTION]... RIGHT_BRACE
+    // ? To check this I will give the port a default value of -1
+    _serverBlocks.push_back(ServerBlock());
     if (atEnd() || currentToken() != SERVER)
         throwParseError("expected top level `server` rule");
     assert(currentToken() == SERVER);
@@ -497,18 +499,18 @@ void ServerConfig::parseServerBlock(void)
     assert(currentToken() == RIGHT_BRACE);
 }
 
-TokenType ServerConfig::currentToken(void) const
+TokenType Parser::currentToken() const
 {
     // ! protect this somehow
     return (_currToken)->type();
 }
 
-void ServerConfig::advanceToken(void)
+void Parser::advanceToken()
 {
     _currToken++;
 }
 
-bool ServerConfig::atEnd(void) const
+bool Parser::atEnd() const
 {
     return _currToken >= _tokenEnd;
 }
@@ -540,6 +542,6 @@ bool ServerConfig::atEnd(void) const
 // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path SEMICOLON
 // CGI := "cgi_extensions" ("php" | "python")... SEMICOLON
 
-ServerConfig::~ServerConfig(void)
+Parser::~Parser()
 {
 }

@@ -1,14 +1,15 @@
 /**
- * @file ConfigParseError.cpp
+ * @file ParseError.cpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file implements the ConfigParseError exception class
+ * @brief This file implements the ParseError exception class
  * @date 2023-07-09
  *
  * @copyright Copyright (c) 2023
  *
  */
-#include "ConfigParseError.hpp"
+#include "config/ParseError.hpp"
 #include <fstream>
+#include <sstream>
 
 // ! DUMB IMPLEMENTATION: Consider storing the line somewhere
 static const std::string getLine(const std::string &filename,
@@ -23,9 +24,8 @@ static const std::string getLine(const std::string &filename,
     return line;
 }
 
-ConfigParseError::ConfigParseError(const std::string &errorMsg,
-                                   const Token &token,
-                                   const std::string &filename)
+ParseError::ParseError(const std::string &errorMsg, const Token &token,
+                       const std::string &filename)
 
 {
     std::stringstream msg;
@@ -37,8 +37,7 @@ ConfigParseError::ConfigParseError(const std::string &errorMsg,
     _errorMsg = msg.str();
 }
 
-ConfigParseError::ConfigParseError(const std::string &errorMsg,
-                                   const std::string &filename)
+ParseError::ParseError(const std::string &errorMsg, const std::string &filename)
 
 {
     std::stringstream msg;
@@ -47,11 +46,11 @@ ConfigParseError::ConfigParseError(const std::string &errorMsg,
     _errorMsg = msg.str();
 }
 
-const char *ConfigParseError::what() const throw()
+const char *ParseError::what() const throw()
 {
     return _errorMsg.c_str();
 }
 
-ConfigParseError::~ConfigParseError() throw()
+ParseError::~ParseError() throw()
 {
 }

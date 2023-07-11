@@ -1,17 +1,18 @@
 /**
- * @file InputValidators.hpp
+ * @file Validators.hpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file declares various input validators used throughout parsing
+ * @brief This file declares various input validators used throughout config
+ * file parsing
  * @date 2023-07-09
  *
  * @copyright Copyright (c) 2023
  *
  */
 
-#ifndef INPUT_VALIDATORS_HPP
-#define INPUT_VALIDATORS_HPP
+#ifndef VALIDATORS_HPP
+#define VALIDATORS_HPP
 
-#include "common.hpp"
+#include <string>
 
 // Various input validators associated with parsing the config file
 bool validateHostName(const std::string &hostname);
@@ -24,5 +25,5 @@ bool validateBodySize(const std::string &bodySizeStr);
 bool validateHTMLMethod(const std::string &bodySizeStr);
 
 // A function that tests out all the input validators
-void inputValidatorTests(void);
+void inputValidatorTests();
 #endif

@@ -8,10 +8,8 @@
  *
  */
 
-#include "InputValidators.hpp"
-#include "Server.hpp"
-#include "ServerConfig.hpp"
-#include "Tokenizer.hpp"
+#include "config/Parser.hpp"
+#include "config/Validators.hpp"
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -35,7 +33,7 @@ int main(int argc, char **argv)
     {
         // ConfigTokenizer tokenizer(filename);
         // std::vector<Token> tokens = tokenizer.tokens();
-        ServerConfig config(filename);
+        Parser config(filename);
 
         inputValidatorTests();
         // Server s("webserv.com", "1234");

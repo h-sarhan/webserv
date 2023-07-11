@@ -12,7 +12,8 @@
 #define TOKENIZER_HPP
 
 #include "Token.hpp"
-#include "common.hpp"
+#include <map>
+#include <vector>
 
 typedef std::istream_iterator<std::string> tokenIterator;
 
@@ -20,18 +21,18 @@ typedef std::istream_iterator<std::string> tokenIterator;
  * @brief This class tokenizes the configuration file of our web server.
  * The list of tokens produces helps with parsing the configuration file.
  */
-class ConfigTokenizer
+class Tokenizer
 {
   private:
     std::vector<Token> _tokens;
     unsigned int _line;
 
   public:
-    ConfigTokenizer(const std::string &filename);
+    Tokenizer(const std::string &filename);
 
-    ~ConfigTokenizer(void);
+    ~Tokenizer();
 
-    const std::vector<Token> &tokens(void) const;
+    const std::vector<Token> &tokens() const;
 
     // Map strings to tokens
     static std::map<std::string, const TokenType> strToToken;
@@ -40,8 +41,8 @@ class ConfigTokenizer
     static std::map<TokenType, const std::string> tokenToStr;
 
   private:
-    ConfigTokenizer(const ConfigTokenizer &old);
-    ConfigTokenizer &operator=(const ConfigTokenizer &old);
+    Tokenizer(const Tokenizer &old);
+    Tokenizer &operator=(const Tokenizer &old);
 
     void tokenizeFile(std::ifstream &configStream);
     void tokenizeLine(std::string &lineStr, const unsigned int lineNum);

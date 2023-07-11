@@ -1,5 +1,5 @@
 /**
- * @file ConfigParseError.hpp
+ * @file ParseError.hpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
  * @brief Custom exception class when an error is encountered during config file
  * parsing
@@ -9,8 +9,8 @@
  *
  */
 
-#ifndef CONFIG_PARSE_ERROR_HPP
-#define CONFIG_PARSE_ERROR_HPP
+#ifndef PARSE_ERROR_HPP
+#define PARSE_ERROR_HPP
 
 #define RED    "\x1b[31m"
 #define RESET  "\x1b[0m"
@@ -23,16 +23,16 @@
 #include <iostream>
 #include <string>
 
-class ConfigParseError : public std::exception
+class ParseError : public std::exception
 {
   private:
     std::string _errorMsg;
 
   public:
-    ConfigParseError(const std::string &errorMsg, const Token &token,
-                     const std::string &filename);
-    ConfigParseError(const std::string &errorMsg, const std::string &filename);
+    ParseError(const std::string &errorMsg, const Token &token,
+               const std::string &filename);
+    ParseError(const std::string &errorMsg, const std::string &filename);
     virtual const char *what() const throw();
-    ~ConfigParseError() throw();
+    ~ParseError() throw();
 };
 #endif

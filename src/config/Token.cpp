@@ -34,33 +34,33 @@ Token &Token::operator=(const Token &old)
     return *this;
 }
 
-Token::~Token(void)
+Token::~Token()
 {
 }
 
-std::string Token::contents(void) const
+std::string Token::contents() const
 {
     return this->_str;
 }
 
-TokenType Token::type(void) const
+TokenType Token::type() const
 {
     return this->_type;
 }
 
-unsigned int Token::line(void) const
+unsigned int Token::line() const
 {
     return this->_line;
 }
 
-unsigned int Token::column(void) const
+unsigned int Token::column() const
 {
     return this->_column;
 }
 
 std::ostream &operator<<(std::ostream &os, const Token &tkn)
 {
-    std::cout << "{type: " << ConfigTokenizer::tokenToStr[tkn.type()]
+    std::cout << "{type: " << Tokenizer::tokenToStr[tkn.type()]
               << ", str: " << tkn.contents() << ", line: " << tkn.line()
               << ", col: " << tkn.column() << "}";
     return os;

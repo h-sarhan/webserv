@@ -1,5 +1,5 @@
 /**
- * @file InputValidators.cpp
+ * @file Validators.cpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
  * @brief This file defines various input validators that will be used to check
  * if user input is valid
@@ -9,9 +9,12 @@
  *
  */
 
-#include "InputValidators.hpp"
+#include "config/Validators.hpp"
 #include <cassert>
+#include <map>
+#include <sstream>
 #include <sys/stat.h>
+#include <vector>
 
 /**
  * @brief Checks if the character in a label is valid
@@ -217,7 +220,7 @@ bool validateURL(const std::string &urlStr)
 /**
  * @brief Tests for the different validation functions
  */
-void inputValidatorTests(void)
+void inputValidatorTests()
 {
     assert(validateURL("") == false);
     assert(validateURL("/") == true);

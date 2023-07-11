@@ -13,9 +13,9 @@
 #define SERVER_HPP
 
 #include "SystemCallException.hpp"
-#include "network.hpp"
 #include <exception>
 #include <map>
+#include <netdb.h>
 #include <string>
 
 class Server

@@ -1,5 +1,5 @@
 /**
- * @file ServerConfig.hpp
+ * @file Parser.hpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
  * @brief This file defines the ServerConfig class and the ServerBlock and Route
  * config structs
@@ -8,12 +8,14 @@
  * @copyright Copyright (c) 2023
  *
  */
-#ifndef CONFIG_HPP
-#define CONFIG_HPP
+#ifndef PARSER_HPP
+#define PARSER_HPP
 
 #include "Token.hpp"
-#include "common.hpp"
 #include "enums/HTTPMethods.hpp"
+#include <map>
+#include <set>
+#include <vector>
 
 /**
  * @brief This struct holds the configuration of a single route
@@ -45,7 +47,7 @@ struct ServerBlock
  * @brief This class defines the overall configuration of our web server.
  * If no configuration file is provided then a default one will be created.
  */
-class ServerConfig
+class Parser
 {
   private:
     std::vector<ServerBlock> _serverBlocks;
@@ -54,37 +56,37 @@ class ServerConfig
     const std::string _configFile;
 
   public:
-    ServerConfig(void);
-    ServerConfig(const std::string &configFile);
-    ~ServerConfig(void);
+    Parser();
+    Parser(const std::string &configFile);
+    ~Parser();
 
   private:
-    ServerConfig(const ServerConfig &config);
-    ServerConfig &operator=(const ServerConfig &config);
+    Parser(const Parser &config);
+    Parser &operator=(const Parser &config);
 
-    TokenType currentToken(void) const;
-    void advanceToken(void);
-    bool atEnd(void) const;
+    TokenType currentToken() const;
+    void advanceToken();
+    bool atEnd() const;
     void throwParseError(const std::string &str) const;
-    bool atServerOption(void) const;
-    bool atLocationOption(void) const;
+    bool atServerOption() const;
+    bool atLocationOption() const;
 
     // Rule parsing functions
-    void parseServerName(void);
-    void parseErrorPage(void);
-    void parseLocationBlock(void);
-    void parseConfigFile(void);
-    void parseServerBlock(void);
-    void parseListenRule(void);
-    void parseServerOption(void);
-    void parseLocationOption(void);
-    void parseTryFiles(void);
-    void parseBodySize(void);
-    void parseHTTPMethods(void);
-    void parseRedirect(void);
-    void parseDirectoryToggle(void);
-    void parseDirectoryFile(void);
-    void parseCGI(void);
+    void parseServerName();
+    void parseErrorPage();
+    void parseLocationBlock();
+    void parseConfigFile();
+    void parseServerBlock();
+    void parseListenRule();
+    void parseServerOption();
+    void parseLocationOption();
+    void parseTryFiles();
+    void parseBodySize();
+    void parseHTTPMethods();
+    void parseRedirect();
+    void parseDirectoryToggle();
+    void parseDirectoryFile();
+    void parseCGI();
 
     bool _serverNameSet;
     bool _listenSet;

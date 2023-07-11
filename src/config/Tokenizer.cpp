@@ -12,6 +12,7 @@
 #include "config/Tokenizer.hpp"
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 /**
  * @brief Construct a new Tokenizer object
@@ -20,7 +21,7 @@
  * @throws std::runtime_error Throws an exception when the configuration
  * file can't be opened
  */
-ConfigTokenizer::ConfigTokenizer(const std::string &filename) : _line(0)
+Tokenizer::Tokenizer(const std::string &filename) : _line(0)
 {
     std::ifstream configStream;
 
@@ -41,7 +42,7 @@ ConfigTokenizer::ConfigTokenizer(const std::string &filename) : _line(0)
  * @throws std::runtime_error Throws an error when there is an issue reading
  * the file
  */
-void ConfigTokenizer::tokenizeFile(std::ifstream &configStream)
+void Tokenizer::tokenizeFile(std::ifstream &configStream)
 {
     std::string lineStr;
     unsigned int lineNum = 1;
@@ -62,8 +63,7 @@ void ConfigTokenizer::tokenizeFile(std::ifstream &configStream)
  * @param lineStr The string containing the line
  * @param lineNum
  */
-void ConfigTokenizer::tokenizeLine(std::string &lineStr,
-                                   const unsigned int lineNum)
+void Tokenizer::tokenizeLine(std::string &lineStr, const unsigned int lineNum)
 {
     // Trim out comments
     size_t commentPos = lineStr.find('#');
@@ -90,7 +90,7 @@ void ConfigTokenizer::tokenizeLine(std::string &lineStr,
  *
  * @return const std::vector<Token>& The token list
  */
-const std::vector<Token> &ConfigTokenizer::tokens(void) const
+const std::vector<Token> &Tokenizer::tokens() const
 {
     return _tokens;
 }
@@ -101,7 +101,7 @@ const std::vector<Token> &ConfigTokenizer::tokens(void) const
  * @param c Character that we are checking
  * @return bool Returns true if it is a token
  */
-bool ConfigTokenizer::isSingleCharToken(const char c) const
+bool Tokenizer::isSingleCharToken(const char c) const
 {
     if (c == '{' || c == '}' || c == '#' || c == ';')
         return true;
@@ -117,9 +117,8 @@ bool ConfigTokenizer::isSingleCharToken(const char c) const
  * @param lineNum The line number we are currently in
  * @param column The column we are currently in
  */
-void ConfigTokenizer::addWord(unsigned int &wordIdx, const std::string &wordStr,
-                              const unsigned int lineNum,
-                              const unsigned int column)
+void Tokenizer::addWord(unsigned int &wordIdx, const std::string &wordStr,
+                        const unsigned int lineNum, const unsigned int column)
 {
     const unsigned int wordStart = wordIdx;
 
@@ -150,9 +149,9 @@ void ConfigTokenizer::addWord(unsigned int &wordIdx, const std::string &wordStr,
  * @param wordPos Where the word is in the line
  * @param lineNum The line number we are in
  */
-void ConfigTokenizer::tokenizeWord(const std::string &wordStr,
-                                   const unsigned int wordPos,
-                                   const unsigned int lineNum)
+void Tokenizer::tokenizeWord(const std::string &wordStr,
+                             const unsigned int wordPos,
+                             const unsigned int lineNum)
 {
     unsigned int wordIdx = 0;
     while (wordIdx < wordStr.length())
@@ -178,7 +177,7 @@ void ConfigTokenizer::tokenizeWord(const std::string &wordStr,
  * @brief Helper function to generate the strToToken map
  *
  */
-static const std::map<std::string, const TokenType> createStrToToken(void)
+static const std::map<std::string, const TokenType> createStrToToken()
 {
     std::map<std::string, const TokenType> tokenMap;
     tokenMap.insert(std::make_pair("server", SERVER));
@@ -204,7 +203,7 @@ static const std::map<std::string, const TokenType> createStrToToken(void)
  * @brief Helper function to generate the tokenToStr map
  *
  */
-static const std::map<TokenType, const std::string> createTokenToStr(void)
+static const std::map<TokenType, const std::string> createTokenToStr()
 {
     std::map<TokenType, const std::string> tokenMap;
     tokenMap.insert(std::make_pair(SERVER, "SERVER"));
@@ -231,12 +230,12 @@ static const std::map<TokenType, const std::string> createTokenToStr(void)
 /**
  * @brief Destroy the Config Tokenizer object
  */
-ConfigTokenizer::~ConfigTokenizer(void)
+Tokenizer::~Tokenizer()
 {
 }
 
 // Assigning the static maps
-std::map<std::string, const TokenType> ConfigTokenizer::strToToken =
+std::map<std::string, const TokenType> Tokenizer::strToToken =
     createStrToToken();
-std::map<TokenType, const std::string> ConfigTokenizer::tokenToStr =
+std::map<TokenType, const std::string> Tokenizer::tokenToStr =
     createTokenToStr();

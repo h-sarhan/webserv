@@ -8,7 +8,9 @@
  *
  */
 
-#include "Server.hpp"
+#include "network/Server.hpp"
+#include "network/network.hpp"
+#include <unistd.h>
 
 Server::Server() : name("webserv.com"), port("1234"), sockFd(-1)
 {
