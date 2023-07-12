@@ -10,6 +10,7 @@
 
 #include "config/Parser.hpp"
 #include "config/Validators.hpp"
+#include "network/Server.hpp"
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -39,9 +40,9 @@ int main(int argc, char **argv)
             // std::vector<Token> tokens = tokenizer.tokens();
             Parser parser(filename);
 
-            // Server s("webserv.com", "1234");
-            // s.bindSocket();
-            // s.startListening();
+            Server s("webserv.com", "1234");
+            s.bindSocket();
+            s.startListening();
             const std::vector<ServerBlock> &config = parser.getConfig();
             std::cout << config;
         }

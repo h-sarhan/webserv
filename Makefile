@@ -31,9 +31,9 @@ RELEASE_FLAGS = -Ofast -march=native -funroll-loops -finline-functions \
 				-fvectorize -DNDEBUG
 
 # If valgrind is not available use the address sanitizer instead
-ifeq (, $(shell which valgrind))
-	DEBUG_FLAGS += -fsanitize=address,undefined
-endif
+# ifeq (, $(shell which valgrind))
+# 	DEBUG_FLAGS += -fsanitize=address,undefined
+# endif
 
 # Compile database for use with clangd
 COMPILE_DB = compile_commands.json

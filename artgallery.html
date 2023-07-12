@@ -1,0 +1,341 @@
+<html>
+<head>
+  <title>Art Gallery | Hiraeth</title>
+  <link href='https://fonts.googleapis.com/css?family=Alegreya Sans SC' rel='stylesheet'>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="all\menu.css" type="text/css" charset="utf-8" />
+  <style>
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body{
+      background-image: url("all/prettyy-blurred.jpg");
+      background-attachment:fixed;
+      font-family: 'Montserrat', sans-serif;
+      background-repeat: no-repeat;
+      background-size: cover;
+      margin-left: 0px;
+      margin-right: 0px;
+      letter-spacing: 0.5px;
+      color: white;
+      font-weight: 50px;
+    }
+
+
+    h1 { /*Page title*/
+      font-weight:normal;
+      margin-bottom:0px;
+      font-size:36px;
+      padding-top: 4px;
+      letter-spacing: 3px;
+      text-shadow: 3px 3px 6px black;
+    }
+
+    h2 { /*Each year title*/
+      font-weight:normal;
+      margin:8 0 4 0;
+      font-size:34px;
+    }
+
+    .row {
+      display: flex;
+      padding: 0 0px;
+    }
+
+    .column {
+      flex: 25%;
+      max-width: 50%;
+      padding: 0 4px;
+    }
+
+    .column img {
+      margin-top: 17px;
+      vertical-align: middle;
+      width: 99%;
+      border-radius: 10px;
+      box-shadow: 0 8px 30px -8px black;
+    }
+
+    .allart { /*container for all rows*/
+      overflow:visible;
+      float:left;
+      width: 86%;
+      color:white;
+      margin-left: 3%;
+      padding: 16px;
+      margin-top: 3%;
+      height: auto;
+    }
+
+    .yearNavig {
+      float: right;
+      width: 8%;
+      padding: 10px;
+      height: 44%;
+      text-align: center;
+      margin-top: 15%;
+      margin-left: 90%;
+      position: fixed;
+    }
+
+    .year{
+      color:white;
+      margin: 5px;
+      font-size: 17px;
+      text-align: center;
+      display: inline-block;
+    }
+
+    a.year:link {
+      text-decoration: none;
+    }
+
+    .active, .year:hover {
+      color:#ffda6b;
+      font-size:150%;
+      text-shadow: 3px 3px 3px black, 3px 3px 3px black;
+    }
+
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+
+    .tooltip .yearTooltiptext {
+      visibility: hidden;
+      width: auto;
+      background-color: black;
+      color: white;
+      text-align: center;
+      border-radius: 3px;
+      padding: 2px;
+      transition: all 0s;
+      position: absolute;
+      z-index: 1;
+      font-size: 13px;
+    }
+
+    .tooltip:hover .yeartooltiptext {
+      visibility: visible;
+      transition-delay: 0.5s;
+    }
+
+</style>
+</head>
+<body>
+
+      <div class="menu">
+        <a href="index.html" class="name tooltip" target="_self">
+          <img src="all\Hiraeth-1.svg" height="50px" width="100px">
+          <span class="tooltiptext">Home</span>
+        </a>
+        <div class="options">
+          <a href="aboutme.html" target="_self" class="links">About Me</a>
+          <a href="resume.html" target="_self" class="links">Resume</a>
+          <a href="artgallery.html" target="_self" style="color:#ffda6b;" class="links">Art Gallery</a>
+          <a href="projects.xml" target="_self" class="links">Projects</a>
+          <a href="music.html" target="_self" class="links">Music</a>
+          <a href="photography.html" target="_self" class="links">Photography</a>
+          <a href="reviews.html" target="_self" class="links">Reflections</a>
+          <a href="https://github.com/MehrinFirdousi" target="_blank" class="instalogo" >
+            <img src="all\github-mark-white.svg" height="27px" width="27px">
+          </a>
+        </div>
+      </div>
+
+      <div class="allart">
+        <h1 id="1"><b>my art over the decade<b></h1>
+        <br />
+        <h2>2020</h2>
+        <div class="row">
+          <div class="column">
+            <img src="artgallerycontent\2020_3.jpg" >
+            <img src="artgallerycontent\2020_4.jpg" >
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2020_2.jpg" >
+            <img src="artgallerycontent\2020_1.jpg" >
+          </div>
+        </div>
+
+        <span id="2"></span>
+        <br /><br /><br /><br />
+        <h2>2019</h2>
+        <div class="row">
+          <div class="column">
+            <img src="artgallerycontent\2019_2.jpeg">
+            <img src="artgallerycontent\2019_3.jpg">
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2019_1.jpg" >
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2017_1.jpg">
+          </div>
+        </div>
+
+        <span id="3"></span>
+        <br /><br /><br /><br />
+        <h2>2018</h2>
+        <div class="row">
+          <div class="column">
+            <img src="artgallerycontent\2018_1.jpg" >
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2018_2.jpg">
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2018_3.jpg">
+          </div>
+        </div>
+
+        <span id="4"></span>
+        <br /><br /><br /><br />
+        <h2>2017</h2>
+        <div class="row">
+          <div class="column">
+            <img src="artgallerycontent\2017_5.jpg" >
+            <img src="artgallerycontent\2017_4.jpg">
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2017_2.jpg">
+            <img src="artgallerycontent\2017_6.jpg">
+          </div>
+        </div>
+
+        <span id="5"></span>
+        <br /><br /><br /><br />
+        <h2>2016</h2>
+        <div class="row">
+          <div class="column">
+            <img src="artgallerycontent\2016_1.jpg" >
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2016_3.jpeg" >
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2017_3.jpg">
+          </div>
+        </div>
+
+        <span id="6"></span>
+        <br /><br /><br /><br />
+        <h2>2015</h2>
+        <div class="row">
+          <div class="column">
+            <img src="artgallerycontent\2015_1.jpg" >
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2015_2.jpg">
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2015_3.jpeg">
+          </div>
+        </div>
+
+        <span id="7"></span>
+        <br /><br /><br /><br />
+        <h2>2014</h2>
+        <div class="row">
+          <div class="column">
+            <img src="artgallerycontent\2014_1.jpeg" >
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2014_3.jpg">
+          </div>
+          <div class="column">
+          <img src="artgallerycontent\2014_2.jpeg">
+          </div>
+        </div>
+
+        <span id="8"></span>
+        <br /><br /><br /><br />
+        <h2>2013</h2>
+        <div class="row">
+          <div class="column">
+            <img src="artgallerycontent\2013_3.jpeg">
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2013_1.jpeg">
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2013_2.jpeg" >
+          </div>
+        </div>
+
+        <span id="9"></span>
+        <br /><br /><br /><br />
+        <h2>2012</h2>
+        <div class="row">
+          <div class="column">
+            <img src="artgallerycontent\2012_1.jpg">
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2012_2.jpeg">
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2012_3.jpeg" >
+          </div>
+        </div>
+
+        <span id="10"></span>
+        <br /><br /><br /><br />
+        <h2>2011</h2>
+        <div class="row">
+          <div class="column">
+            <img src="artgallerycontent\2011_1.jpeg">
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2011_4.jpeg">
+          </div>
+          <div class="column">
+            <img src="artgallerycontent\2011_2.jpeg" >
+          </div>
+        </div>
+      </div>
+
+      <div class="yearNavig">
+          <a href="#1" class="year">2020
+          </a><br />
+          <a href="#2" class="year tooltip">○
+            <span class="yearTooltiptext">2019</span>
+          </a><br />
+          <a href="#3" class="year tooltip">○
+            <span class="yearTooltiptext">2018</span>
+          </a><br />
+          <a href="#4" class="year">2017
+          </a><br />
+          <a href="#5" class="year tooltip">○
+            <span class="yearTooltiptext">2016</span>
+          </a><br />
+          <a href="#6" class="year tooltip">○
+            <span class="yearTooltiptext">2015</span>
+          </a><br />
+          <a href="#7" class="year">2014
+          </a><br />
+          <a href="#8" class="year tooltip">○
+            <span class="yearTooltiptext">2013</span>
+          </a><br />
+          <a href="#9" class="year tooltip">○
+            <span class="yearTooltiptext">2012</span>
+          </a><br />
+          <a href="#10" class="year">2011
+          </a><br />
+      </div>
+
+  <script>
+  var years = document.getElementsByClassName("year");
+  for (var i = 0; i < years.length; i++) {
+    years[i].addEventListener("click", function() {
+    var current = document.getElementsByClassName("active");
+    if (current.length > 0)
+        current[0].className = current[0].className.replace(" active", "");
+    this.className += " active";
+    });
+  }
+  </script>
+</body>
+</html>

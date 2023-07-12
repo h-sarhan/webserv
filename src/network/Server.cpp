@@ -10,27 +10,35 @@
 
 #include "network/Server.hpp"
 #include "network/network.hpp"
-#include <unistd.h>
+#include <cstddef>
 
-Server::Server() : name("webserv.com"), port("1234"), sockFd(-1)
+bool quit = false;
+Server::Server() : name("webserv.com"), port("1234"), listener(-1)
 {
-}
-
-Server::Server(std::string name, std::string port) : name(name), port(port)
-{
-    addrinfo hints;
+    addrinfo hints = {};
     int status;
 
-    // std::fill(&hints, &hints + sizeof(hints), 0); // cpp alternative for
-    // memset, yet to test
-    memset(&hints, 0, sizeof(hints));   // make sure the struct is empty
-    hints.ai_family = AF_UNSPEC;        // don't care IPv4 or IPv6
-    hints.ai_socktype = SOCK_STREAM;    // TCP stream sockets
-    hints.ai_flags = AI_PASSIVE;        // fill in my IP for me
-    if ((status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo)) !=
-        0)   // first param is host IP/name and its null because we set ai_flags
-             // as AI_PASSIVE
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+    status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
+    if (status != 0)
         throw SystemCallException("getaddrinfo", gai_strerror(status));
+    // virtualServers = getConfig();
+}
+
+Server::Server(std::string name, std::string port) : name(name), port(port), listener(-1)
+{
+    addrinfo hints = {};
+    int status;
+
+    hints.ai_family = AF_UNSPEC;       // don't care IPv4 or IPv6
+    hints.ai_socktype = SOCK_STREAM;   // TCP stream sockets
+    hints.ai_flags = AI_PASSIVE;       // fill in my IP for me
+    status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
+    if (status != 0)
+        throw SystemCallException("getaddrinfo", gai_strerror(status));
+    // virtualServers = getConfig();
 }
 
 static int checkErr(std::string funcName, int retValue)
@@ -40,6 +48,17 @@ static int checkErr(std::string funcName, int retValue)
     return (retValue);
 }
 
+static pollfd createPollFd(int fd, short events)
+{
+    pollfd socket;
+
+    socket.fd = fd;
+    socket.events = events;
+    socket.revents = 0;
+
+    return socket;
+}
+
 void Server::bindSocket()
 {
     addrinfo *p;
@@ -47,99 +66,183 @@ void Server::bindSocket()
 
     for (p = servInfo; p != NULL; p = p->ai_next)
     {
-        if ((this->sockFd = socket(servInfo->ai_family, servInfo->ai_socktype,
-                                   servInfo->ai_protocol)) == -1)
+        this->listener = socket(servInfo->ai_family, servInfo->ai_socktype, servInfo->ai_protocol);
+        if (this->listener == -1)
             std::cout << "socket: " << strerror(errno) << std::endl;
         else
         {
-            checkErr("setsockopt",
-                     setsockopt(this->sockFd, SOL_SOCKET, SO_REUSEADDR,
-                                &reusePort, sizeof(reusePort)));
-            if (bind(this->sockFd, servInfo->ai_addr, servInfo->ai_addrlen) !=
-                -1)   // binding the socket to a port means - the port number
-                      // will be used by the kernel to match an incoming packet
-                      // to webserv's process socket descriptor.
+            // Setting the socket to be non-blocking
+            fcntl(this->listener, F_SETFL, O_NONBLOCK);
+            checkErr("setsockopt", setsockopt(this->listener, SOL_SOCKET, SO_REUSEADDR, &reusePort,
+                                              sizeof(reusePort)));
+            // binding the socket to a port means - the port number
+            // will be used by the kernel to match an incoming packet
+            // to webserv's process socket descriptor.
+            if (bind(this->listener, servInfo->ai_addr, servInfo->ai_addrlen) != -1)
                 break;
             std::cout << "bind: " << strerror(errno) << std::endl;
-            close(this->sockFd);
+            close(this->listener);
         }
     }
     if (!p)
         throw SystemCallException("failed to bind");
+    clients.push_back(createPollFd(this->listener, POLLIN));
 }
 
-// just a sample connection handler for now
-static void handleConnection(int newFd)
+// change this to use fd directly and close stuff in caller func
+std::string Server::readRequest(size_t clientNo)
 {
-    int bytes_sent;
+    int bytes_rec;
+    char *buf = new char[2000000];
+    std::string request;
 
-    std::string msg =
-        "HTTP/1.1 200 OK\r\nContent-Type: text/html; "
-        "charset=UTF-8\r\nContent-Length: 100\r\n\r\n<!DOCTYPE "
-        "html><html><head><title>Hello World</title></head><body><h1>Hello "
-        "World</h1></body></html>";
-    std::string msg2 =
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean "
-        "venenatis dolor neque. Maecenas vel magna id nibh tristique aliquam. "
-        "Etiam venenatis elit ultrices, iaculis nulla ut, gravida ligula. Sed "
-        "at rhoncus turpis. Curabitur suscipit augue quis nisi vulputate, ac "
-        "porttitor arcu ornare. Nullam suscipit maximus felis sit amet "
-        "bibendum. Etiam nec tincidunt neque. Nunc purus urna, mollis sit amet "
-        "accumsan et, finibus ut velit. Mauris suscipit ac augue a volutpat. "
-        "Nulla a nulla non enim consequat pharetra. Nunc ut pharetra leo. Sed "
-        "eu varius ante, sed aliquam massa. Cras placerat lorem sit amet leo "
-        "euismod rhoncus. Donec fermentum est dui, vel imperdiet leo dictum "
-        "sed. Nam tincidunt purus at porttitor viverra. Integer porta lacinia "
-        "gravida. Curabitur maximus nibh sem, eu ullamcorper lacus hendrerit "
-        "non. Ut lorem libero, posuere et massa id, ornare pulvinar dui. "
-        "Aliquam sodales nisl neque. Donec convallis mi nec elit suscipit "
-        "rhoncus. Maecenas scelerisque, ipsum non vestibulum placerat, orci "
-        "enim porta nibh, sed lacinia odio orci ut urna. In eu nulla euismod, "
-        "fringilla nulla non, scelerisque massa. Curabitur leo eros, iaculis "
-        "quis pulvinar sed, dictum id diam. Aenean ultrices tellus a enim "
-        "aliquam varius. Nam semper urna massa, eu dictum lacus ornare id. Nam "
-        "in nunc sem. Praesent molestie eget massa eget suscipit. Curabitur "
-        "non lorem a turpis feugiat sagittis. In nulla ante, porta sed "
-        "tincidunt eu, vestibulum sit amet mi. Sed et neque mi. Sed at urna "
-        "lacinia, suscipit enim vel, posuere tellus. Nunc in imperdiet dolor, "
-        "in fermentum eros. Sed blandit nisi a ultrices venenatis. Aenean ut "
-        "purus nec enim volutpat tristique sit amet eu orci. Morbi consectetur "
-        "velit vel massa rhoncus sollicitudin. In nisi tellus, pretium sed "
-        "libero vel, consequat condimentum quam. Proin interdum tellus sed "
-        "massa pharetra lobortis. Sed vel elementum lorem, vitae tincidunt "
-        "leo. Orci varius natoque penatibus et magnis dis parturient montes, "
-        "nascetur ridiculus mus. Duis non ipsum ornare accumsan.";
+    // receiving request
+    std::cout << "Received a request: " << std::endl;
+    bytes_rec = recv(clients[clientNo].fd, buf, 2000000, 0);
+    if (bytes_rec < 0)
+        std::cout << "Failed to receive request" << std::endl;
+    else if (bytes_rec == 0)
+        std::cout << "Connection closed by client" << std::endl;
+    if (bytes_rec <= 0)
+    {
+        close(clients[clientNo].fd);
+        clients.erase(clients.begin() + clientNo);
+        delete[] buf;
+        return std::string();
+    }
+    buf[bytes_rec] = 0;
+    std::cout << "bytes = " << bytes_rec << ", msg: " << std::endl;
+    std::cout << "---------------------------------------------------------\n";
+    std::cout << buf;
+    std::cout << "---------------------------------------------------------\n";
 
-    checkErr("send", bytes_sent = send(newFd, msg.c_str(), msg.length(), 0));
-    std::cout << "bytes sent = " << bytes_sent << ", msg len = " << msg.length()
-              << std::endl;
+    // example of how to save an image from a post req or any file
 
-    char *buf = new char[2000];
-    bzero(buf, 2000);
-    checkErr("recv", bytes_sent = recv(newFd, buf, 2000, 0));
-    std::cout << "bytes rec = " << bytes_sent << ", msg = " << std::endl
-              << buf << std::endl;
+    // std::ofstream file("img.png", std::ios::binary);
+    // std::string req(buf);
+    // int index = req.find("\r\n\r\n");
+    // file.write(buf + index + 4, bytes_rec - index - 4);
+    // file.close();
+    request = buf;
     delete[] buf;
-    close(newFd);
+    return (request);
 }
 
-void Server::startListening()
+std::string static createResponse(std::string filename, std::string headers)
+{
+    std::ifstream file;
+    std::stringstream responseBuffer;
+    std::stringstream fileBuffer;
+    std::string fileContents;
+
+    file.open(filename.c_str());
+    // if (!file.good())
+    // return 404 page as response
+    fileBuffer << file.rdbuf();
+    file.close();
+    fileContents = fileBuffer.str();
+    responseBuffer << headers;
+    responseBuffer << fileContents.length() << "\r\n\r\n";
+    responseBuffer << fileContents;
+    return responseBuffer.str();
+}
+
+static int sendAll(int clientFd, std::string &msg, size_t msgLen)
+{
+    ssize_t bytesLeft = msgLen;
+    ssize_t bytesSent = 0;
+    ssize_t totalSent = 0;
+
+    while (bytesLeft > 0)
+    {
+        bytesSent = send(clientFd, msg.c_str() + totalSent, bytesLeft, 0);
+        if (bytesSent == -1)
+            return (-1);
+        bytesLeft -= bytesSent;
+        totalSent += bytesSent;
+    }
+    return (totalSent);
+}
+
+void Server::sendResponse(size_t clientNo, std::string request)
+{
+    std::string msg;
+    int bytesSent;
+
+    if (request.length() == 0)
+        return;
+    if (request.find("/artgallerycontent/2020_3.jpg") != std::string::npos)
+        msg = createResponse("artgallerycontent/2020_3.jpg", IMG_HEADERS);
+    else
+        msg = createResponse("artgallery.html", HTTP_HEADERS);
+    std::cout << "Sending a response... " << std::endl;
+    bytesSent = sendAll(clients[clientNo].fd, msg, msg.length());
+    if (bytesSent < 0)
+        std::cout << "Sending response failed" << std::endl;
+    else
+        std::cout << "Response sent to fd " << clientNo << ", " << clients[clientNo].fd
+                  << ", bytesSent = " << bytesSent << std::endl;
+    std::cout << "---------------------------------------------------------\n";
+    close(clients[clientNo].fd);
+    clients.erase(clients.begin() + clientNo);
+}
+
+static void sigInthandler(int sigNo)
+{
+    (void) sigNo;
+    quit = true;
+}
+
+void Server::acceptNewConnection()
 {
     int newFd;
     sockaddr_storage their_addr;
     socklen_t addr_size;
 
-    checkErr("listen", listen(this->sockFd, QUEUE_LIMIT));
     addr_size = sizeof(their_addr);
+    newFd = accept(this->listener, (sockaddr *) &their_addr, &addr_size);
+    if (newFd == -1)
+    {
+        std::cout << "Accept failed" << std::endl;
+        return;
+    }
+    std::cout << "New connection! fd = " << newFd << std::endl;
+    if (clients.size() < MAX_CLIENTS)
+        clients.push_back(createPollFd(newFd, POLLIN | POLLOUT));
+    else
+    {
+        std::cout << "Maximum clients reached, dropping this connection" << std::endl;
+        // send 503 error page
+        close(newFd);
+    }
+}
+
+void Server::startListening()
+{
+    signal(SIGINT, sigInthandler);
+    checkErr("listen", listen(this->listener, QUEUE_LIMIT));
     std::cout << "Listening on port " << this->port << std::endl;
-    newFd = checkErr(
-        "accept", accept(this->sockFd, (sockaddr *) &their_addr, &addr_size));
-    handleConnection(newFd);
+    while (true)
+    {
+        checkErr("poll", poll(&clients[0], clients.size(), -1));
+        for (size_t i = 0; i < clients.size(); i++)
+        {
+            // server listener got something new to read
+            if ((clients[i].fd == listener) && (clients[i].revents & POLLIN))
+                acceptNewConnection();
+            // one of the clients is ready to send and recv
+            else if ((clients[i].revents & POLLIN) && (clients[i].revents & POLLOUT))
+                sendResponse(i, readRequest(i));
+        }
+        if (quit)
+            break;
+    }
 }
 
 Server::~Server()
 {
+    std::cout << "Server destructor called" << std::endl;
     freeaddrinfo(servInfo);
-    if (sockFd != -1)
-        close(sockFd);
+    for (size_t i = 0; i < clients.size(); i++)
+        close(clients[i].fd);
 }
