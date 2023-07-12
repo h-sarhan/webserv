@@ -47,3 +47,4 @@ docs/sphinx/build
 docs/sphinx/source/api
 .vscode
 .DS_Store
+assets/bible.txt

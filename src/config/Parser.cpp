@@ -48,7 +48,7 @@ HTTPMethod strToHTTPMethod(const std::string &str)
         return DELETE;
     if (str == "PUT")
         return PUT;
-    return ERROR;
+    return OTHER;
 }
 
 std::string httpMethodtoStr(HTTPMethod tkn)
@@ -393,7 +393,7 @@ void Parser::parseHTTPMethods()
     while (!atEnd() && currentToken() == WORD)
     {
         const HTTPMethod method = strToHTTPMethod(_currToken->contents());
-        if (method == ERROR)
+        if (method == OTHER)
             throwParseError("invalid HTTP `method` specified");
 
         if (methods.count(method) != 0)
