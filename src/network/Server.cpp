@@ -137,7 +137,7 @@ std::string static createResponse(std::string filename, std::string headers)
 
     file.open(filename.c_str());
     // if (!file.good())
-        // return 404 page as response
+    // return 404 page as response
     fileBuffer << file.rdbuf();
     file.close();
     fileContents = fileBuffer.str();
@@ -147,17 +147,19 @@ std::string static createResponse(std::string filename, std::string headers)
     return responseBuffer.str();
 }
 
-static int sendAll(int clientFd, std::string& msg, size_t msgLen)
+static int sendAll(int clientFd, std::string &msg, size_t msgLen)
 {
     ssize_t bytesLeft = msgLen;
     ssize_t bytesSent = 0;
+    ssize_t totalSent = 0;
 
     while (bytesLeft > 0)
     {
-        bytesSent = send(clientFd, msg.c_str(), bytesLeft, 0);
+        bytesSent = send(clientFd, msg.c_str() + totalSent, bytesLeft, 0);
         if (bytesSent == -1)
             return (-1);
         bytesLeft -= bytesSent;
+        totalSent += bytesSent;
     }
     return (bytesSent);
 }
