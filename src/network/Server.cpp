@@ -93,6 +93,7 @@ std::string Server::readRequest(size_t clientNo)
 {
     int bytes_rec;
     char *buf = new char[2000000];
+    std::string request;
 
     // receiving request
     std::cout << "Received a request: " << std::endl;
@@ -121,9 +122,9 @@ std::string Server::readRequest(size_t clientNo)
     // int index = req.find("\r\n\r\n");
     // file.write(buf + index + 4, bytes_rec - index - 4);
     // file.close();
-    
+    request = buf;
     delete[] buf;
-    return (std::string(buf));
+    return (request);
 }
 
 std::string static createResponse(std::string filename, std::string headers)
