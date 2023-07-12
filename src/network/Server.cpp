@@ -161,7 +161,7 @@ static int sendAll(int clientFd, std::string &msg, size_t msgLen)
         bytesLeft -= bytesSent;
         totalSent += bytesSent;
     }
-    return (bytesSent);
+    return (totalSent);
 }
 
 void Server::sendResponse(size_t clientNo, std::string request)
