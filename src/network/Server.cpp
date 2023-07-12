@@ -21,7 +21,8 @@ Server::Server() : name("webserv.com"), port("1234"), listener(-1)
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
-    if ((status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo)) != 0)
+    status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
+    if (status != 0)
         throw SystemCallException("getaddrinfo", gai_strerror(status));
     // virtualServers = getConfig();
 }
@@ -34,8 +35,8 @@ Server::Server(std::string name, std::string port) : name(name), port(port), lis
     hints.ai_family = AF_UNSPEC;       // don't care IPv4 or IPv6
     hints.ai_socktype = SOCK_STREAM;   // TCP stream sockets
     hints.ai_flags = AI_PASSIVE;       // fill in my IP for me
-    if ((status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo)) !=
-        0)   // first param is host IP/name and its null because we set ai_flags
+    status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
+    if (status != 0)
         throw SystemCallException("getaddrinfo", gai_strerror(status));
     // virtualServers = getConfig();
 }
@@ -65,13 +66,13 @@ void Server::bindSocket()
 
     for (p = servInfo; p != NULL; p = p->ai_next)
     {
-        if ((this->listener =
-                 socket(servInfo->ai_family, servInfo->ai_socktype, servInfo->ai_protocol)) == -1)
+        this->listener = socket(servInfo->ai_family, servInfo->ai_socktype, servInfo->ai_protocol);
+        if (this->listener == -1)
             std::cout << "socket: " << strerror(errno) << std::endl;
         else
         {
-            // fcntl(this->listener, F_SETFL, O_NONBLOCK); // Setting the socket
-            // to be non-blocking
+            // Setting the socket to be non-blocking
+            fcntl(this->listener, F_SETFL, O_NONBLOCK);
             checkErr("setsockopt", setsockopt(this->listener, SOL_SOCKET, SO_REUSEADDR, &reusePort,
                                               sizeof(reusePort)));
             // binding the socket to a port means - the port number
@@ -134,7 +135,9 @@ std::string static createResponse(std::string filename, std::string headers)
     std::stringstream fileBuffer;
     std::string fileContents;
 
-    file.open(filename);
+    file.open(filename.c_str());
+    // if (!file.good())
+        // return 404 page as response
     fileBuffer << file.rdbuf();
     file.close();
     fileContents = fileBuffer.str();
@@ -207,6 +210,7 @@ void Server::acceptNewConnection()
     else
     {
         std::cout << "Maximum clients reached, dropping this connection" << std::endl;
+        // send 503 error page
         close(newFd);
     }
 }
