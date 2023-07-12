@@ -14,8 +14,15 @@
 
 #include "SystemCallException.hpp"
 #include "network.hpp"
+// #include "Connection.hpp"
 
 #define MAX_CLIENTS 10
+
+struct Connection
+{
+    std::string request;
+    std::string response;
+};
 
 class Server
 {
@@ -24,7 +31,8 @@ class Server
     std::string port;
     addrinfo *servInfo;
     int listener;
-    std::vector<pollfd> clients;
+    std::vector<pollfd> sockets;
+    std::map<int, Connection> cons;
     // const std::vector<ServerBlock>& virtualServers;
 
     // std::map<std::string route, Location location> locations;
@@ -36,8 +44,8 @@ class Server
     void bindSocket();
     void startListening();
     void acceptNewConnection();
-    std::string readRequest(size_t clientNo);
-    void sendResponse(size_t clientNo, std::string request);
+    void readRequest(size_t clientNo);
+    void sendResponse(size_t clientNo);
     ~Server();
 };
 

@@ -10,7 +10,6 @@
 
 #include "network/Server.hpp"
 #include "network/network.hpp"
-#include <cstddef>
 
 bool quit = false;
 Server::Server() : name("webserv.com"), port("1234"), listener(-1)
@@ -86,46 +85,37 @@ void Server::bindSocket()
     }
     if (!p)
         throw SystemCallException("failed to bind");
-    clients.push_back(createPollFd(this->listener, POLLIN));
+    sockets.push_back(createPollFd(this->listener, POLLIN));
 }
 
 // change this to use fd directly and close stuff in caller func
-std::string Server::readRequest(size_t clientNo)
+void Server::readRequest(size_t clientNo)
 {
     int bytes_rec;
     char *buf = new char[2000000];
-    std::string request;
 
     // receiving request
     std::cout << "Received a request: " << std::endl;
-    bytes_rec = recv(clients[clientNo].fd, buf, 2000000, 0);
+    bytes_rec = recv(sockets[clientNo].fd, buf, 2000000, 0);
     if (bytes_rec < 0)
         std::cout << "Failed to receive request" << std::endl;
     else if (bytes_rec == 0)
         std::cout << "Connection closed by client" << std::endl;
     if (bytes_rec <= 0)
     {
-        close(clients[clientNo].fd);
-        clients.erase(clients.begin() + clientNo);
+        close(sockets[clientNo].fd);
+        cons.erase(sockets[clientNo].fd);
+        sockets.erase(sockets.begin() + clientNo);
         delete[] buf;
-        return std::string();
     }
     buf[bytes_rec] = 0;
     std::cout << "bytes = " << bytes_rec << ", msg: " << std::endl;
     std::cout << "---------------------------------------------------------\n";
     std::cout << buf;
     std::cout << "---------------------------------------------------------\n";
-
-    // example of how to save an image from a post req or any file
-
-    // std::ofstream file("img.png", std::ios::binary);
-    // std::string req(buf);
-    // int index = req.find("\r\n\r\n");
-    // file.write(buf + index + 4, bytes_rec - index - 4);
-    // file.close();
-    request = buf;
+    sockets[clientNo].events = POLLIN | POLLOUT;
+    cons.at(sockets[clientNo].fd).request = buf;
     delete[] buf;
-    return (request);
 }
 
 std::string static createResponse(std::string filename, std::string headers)
@@ -147,44 +137,65 @@ std::string static createResponse(std::string filename, std::string headers)
     return responseBuffer.str();
 }
 
-static int sendAll(int clientFd, std::string &msg, size_t msgLen)
-{
-    ssize_t bytesLeft = msgLen;
-    ssize_t bytesSent = 0;
-    ssize_t totalSent = 0;
+// static int sendAll(int clientFd, const char *msg, size_t msgLen)
+// {
+//     ssize_t bytesLeft = msgLen;
+//     ssize_t bytesSent = 0;
+//     ssize_t totalSent = 0;
+//     // pollfd client = createPollFd(clientFd, POLLOUT);
 
-    while (bytesLeft > 0)
-    {
-        bytesSent = send(clientFd, msg.c_str() + totalSent, bytesLeft, 0);
-        if (bytesSent == -1)
-            return (-1);
-        bytesLeft -= bytesSent;
-        totalSent += bytesSent;
-    }
-    return (totalSent);
-}
+//     while (bytesLeft > 0)
+//     {
+//         // checkErr("poll", poll(&client, 1, -1));
+//         bytesSent = send(clientFd, msg + totalSent, bytesLeft, 0);
+//         if (bytesSent == -1)
+//             return (-1);
+//         bytesLeft -= bytesSent;
+//         totalSent += bytesSent;
+//     }
+//     return (totalSent);
+// }
 
-void Server::sendResponse(size_t clientNo, std::string request)
+void Server::sendResponse(size_t clientNo)
 {
     std::string msg;
-    int bytesSent;
+    size_t bytesSent;
+    int fd;
 
-    if (request.length() == 0)
-        return;
-    if (request.find("/artgallerycontent/2020_3.jpg") != std::string::npos)
-        msg = createResponse("artgallerycontent/2020_3.jpg", IMG_HEADERS);
-    else
-        msg = createResponse("artgallery.html", HTTP_HEADERS);
+    fd = sockets[clientNo].fd;
+    if (cons.at(fd).request.length() > 0)
+    {
+        if (cons.at(fd).request.find("/artgallerycontent/2020_3.jpg") != std::string::npos)
+            cons.at(fd).response = createResponse("artgallerycontent/2020_3.jpg", IMG_HEADERS);
+        else
+            // cons.at(fd).response = createResponse("artgallery.html", HTTP_HEADERS);
+            cons.at(fd).response = createResponse("assets/bible.txt", HTTP_HEADERS);
+        cons.at(fd).request.clear();
+    }
+    if (cons.at(fd).response.length() == 0)
+    {
+        std::cout << "Nothing to send >:(" << std::endl;
+        return ;
+    }
+    msg = cons.at(fd).response;
     std::cout << "Sending a response... " << std::endl;
-    bytesSent = sendAll(clients[clientNo].fd, msg, msg.length());
+    bytesSent = send(fd, msg.c_str(), msg.length(), 0);
     if (bytesSent < 0)
         std::cout << "Sending response failed" << std::endl;
-    else
-        std::cout << "Response sent to fd " << clientNo << ", " << clients[clientNo].fd
+    else if (bytesSent < msg.length())
+    {
+        std::cout << "Response only sent partially: " << bytesSent << std::endl;
+        cons.at(fd).response = msg.substr(bytesSent, msg.length() - bytesSent);
+    }
+    else // if (bytesSent == msg.length()) // everything sent completely
+    {
+        std::cout << "Response sent to fd " << clientNo << ", " << fd
                   << ", bytesSent = " << bytesSent << std::endl;
+        close(fd);
+        cons.erase(fd);
+        sockets.erase(sockets.begin() + clientNo);
+    }
     std::cout << "---------------------------------------------------------\n";
-    close(clients[clientNo].fd);
-    clients.erase(clients.begin() + clientNo);
 }
 
 static void sigInthandler(int sigNo)
@@ -206,9 +217,13 @@ void Server::acceptNewConnection()
         std::cout << "Accept failed" << std::endl;
         return;
     }
+    // fcntl(newFd, F_SETFL, O_NONBLOCK); // enable this when doing partial recv
     std::cout << "New connection! fd = " << newFd << std::endl;
-    if (clients.size() < MAX_CLIENTS)
-        clients.push_back(createPollFd(newFd, POLLIN | POLLOUT));
+    if (sockets.size() < MAX_CLIENTS)
+    {
+        cons.insert(std::make_pair(newFd, Connection()));
+        sockets.push_back(createPollFd(newFd, POLLIN));
+    }
     else
     {
         std::cout << "Maximum clients reached, dropping this connection" << std::endl;
@@ -224,15 +239,19 @@ void Server::startListening()
     std::cout << "Listening on port " << this->port << std::endl;
     while (true)
     {
-        checkErr("poll", poll(&clients[0], clients.size(), -1));
-        for (size_t i = 0; i < clients.size(); i++)
+        checkErr("poll", poll(&sockets[0], sockets.size(), -1));
+        for (size_t i = 0; i < sockets.size(); i++)
         {
             // server listener got something new to read
-            if ((clients[i].fd == listener) && (clients[i].revents & POLLIN))
-                acceptNewConnection();
-            // one of the clients is ready to send and recv
-            else if ((clients[i].revents & POLLIN) && (clients[i].revents & POLLOUT))
-                sendResponse(i, readRequest(i));
+            if (sockets[i].revents & POLLIN)
+            {
+                if (sockets[i].fd == listener)
+                    acceptNewConnection();
+                else // its one of the clients
+                    readRequest(i);
+            }
+            else if (sockets[i].revents & POLLOUT)
+                sendResponse(i);
         }
         if (quit)
             break;
@@ -243,6 +262,6 @@ Server::~Server()
 {
     std::cout << "Server destructor called" << std::endl;
     freeaddrinfo(servInfo);
-    for (size_t i = 0; i < clients.size(); i++)
-        close(clients[i].fd);
+    for (size_t i = 0; i < sockets.size(); i++)
+        close(sockets[i].fd);
 }
