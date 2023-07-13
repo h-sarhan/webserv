@@ -17,11 +17,12 @@
 
 #define WHITESPACE " \t\n\r\f\v"
 
-// * Important headers?
-// Content-Length: 1000
-// Transfer-encoding: chunked
-// User-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:50.0) Gecko/20100101 Firefox/50.0
+// * Important headers
 // Host: webserv.com
+// Connection: keep-alive
+// Keep-Alive: timeout=5, max=1000
+// ? Content-Length: 1000 // mehrins job i think
+// ? Transfer-encoding: chunked // mehrins job i think
 
 /**
  * @brief This class defines an HTTP request
@@ -32,8 +33,11 @@ class Request
     HTTPMethod _httpMethod;
     std::string _target;
     std::map<std::string, std::string> _headers;
-    std::string _userAgent;
-    char *_rawBody;
+    const char *_rawBody;
+    // * const std::string _host; // Get from header
+    // * const bool _keepAlive; // Get from header
+    // * const unsigned int _keepAliveFor; // Get from header
+    // * const unsigned int _maxReconnections; // Get from header
 
   public:
     Request(const char *rawReq);

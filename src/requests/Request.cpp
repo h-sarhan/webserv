@@ -66,6 +66,12 @@ void Request::parseRequest(const std::string &reqStr)
     std::stringstream reqStream(reqStr);
 
     parseStartLine(reqStream);
+    if (reqStream.peek() == '\r')
+    {
+        if ((size_t) reqStream.tellg() + 2 > reqStr.length())
+            throw InvalidRequestError("Invalid line ending");
+        _rawBody = &reqStr[(int) reqStream.tellg() + 2];
+    }
 }
 
 void Request::parseStartLine(std::stringstream &reqStream)
@@ -144,8 +150,11 @@ void requestParsingTests()
     assert(testRequest("PUT /fds HTTP/1.0\r\n") == true);
     assert(testRequest("DELETE /fds HTTP/1.0\r\n") == true);
 
-    // Empty body tests
-    // assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
+    // Empty body tests with no headers
+    assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
+
+    // Normal body test with no headers
+    assert(testRequest("PUT /fds HTTP/1.0\r\n\r\nThis is a body") == true);
 
     // HTTP Method tests
     Request delReq("DELETE /fds HTTP/1.0\r\n");
