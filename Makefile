@@ -6,7 +6,7 @@ SRC_DIR = ./src
 CONFIG_DIR = $(SRC_DIR)/config
 NETWORK_DIR = $(SRC_DIR)/network
 CONFIG_SRC = Tokenizer.cpp Token.cpp Parser.cpp ParseError.cpp Validators.cpp ServerBlock.cpp
-NETWORK_SRC = Server.cpp
+NETWORK_SRC = Server.cpp Connection.cpp
 CONFIG_SRC := $(addprefix $(CONFIG_DIR)/, $(CONFIG_SRC))
 NETWORK_SRC := $(addprefix $(NETWORK_DIR)/, $(NETWORK_SRC))
 

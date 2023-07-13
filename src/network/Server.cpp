@@ -91,17 +91,20 @@ void Server::bindSocket()
 // change this to use fd directly and close stuff in caller func
 void Server::readRequest(size_t clientNo)
 {
-    int bytes_rec;
-    char *buf = new char[200000];
+    size_t contentLen = 200000; // temporary contentLen until the one from the request is parsed
+    int bytesRec;
+    char *buf = new char[contentLen];
+    // std::string &req = cons.at(sockets[clientNo].fd).request;
+    // size_t &totalRec = cons.at(sockets[clientNo].fd).totalBytesRec;
 
     // receiving request
     std::cout << "Received a request: " << std::endl;
-    bytes_rec = recv(sockets[clientNo].fd, buf, 200000, 0);
-    if (bytes_rec < 0)
+    bytesRec = recv(sockets[clientNo].fd, buf, contentLen, 0);
+    if (bytesRec < 0)
         std::cout << "Failed to receive request: " << strerror(errno) << std::endl;
-    else if (bytes_rec == 0)
+    else if (bytesRec == 0)
         std::cout << "Connection closed by client" << std::endl;
-    if (bytes_rec <= 0)
+    if (bytesRec <= 0)
     {
         close(sockets[clientNo].fd);
         cons.erase(sockets[clientNo].fd);
@@ -109,13 +112,17 @@ void Server::readRequest(size_t clientNo)
         delete[] buf;
         return ;
     }
-    buf[bytes_rec] = 0;
-    std::cout << "bytes = " << bytes_rec << ", msg: " << std::endl;
+    buf[bytesRec] = 0;
+    // if this is a POST req and bytesRec != contentLength
+        // append buf to request;
+        // delete[] buf
+        // return here so that we dont set the events to start responding
+    std::cout << "bytes = " << bytesRec << ", msg: " << std::endl;
     std::cout << "---------------------------------------------------------\n";
     std::cout << buf;
     std::cout << "---------------------------------------------------------\n";
     sockets[clientNo].events = POLLIN | POLLOUT;
-    cons.at(sockets[clientNo].fd).request = buf;
+    cons.at(sockets[clientNo].fd).request += buf;
     delete[] buf;
 }
 
@@ -200,7 +207,7 @@ void Server::acceptNewConnection()
         std::cout << "Accept failed" << std::endl;
         return;
     }
-    // fcntl(newFd, F_SETFL, O_NONBLOCK); // enable this when doing partial recv
+    fcntl(newFd, F_SETFL, O_NONBLOCK); // enable this when doing partial recv
     std::cout << "New connection! fd = " << newFd << std::endl;
     if (sockets.size() < MAX_CLIENTS)
     {

@@ -16,12 +16,12 @@
 
 class Connection
 {
-    private:
-        int fdTemp;
+    public:
         std::string request; // this will be an object of its respective class later and not just str
         std::string response; // this will be an object of its respective class later and not just str
-    public:
-        Connection(int fd);
+        size_t totalBytesRec;
+        size_t totalBytesSent;
+        Connection();
         ~Connection();
 };
 

@@ -14,16 +14,17 @@
 
 #include "SystemCallException.hpp"
 #include "network.hpp"
-// #include "Connection.hpp"
+#include "Connection.hpp"
 
 #define MAX_CLIENTS 10
 
-struct Connection
-{
-    std::string request;
-    std::string response;
-    size_t totalBytesSent;
-};
+// struct Connection
+// {
+//     std::string request;
+//     std::string response;
+//     size_t totalBytesRec;
+//     size_t totalBytesSent;
+// };
 
 class Server
 {
