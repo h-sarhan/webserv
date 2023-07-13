@@ -12,7 +12,7 @@
 
 #include "network/Connection.hpp"
 
-Connection::Connection() : totalBytesRec(0), totalBytesSent(0)
+Connection::Connection(int listener) : listener(listener), totalBytesRec(0), totalBytesSent(0)
 {
 }
 

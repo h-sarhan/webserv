@@ -13,33 +13,51 @@
 
 bool quit = false;
 
-// Server::Server() : port("1234"), listener(-1)
-// {
-//     addrinfo hints = {};
-//     int status;
+/**
+ * @todo
+ * make wrapper class for addrinfo so that freeaddrinfo can be called automatically for any exception
+ * 
+*/
 
-//     hints.ai_family = AF_UNSPEC;
-//     hints.ai_socktype = SOCK_STREAM;
-//     hints.ai_flags = AI_PASSIVE;
-//     status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
-//     if (status != 0)
-//         throw SystemCallException("getaddrinfo", gai_strerror(status));
-    
-// }
+Server::Server()
+{
+    const ServerBlock defaultConfig = createDefaultServerBlock();
+    std::cout << "Default config - " << std::endl;
+    std::cout << defaultConfig;
+    std::cout << "Setting up listener on port " << defaultConfig.port << std::endl;
+    initListener(defaultConfig);
+}
 
-Server::Server(std::string port, serverList virtualServers) : port(port), listener(-1), virtualServers(virtualServers)
+Server::Server(serverList virtualServers)
+{
+    std::cout << "Virtual servers - " << std::endl;
+    std::cout << virtualServers << std::endl;
+    std::vector<ServerBlock>::const_iterator it;
+    for (it = virtualServers.begin(); it != virtualServers.end() ; it++)
+    {
+        std::cout << "Setting up listener on port " << it->port << std::endl;
+        initListener(*it);
+    }
+}
+
+void Server::initListener(const ServerBlock &config)
 {
     addrinfo hints = {};
+    addrinfo *servInfo;
     int status;
+    std::stringstream ss;
+    std::string port;
 
     hints.ai_family = AF_UNSPEC;       // don't care IPv4 or IPv6
     hints.ai_socktype = SOCK_STREAM;   // TCP stream sockets
     hints.ai_flags = AI_PASSIVE;       // fill in my IP for me
+    ss << config.port;
+    ss >> port;
     status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
     if (status != 0)
         throw SystemCallException("getaddrinfo", gai_strerror(status));
-    std::cout << "Virtual servers - " << std::endl;
-    std::cout << virtualServers << std::endl;
+    bindSocket(servInfo, config);
+    freeaddrinfo(servInfo);
 }
 
 static int checkErr(std::string funcName, int retValue)
@@ -60,42 +78,43 @@ static pollfd createPollFd(int fd, short events)
     return socket;
 }
 
-void Server::bindSocket()
+void Server::bindSocket(addrinfo *servInfo, const ServerBlock &config)
 {
-    (void)virtualServers;
     addrinfo *p;
     int reusePort = 1;
+    int listenerFd;
 
     for (p = servInfo; p != NULL; p = p->ai_next)
     {
-        this->listener = socket(servInfo->ai_family, servInfo->ai_socktype, servInfo->ai_protocol);
-        if (this->listener == -1)
+        listenerFd = socket(servInfo->ai_family, servInfo->ai_socktype, servInfo->ai_protocol);
+        if (listenerFd == -1)
             std::cout << "socket: " << strerror(errno) << std::endl;
         else
         {
             // Setting the socket to be non-blocking
-            fcntl(this->listener, F_SETFL, O_NONBLOCK);
-            checkErr("setsockopt", setsockopt(this->listener, SOL_SOCKET, SO_REUSEADDR, &reusePort,
+            checkErr("fcntl", fcntl(listenerFd, F_SETFL, O_NONBLOCK));
+            checkErr("setsockopt", setsockopt(listenerFd, SOL_SOCKET, SO_REUSEADDR, &reusePort,
                                               sizeof(reusePort)));
             // binding the socket to a port means - the port number
             // will be used by the kernel to match an incoming packet
             // to webserv's process socket descriptor.
-            if (bind(this->listener, servInfo->ai_addr, servInfo->ai_addrlen) != -1)
+            if (bind(listenerFd, servInfo->ai_addr, servInfo->ai_addrlen) != -1)
                 break;
             std::cout << "bind: " << strerror(errno) << std::endl;
-            close(this->listener);
+            close(listenerFd);
         }
     }
     if (!p)
         throw SystemCallException("failed to bind");
-    sockets.push_back(createPollFd(this->listener, POLLIN));
-    checkErr("listen", listen(this->listener, QUEUE_LIMIT));
+    sockets.push_back(createPollFd(listenerFd, POLLIN));
+    listeners.insert(std::make_pair(listenerFd, config));
+    checkErr("listen", listen(listenerFd, QUEUE_LIMIT));
 }
 
 // change this to use fd directly and close stuff in caller func
 void Server::readRequest(size_t clientNo)
 {
-    size_t contentLen = 200000; // temporary contentLen until the one from the request is parsed
+    size_t contentLen = 200000;   // temporary contentLen until the one from the request is parsed
     char *buf = new char[contentLen];
     std::string &req = cons.at(sockets[clientNo].fd).request;
     size_t &totalRec = cons.at(sockets[clientNo].fd).totalBytesRec;
@@ -114,17 +133,23 @@ void Server::readRequest(size_t clientNo)
         cons.erase(sockets[clientNo].fd);
         sockets.erase(sockets.begin() + clientNo);
         delete[] buf;
-        return ;
+        return;
     }
     buf[bytesRec] = 0;
     totalRec += bytesRec;
     req += buf;
+
+    // if we're here, the call to recv was successful and we should 
+    // at least have received the headers (check for a \r\n\r\n) 
+    // at this point, the header of the request needs to be parsed to
+    // determine content length / chunked encoding
+
     // if this is a POST req and totalRec != contentLength
         // append buf to request;
         // delete[] buf
         // return here so that we dont set the events to start responding
     std::cout << "Request size = " << totalRec << std::endl;
-    totalRec = 0; // getting ready for next request
+    totalRec = 0;   // getting ready for next request
     sockets[clientNo].events = POLLIN | POLLOUT;
     std::cout << "bytes = " << bytesRec << ", msg: " << std::endl;
     std::cout << "---------------------------------------------------------\n";
@@ -168,7 +193,7 @@ void Server::sendResponse(size_t clientNo)
     if (res.length() == 0)
     {
         std::cout << "Nothing to send >:(" << std::endl;
-        return ;
+        return;
     }
     std::cout << "Sending a response... " << std::endl;
     bytesSent = send(sockets[clientNo].fd, res.c_str() + totalSent, res.length() - totalSent, 0);
@@ -177,16 +202,18 @@ void Server::sendResponse(size_t clientNo)
     else
     {
         totalSent += bytesSent;
-        if (totalSent < res.length()) // partial send 
+        if (totalSent < res.length())   // partial send
         {
-            std::cout << "Response only sent partially: " << bytesSent << ". Total: " << totalSent << std::endl;
-            return ;
+            std::cout << "Response only sent partially: " << bytesSent << ". Total: " << totalSent
+                      << std::endl;
+            return;
         }
-        else // everything got sent
+        else   // everything got sent
         {
-            std::cout << "Response sent successfully to fd " << clientNo << ", " << sockets[clientNo].fd << ", total bytes sent = " << totalSent << std::endl;
-            // if keep-alive was requested 
-                // clear response string, set totalBytesSent to 0 and return here!!
+            std::cout << "Response sent successfully to fd " << clientNo << ", "
+                      << sockets[clientNo].fd << ", total bytes sent = " << totalSent << std::endl;
+            // if keep-alive was requested
+            // clear response string, set totalBytesSent to 0 and return here!!
         }
     }
     close(sockets[clientNo].fd);
@@ -201,24 +228,24 @@ static void sigInthandler(int sigNo)
     quit = true;
 }
 
-void Server::acceptNewConnection()
+void Server::acceptNewConnection(size_t listenerNo)
 {
     int newFd;
     sockaddr_storage their_addr;
     socklen_t addr_size;
 
     addr_size = sizeof(their_addr);
-    newFd = accept(this->listener, (sockaddr *) &their_addr, &addr_size);
+    newFd = accept(sockets[listenerNo].fd, (sockaddr *) &their_addr, &addr_size);
     if (newFd == -1)
     {
         std::cout << "Accept failed" << std::endl;
         return;
     }
-    fcntl(newFd, F_SETFL, O_NONBLOCK); // enable this when doing partial recv
+    fcntl(newFd, F_SETFL, O_NONBLOCK);   // enable this when doing partial recv
     std::cout << "New connection! fd = " << newFd << std::endl;
     if (sockets.size() < MAX_CLIENTS)
     {
-        cons.insert(std::make_pair(newFd, Connection()));
+        cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd)));
         sockets.push_back(createPollFd(newFd, POLLIN));
     }
     else
@@ -232,7 +259,6 @@ void Server::acceptNewConnection()
 void Server::startListening()
 {
     signal(SIGINT, sigInthandler);
-    std::cout << "Listening on port " << this->port << std::endl;
     while (true)
     {
         checkErr("poll", poll(&sockets[0], sockets.size(), -1));
@@ -241,10 +267,19 @@ void Server::startListening()
             // server listener got something new to read
             if (sockets[i].revents & POLLIN)
             {
-                if (sockets[i].fd == listener)
-                    acceptNewConnection();
-                else // its one of the clients
-                    readRequest(i);
+                // if (sockets[i].fd == listener)
+                if (listeners.count(sockets[i].fd))
+                    acceptNewConnection(i);
+                else   // its one of the clients
+                    // if we didnt receive the header for this connection yet,
+                        // readHeader();
+                        // ^this reads till the header (or more) and parses it to get info like
+                        // Content-Length or Transfer-encoding so we can decide how to read the
+                        // rest of the request
+                    // else
+                        readRequest(i);
+                        // ^this will be only to read the rest of the request according to the
+                        // header-specified requirements
             }
             else if (sockets[i].revents & POLLOUT)
                 sendResponse(i);
@@ -257,7 +292,7 @@ void Server::startListening()
 Server::~Server()
 {
     std::cout << "Server destructor called" << std::endl;
-    freeaddrinfo(servInfo);
+    // freeaddrinfo(servInfo);
     for (size_t i = 0; i < sockets.size(); i++)
         close(sockets[i].fd);
 }

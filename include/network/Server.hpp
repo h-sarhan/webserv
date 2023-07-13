@@ -32,22 +32,21 @@ typedef const std::vector<ServerBlock>& serverList;
 class Server
 {
   private:
-    std::string port;
-    addrinfo *servInfo;
-    int listener;
     std::vector<pollfd> sockets;
     std::map<int, Connection> cons; // maps a socket fd to its connection data
-    serverList virtualServers;
+    std::map<int, const ServerBlock&> listeners;
 
+    // serverList virtualServers;
     // std::map<std::string route, Location location> locations;
     // std::map<int errCode, std::string pageLocation>	errorPages;
 
   public:
-    // Server();
-    Server(std::string port, serverList virtualServers);
-    void bindSocket();
+    Server();
+    Server(serverList virtualServers);
+    void initListener(const ServerBlock &config);
+    void bindSocket(addrinfo *servInfo, const ServerBlock &config);
     void startListening();
-    void acceptNewConnection();
+    void acceptNewConnection(size_t listenerNo);
     void readRequest(size_t clientNo);
     void sendResponse(size_t clientNo);
     ~Server();

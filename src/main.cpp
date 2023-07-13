@@ -39,16 +39,13 @@ int main(int argc, char **argv)
             // ConfigTokenizer tokenizer(filename);
             // std::vector<Token> tokens = tokenizer.tokens();
             Parser parser(filename);
-            Server s("1234", parser.getConfig());
-            s.bindSocket();
+            Server s(parser.getConfig());
             s.startListening();
         }
         else
         {
-            std::vector<ServerBlock> defaultConfig;
-            defaultConfig.push_back(createDefaultServerBlock());
-            Server s("1234", defaultConfig);
-            s.bindSocket();
+            // uses default config
+            Server s;
             s.startListening();
         }
     }
