@@ -22,6 +22,7 @@ struct Connection
 {
     std::string request;
     std::string response;
+    size_t totalBytesSent;
 };
 
 class Server

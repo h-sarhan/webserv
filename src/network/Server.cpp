@@ -92,13 +92,13 @@ void Server::bindSocket()
 void Server::readRequest(size_t clientNo)
 {
     int bytes_rec;
-    char *buf = new char[2000000];
+    char *buf = new char[200000];
 
     // receiving request
     std::cout << "Received a request: " << std::endl;
-    bytes_rec = recv(sockets[clientNo].fd, buf, 2000000, 0);
+    bytes_rec = recv(sockets[clientNo].fd, buf, 200000, 0);
     if (bytes_rec < 0)
-        std::cout << "Failed to receive request" << std::endl;
+        std::cout << "Failed to receive request: " << strerror(errno) << std::endl;
     else if (bytes_rec == 0)
         std::cout << "Connection closed by client" << std::endl;
     if (bytes_rec <= 0)
@@ -107,6 +107,7 @@ void Server::readRequest(size_t clientNo)
         cons.erase(sockets[clientNo].fd);
         sockets.erase(sockets.begin() + clientNo);
         delete[] buf;
+        return ;
     }
     buf[bytes_rec] = 0;
     std::cout << "bytes = " << bytes_rec << ", msg: " << std::endl;
@@ -137,64 +138,46 @@ std::string static createResponse(std::string filename, std::string headers)
     return responseBuffer.str();
 }
 
-// static int sendAll(int clientFd, const char *msg, size_t msgLen)
-// {
-//     ssize_t bytesLeft = msgLen;
-//     ssize_t bytesSent = 0;
-//     ssize_t totalSent = 0;
-//     // pollfd client = createPollFd(clientFd, POLLOUT);
-
-//     while (bytesLeft > 0)
-//     {
-//         // checkErr("poll", poll(&client, 1, -1));
-//         bytesSent = send(clientFd, msg + totalSent, bytesLeft, 0);
-//         if (bytesSent == -1)
-//             return (-1);
-//         bytesLeft -= bytesSent;
-//         totalSent += bytesSent;
-//     }
-//     return (totalSent);
-// }
-
 void Server::sendResponse(size_t clientNo)
 {
-    std::string msg;
-    size_t bytesSent;
-    int fd;
+    ssize_t bytesSent;
+    std::string &req = cons.at(sockets[clientNo].fd).request;
+    std::string &res = cons.at(sockets[clientNo].fd).response;
+    size_t &totalSent = cons.at(sockets[clientNo].fd).totalBytesSent;
 
-    fd = sockets[clientNo].fd;
-    if (cons.at(fd).request.length() > 0)
+    if (req.length() > 0)
     {
-        if (cons.at(fd).request.find("/artgallerycontent/2020_3.jpg") != std::string::npos)
-            cons.at(fd).response = createResponse("artgallerycontent/2020_3.jpg", IMG_HEADERS);
-        else
-            // cons.at(fd).response = createResponse("artgallery.html", HTTP_HEADERS);
-            cons.at(fd).response = createResponse("assets/bible.txt", HTTP_HEADERS);
-        cons.at(fd).request.clear();
+        res = createResponse("assets/artgallery.html", HTTP_HEADERS);
+        totalSent = 0;
+        req.clear();
     }
-    if (cons.at(fd).response.length() == 0)
+    if (res.length() == 0)
     {
         std::cout << "Nothing to send >:(" << std::endl;
         return ;
     }
-    msg = cons.at(fd).response;
     std::cout << "Sending a response... " << std::endl;
-    bytesSent = send(fd, msg.c_str(), msg.length(), 0);
+    bytesSent = send(sockets[clientNo].fd, res.c_str() + totalSent, res.length() - totalSent, 0);
     if (bytesSent < 0)
-        std::cout << "Sending response failed" << std::endl;
-    else if (bytesSent < msg.length())
+        std::cout << "Sending response failed: " << strerror(errno) << std::endl;
+    else
     {
-        std::cout << "Response only sent partially: " << bytesSent << std::endl;
-        cons.at(fd).response = msg.substr(bytesSent, msg.length() - bytesSent);
+        totalSent += bytesSent;
+        if (totalSent < res.length()) // partial send 
+        {
+            std::cout << "Response only sent partially: " << bytesSent << ". Total: " << totalSent << std::endl;
+            return ;
+        }
+        else // everything got sent
+        {
+            std::cout << "Response sent successfully to fd " << clientNo << ", " << sockets[clientNo].fd << ", total bytes sent = " << totalSent << std::endl;
+            // if keep-alive was requested 
+                // clear response string, set totalBytesSent to 0 and return here!!
+        }
     }
-    else // if (bytesSent == msg.length()) // everything sent completely
-    {
-        std::cout << "Response sent to fd " << clientNo << ", " << fd
-                  << ", bytesSent = " << bytesSent << std::endl;
-        close(fd);
-        cons.erase(fd);
-        sockets.erase(sockets.begin() + clientNo);
-    }
+    close(sockets[clientNo].fd);
+    cons.erase(sockets[clientNo].fd);
+    sockets.erase(sockets.begin() + clientNo);
     std::cout << "---------------------------------------------------------\n";
 }
 
