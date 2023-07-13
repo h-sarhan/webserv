@@ -31,29 +31,32 @@ int main(int argc, char **argv)
 
     // Test that validators work
     inputValidatorTests();
-    if (argc == 2)
+    try
     {
-        std::string filename = argv[1];
-        try
+        if (argc == 2)
         {
+            std::string filename = argv[1];
             // ConfigTokenizer tokenizer(filename);
             // std::vector<Token> tokens = tokenizer.tokens();
             Parser parser(filename);
-
-            Server s("webserv.com", "1234");
+            Server s("1234", parser.getConfig());
             s.bindSocket();
             s.startListening();
-            const std::vector<ServerBlock> &config = parser.getConfig();
-            std::cout << config;
         }
-        catch (const std::exception &e)
+        else
         {
-            std::cerr << e.what() << std::endl;
-            return (EXIT_FAILURE);
+            std::vector<ServerBlock> defaultConfig;
+            defaultConfig.push_back(createDefaultServerBlock());
+            Server s("1234", defaultConfig);
+            s.bindSocket();
+            s.startListening();
         }
     }
-    const ServerBlock &config = createDefaultServerBlock();
-    std::cout << config;
+    catch (const std::exception &e)
+    {
+        std::cerr << e.what() << std::endl;
+        return (EXIT_FAILURE);
+    }
 
     return (EXIT_SUCCESS);
 }

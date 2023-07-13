@@ -12,21 +12,22 @@
 #include "network/network.hpp"
 
 bool quit = false;
-Server::Server() : name("webserv.com"), port("1234"), listener(-1)
-{
-    addrinfo hints = {};
-    int status;
 
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-    status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
-    if (status != 0)
-        throw SystemCallException("getaddrinfo", gai_strerror(status));
-    // virtualServers = getConfig();
-}
+// Server::Server() : port("1234"), listener(-1)
+// {
+//     addrinfo hints = {};
+//     int status;
 
-Server::Server(std::string name, std::string port) : name(name), port(port), listener(-1)
+//     hints.ai_family = AF_UNSPEC;
+//     hints.ai_socktype = SOCK_STREAM;
+//     hints.ai_flags = AI_PASSIVE;
+//     status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
+//     if (status != 0)
+//         throw SystemCallException("getaddrinfo", gai_strerror(status));
+    
+// }
+
+Server::Server(std::string port, serverList virtualServers) : port(port), listener(-1), virtualServers(virtualServers)
 {
     addrinfo hints = {};
     int status;
@@ -37,7 +38,8 @@ Server::Server(std::string name, std::string port) : name(name), port(port), lis
     status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
     if (status != 0)
         throw SystemCallException("getaddrinfo", gai_strerror(status));
-    // virtualServers = getConfig();
+    std::cout << "Virtual servers - " << std::endl;
+    std::cout << virtualServers << std::endl;
 }
 
 static int checkErr(std::string funcName, int retValue)
@@ -60,6 +62,7 @@ static pollfd createPollFd(int fd, short events)
 
 void Server::bindSocket()
 {
+    (void)virtualServers;
     addrinfo *p;
     int reusePort = 1;
 
@@ -86,16 +89,17 @@ void Server::bindSocket()
     if (!p)
         throw SystemCallException("failed to bind");
     sockets.push_back(createPollFd(this->listener, POLLIN));
+    checkErr("listen", listen(this->listener, QUEUE_LIMIT));
 }
 
 // change this to use fd directly and close stuff in caller func
 void Server::readRequest(size_t clientNo)
 {
     size_t contentLen = 200000; // temporary contentLen until the one from the request is parsed
-    int bytesRec;
     char *buf = new char[contentLen];
-    // std::string &req = cons.at(sockets[clientNo].fd).request;
-    // size_t &totalRec = cons.at(sockets[clientNo].fd).totalBytesRec;
+    std::string &req = cons.at(sockets[clientNo].fd).request;
+    size_t &totalRec = cons.at(sockets[clientNo].fd).totalBytesRec;
+    int bytesRec;
 
     // receiving request
     std::cout << "Received a request: " << std::endl;
@@ -113,16 +117,19 @@ void Server::readRequest(size_t clientNo)
         return ;
     }
     buf[bytesRec] = 0;
-    // if this is a POST req and bytesRec != contentLength
+    totalRec += bytesRec;
+    req += buf;
+    // if this is a POST req and totalRec != contentLength
         // append buf to request;
         // delete[] buf
         // return here so that we dont set the events to start responding
+    std::cout << "Request size = " << totalRec << std::endl;
+    totalRec = 0; // getting ready for next request
+    sockets[clientNo].events = POLLIN | POLLOUT;
     std::cout << "bytes = " << bytesRec << ", msg: " << std::endl;
     std::cout << "---------------------------------------------------------\n";
     std::cout << buf;
     std::cout << "---------------------------------------------------------\n";
-    sockets[clientNo].events = POLLIN | POLLOUT;
-    cons.at(sockets[clientNo].fd).request += buf;
     delete[] buf;
 }
 
@@ -225,7 +232,6 @@ void Server::acceptNewConnection()
 void Server::startListening()
 {
     signal(SIGINT, sigInthandler);
-    checkErr("listen", listen(this->listener, QUEUE_LIMIT));
     std::cout << "Listening on port " << this->port << std::endl;
     while (true)
     {

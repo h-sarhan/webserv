@@ -15,6 +15,7 @@
 #include "SystemCallException.hpp"
 #include "network.hpp"
 #include "Connection.hpp"
+#include "config/ServerBlock.hpp"
 
 #define MAX_CLIENTS 10
 
@@ -26,23 +27,24 @@
 //     size_t totalBytesSent;
 // };
 
+typedef const std::vector<ServerBlock>& serverList;
+
 class Server
 {
   private:
-    std::string name;
     std::string port;
     addrinfo *servInfo;
     int listener;
     std::vector<pollfd> sockets;
-    std::map<int, Connection> cons;
-    // const std::vector<ServerBlock>& virtualServers;
+    std::map<int, Connection> cons; // maps a socket fd to its connection data
+    serverList virtualServers;
 
     // std::map<std::string route, Location location> locations;
     // std::map<int errCode, std::string pageLocation>	errorPages;
 
   public:
-    Server();
-    Server(std::string name, std::string port);
+    // Server();
+    Server(std::string port, serverList virtualServers);
     void bindSocket();
     void startListening();
     void acceptNewConnection();
