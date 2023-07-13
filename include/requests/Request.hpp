@@ -50,6 +50,7 @@ class Request
     // ! Make these const when im not tired
     std::string userAgent();
     std::string host();
+
     bool keepAlive();
     unsigned int keepAliveTimer();
     unsigned int maxReconnections();

@@ -240,70 +240,67 @@ void requestParsingTests()
 {
     (void) testRequest;
 
-    // // Start line fail tests
-    // assert(testRequest("") == false);
-    // assert(testRequest("GET") == false);
-    // assert(testRequest("GET ") == false);
-    // assert(testRequest("GET fsfd") == false);
-    // assert(testRequest("GET fsfd HTTP/2.0\r\n") == false);
-    // assert(testRequest("GET  HTTP/1.0\r\n") == false);
-    // assert(testRequest("POSTT / HTTP/1.1\r\n") == false);
-    // assert(testRequest("PUT /fds HTTP/1.0\r") == false);
+    // Start line fail tests
+    assert(testRequest("") == false);
+    assert(testRequest("GET") == false);
+    assert(testRequest("GET ") == false);
+    assert(testRequest("GET fsfd") == false);
+    assert(testRequest("GET fsfd HTTP/2.0\r\n") == false);
+    assert(testRequest("GET  HTTP/1.0\r\n") == false);
+    assert(testRequest("POSTT / HTTP/1.1\r\n") == false);
+    assert(testRequest("PUT /fds HTTP/1.0\r") == false);
 
-    // // Start line pass tests
-    // assert(testRequest("GET fsfd HTTP/1.1\r\n") == true);
-    // assert(testRequest("GET fsfd HTTP/1.0\r\n") == true);
-    // assert(testRequest("POST / HTTP/1.1\r\n") == true);
-    // assert(testRequest("PUT /fds HTTP/1.0\r\n") == true);
-    // assert(testRequest("DELETE /fds HTTP/1.0\r\n") == true);
+    // Start line pass tests
+    assert(testRequest("GET fsfd HTTP/1.1\r\n") == true);
+    assert(testRequest("GET fsfd HTTP/1.0\r\n") == true);
+    assert(testRequest("POST / HTTP/1.1\r\n") == true);
+    assert(testRequest("PUT /fds HTTP/1.0\r\n") == true);
+    assert(testRequest("DELETE /fds HTTP/1.0\r\n") == true);
 
-    // // Empty body tests with no headers
-    // assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
+    // Empty body tests with no headers
+    assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
 
-    // // Normal body test with no headers
-    // assert(testRequest("PUT /fds HTTP/1.0\r\n\r\nThis is a body") == true);
+    // Normal body test with no headers
+    assert(testRequest("PUT /fds HTTP/1.0\r\n\r\nThis is a body") == true);
 
-    // // HTTP Method tests
-    // Request delReq("DELETE /fds HTTP/1.0\r\n",
-    //                std::vector<ServerBlock>(1, createDefaultServerBlock()));
-    // assert(delReq.method() == DELETE);
+    // HTTP Method tests
+    Request delReq("DELETE /fds HTTP/1.0\r\n",
+                   std::vector<ServerBlock>(1, createDefaultServerBlock()), 80);
+    assert(delReq.method() == DELETE);
 
-    // Request getReq("GET /fds HTTP/1.0\r\n",
-    //                std::vector<ServerBlock>(1, createDefaultServerBlock()));
-    // assert(getReq.method() == GET);
+    Request getReq("GET /fds HTTP/1.0\r\n", std::vector<ServerBlock>(1, createDefaultServerBlock()),
+                   80);
+    assert(getReq.method() == GET);
 
-    // Request postReq("POST /fds HTTP/1.0\r\n",
-    //                 std::vector<ServerBlock>(1, createDefaultServerBlock()));
-    // assert(postReq.method() == POST);
+    Request postReq("POST /fds HTTP/1.0\r\n",
+                    std::vector<ServerBlock>(1, createDefaultServerBlock()), 80);
+    assert(postReq.method() == POST);
 
-    // Request putReq("PUT /fds HTTP/1.0\r\n",
-    //                std::vector<ServerBlock>(1, createDefaultServerBlock()));
-    // assert(putReq.method() == PUT);
+    Request putReq("PUT /fds HTTP/1.0\r\n", std::vector<ServerBlock>(1, createDefaultServerBlock()),
+                   80);
+    assert(putReq.method() == PUT);
 
-    // // Header tests
-    // assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
-    //                    "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
-    //                    "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost: webserv.com\r\n") == true);
-    // assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
-    //                    "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
-    //                    "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost webserv.com\r\n") == false);
+    // Header tests
+    assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
+                       "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
+                       "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost: webserv.com\r\n") == true);
+    assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
+                       "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
+                       "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost webserv.com\r\n") == false);
 
-    // // Test big GET with a bunch of headers and body should pass
-    // assert(
-    //     testRequest(
-    //         "GET /favicon.ico HTTP/1.1\r\nHost: localhost:1234\r\nConnection: "
-    //         "keep-alive\r\nsec-ch-ua: "
-    //         "\"Not_A Brand\";v=\"99\", \"Google Chrome\";v=\"109\", "
-    //         "\"Chromium\";v=\"109\"\r\nsec-ch-ua-mobile: ?0\r\nUser-Agent: Mozilla/5.0
-    //         (Macintosh; " "Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)
-    //         Chrome/109.0.0.0 " "Safari/537.36\r\nsec-ch-ua-platform: \"macOS\"\r\nAccept: "
-    //         "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8\r\nSec-Fetch-Site:
-    //         " "same-origin\r\nSec-Fetch-Mode: no-cors\r\nSec-Fetch-Dest: image\r\nReferer: "
-    //         "http://localhost:1234/\r\nAccept-Encoding: gzip, deflate, br\r\nAccept-Language: "
-    //         "en-US,en;q=0.9,ar-XB;q=0.8,ar;q=0.7\r\n\r\nergrere") == true);
+    // Test big GET with a bunch of headers and body should pass
+    assert(
+        testRequest("GET /favicon.ico HTTP/1.1\r\n"
+                    "Host: localhost:1234\r\nConnection: keep-alive\r\n"
+                    "sec-ch-ua-mobile: ?0\r\n"
+                    "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)\r\n"
+                    "Accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8\r\n"
+                    "Referer: http://localhost:1234/\r\n"
+                    "Accept-Encoding: gzip, deflate, br\r\n"
+                    "Accept-Language: en-US,en;q=0.9,ar-XB;q=0.8,ar;q=0.7\r\n\r\nergrere") == true);
 
     const char *getReqStr = "GET meme.jpeg HTTP/1.1\r\n"
-                            "Host: webserv.com\r\n"
+                            "Host: webserv.com:1234\r\n"
                             "Connection: Keep-Alive\r\n"
                             "Content-Encoding: gzip\r\n"
                             "Content-Type: text/html; charset=utf-8\r\n"
@@ -317,7 +314,6 @@ void requestParsingTests()
     assert(getReqTest.keepAlive() == true);
     assert(getReqTest.keepAliveTimer() == 5);
     assert(getReqTest.body() == "meh");
-    // strlen(getReqTest.body());
     assert(getReqTest.host() == "webserv.com");
     assert(getReqTest.maxReconnections() == 100);
     assert(getReqTest.method() == GET);
