@@ -35,9 +35,10 @@ class Request
     std::map<std::string, std::string> _headers;
     std::string _rawBody;
     const std::vector<ServerBlock> &_config;
+    const unsigned int _port;
 
   public:
-    Request(const std::string rawReq, const std::vector<ServerBlock> &config);
+    Request(const std::string rawReq, const std::vector<ServerBlock> &config, unsigned int port);
     Request(const Request &req);
     Request &operator=(const Request &req);
     ~Request();

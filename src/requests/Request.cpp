@@ -22,14 +22,16 @@ static void trimWhitespace(std::string &str)
     str.erase(str.find_last_not_of(WHITESPACE) + 1);
 }
 
-Request::Request(const std::string rawReq, const std::vector<ServerBlock> &config) : _config(config)
+Request::Request(const std::string rawReq, const std::vector<ServerBlock> &config,
+                 unsigned int port)
+    : _config(config), _port(port)
 {
     parseRequest(rawReq);
 }
 
 Request::Request(const Request &req)
     : _httpMethod(req.method()), _target(req._target), _headers(req._headers),
-      _rawBody(req._rawBody), _config(req._config)
+      _rawBody(req._rawBody), _config(req._config), _port(req._port)
 {
 }
 
@@ -160,7 +162,13 @@ std::string Request::userAgent()
 std::string Request::host()
 {
     if (_headers.count("host") != 0)
-        return _headers["host"];
+    {
+        std::string hostValue = _headers["host"];
+        const size_t colonPos = hostValue.find(":");
+        if (colonPos != std::string::npos)
+            return hostValue.substr(0, colonPos);
+        return hostValue;
+    }
     return "localhost";
 }
 
@@ -219,7 +227,7 @@ static bool testRequest(const char *req)
 {
     try
     {
-        Request request(req, std::vector<ServerBlock>(1, createDefaultServerBlock()));
+        Request request(req, std::vector<ServerBlock>(1, createDefaultServerBlock()), 80);
         return true;
     }
     catch (const std::exception &e)
@@ -304,7 +312,7 @@ void requestParsingTests()
                             "Last-Modified: Mon, 25 Jul 2016 04:32:39 GMT\r\n"
                             "Server: Apache\r\n\r\nmeh";
 
-    Request getReqTest(getReqStr, std::vector<ServerBlock>(1, createDefaultServerBlock()));
+    Request getReqTest(getReqStr, std::vector<ServerBlock>(1, createDefaultServerBlock()), 80);
 
     assert(getReqTest.keepAlive() == true);
     assert(getReqTest.keepAliveTimer() == 5);
