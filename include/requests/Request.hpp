@@ -15,6 +15,14 @@
 #include "enums/HTTPMethods.hpp"
 #include <map>
 
+#define WHITESPACE " \t\n\r\f\v"
+
+// * Important headers?
+// Content-Length: 1000
+// Transfer-encoding: chunked
+// User-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:50.0) Gecko/20100101 Firefox/50.0
+// Host: webserv.com
+
 /**
  * @brief This class defines an HTTP request
  */
@@ -22,9 +30,10 @@ class Request
 {
   private:
     HTTPMethod _httpMethod;
-    std::string _pathToTarget;
+    std::string _target;
     std::map<std::string, std::string> _headers;
-    std::string _rawBody;
+    std::string _userAgent;
+    char *_rawBody;
 
   public:
     Request(const char *rawReq);
@@ -34,16 +43,18 @@ class Request
 
     const HTTPMethod &method() const;
     const std::string &target(const ServerBlock &config) const;
-    const std::string &body() const;
+
+    const std::string &userAgent() const;
+    const char *body() const;
 
   private:
     void parseRequest(const std::string &reqStr);
-    void extracted(std::stringstream &reqStream, std::string &token);
     void parseStartLine(std::stringstream &reqStream);
-    void stripLineEnding(std::stringstream &reqStream);
-    std::string stripLineEnding(const std::string &token);
-    void validateToken(const std::stringstream &reqStream, const std::string &token,
-                       const std::string &errMsg);
+    void parseHeader(const std::string &header);
+    void checkLineEnding(const std::string &line);
+
+    void checkStream(const std::stringstream &reqStream, const std::string &token,
+                     const std::string &errMsg);
     void checkEOF(const std::stringstream &reqStream);
 };
 
