@@ -33,24 +33,25 @@ class Request
     HTTPMethod _httpMethod;
     std::string _target;
     std::map<std::string, std::string> _headers;
-    const char *_rawBody;
+    std::string _rawBody;
     const std::vector<ServerBlock> &_config;
-    // * const std::string _host; // Get from header
-    // * const bool _keepAlive; // Get from header
-    // * const unsigned int _keepAliveFor; // Get from header
-    // * const unsigned int _maxReconnections; // Get from header
 
   public:
-    Request(const char *rawReq, const std::vector<ServerBlock> &config);
+    Request(const std::string rawReq, const std::vector<ServerBlock> &config);
     Request(const Request &req);
     Request &operator=(const Request &req);
     ~Request();
 
     const HTTPMethod &method() const;
-    const std::string &target(const ServerBlock &config) const;
+    const std::string &body() const;
+    // std::string target() const;
 
-    const std::string &userAgent() const;
-    const char *body() const;
+    // ! Make these const when im not tired
+    std::string userAgent();
+    std::string host();
+    bool keepAlive();
+    unsigned int keepAliveTimer();
+    unsigned int maxReconnections();
 
   private:
     void parseRequest(const std::string &reqStr);
