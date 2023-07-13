@@ -38,6 +38,7 @@ class Request
     const unsigned int _port;
 
   public:
+    // ! Take in strings by reference
     Request(const std::string rawReq, const std::vector<ServerBlock> &config, unsigned int port);
     Request(const Request &req);
     Request &operator=(const Request &req);
@@ -45,7 +46,9 @@ class Request
 
     const HTTPMethod &method() const;
     const std::string &body() const;
-    // std::string target() const;
+
+    // ! Severely hardcoded right. I need to go through the config file to serve the correct file
+    std::string target() const;
 
     // ! Make these const when im not tired
     std::string userAgent();

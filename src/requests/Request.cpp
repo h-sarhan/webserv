@@ -223,6 +223,11 @@ unsigned int Request::maxReconnections()
     return 100;
 }
 
+std::string Request::target() const
+{
+    return std::string("./assets/web/").append(_target);
+}
+
 static bool testRequest(const char *req)
 {
     try
