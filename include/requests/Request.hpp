@@ -34,13 +34,14 @@ class Request
     std::string _target;
     std::map<std::string, std::string> _headers;
     const char *_rawBody;
+    const std::vector<ServerBlock> &_config;
     // * const std::string _host; // Get from header
     // * const bool _keepAlive; // Get from header
     // * const unsigned int _keepAliveFor; // Get from header
     // * const unsigned int _maxReconnections; // Get from header
 
   public:
-    Request(const char *rawReq);
+    Request(const char *rawReq, const std::vector<ServerBlock> &config);
     Request(const Request &req);
     Request &operator=(const Request &req);
     ~Request();
@@ -54,8 +55,8 @@ class Request
   private:
     void parseRequest(const std::string &reqStr);
     void parseStartLine(std::stringstream &reqStream);
-    void parseHeader(const std::string &header);
-    void checkLineEnding(const std::string &line);
+    void parseHeader(std::stringstream &reqStream);
+    void checkLineEnding(std::stringstream &reqStream);
 
     void checkStream(const std::stringstream &reqStream, const std::string &token,
                      const std::string &errMsg);

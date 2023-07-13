@@ -14,23 +14,23 @@
 #include <iostream>
 #include <sstream>
 
-// static void trimWhitespace(std::string &str)
-// {
-//     // left trim
-//     str.erase(0, str.find_first_not_of(WHITESPACE));
-//     // right trim
-//     str.erase(str.find_last_not_of(WHITESPACE) + 1);
-// }
-
-Request::Request(const char *rawReq) : _rawBody(NULL)
+static void trimWhitespace(std::string &str)
 {
-    // * rawReq needs to null terminated
+    // left trim
+    str.erase(0, str.find_first_not_of(WHITESPACE));
+    // right trim
+    str.erase(str.find_last_not_of(WHITESPACE) + 1);
+}
+
+Request::Request(const char *rawReq, const std::vector<ServerBlock> &config)
+    : _rawBody(NULL), _config(config)
+{
     parseRequest(rawReq);
 }
 
 Request::Request(const Request &req)
     : _httpMethod(req.method()), _target(req._target), _headers(req._headers),
-      _rawBody(req._rawBody)
+      _rawBody(req._rawBody), _config(req._config)
 {
 }
 
@@ -63,14 +63,23 @@ const char *Request::body() const
 
 void Request::parseRequest(const std::string &reqStr)
 {
-    std::stringstream reqStream(reqStr);
+    const size_t bodyStart = reqStr.find("\r\n\r\n");
+    std::stringstream reqStream;
+    if (bodyStart == std::string::npos)
+    {
+        _rawBody = NULL;
+        reqStream.str(reqStr);
+    }
+    else
+    {
+        reqStream.str(reqStr.substr(0, bodyStart + 2));
+        _rawBody = &reqStr[bodyStart + 4];
+    }
 
     parseStartLine(reqStream);
-    if (reqStream.peek() == '\r')
+    while (reqStream.peek() != '\r' && !reqStream.eof())
     {
-        if ((size_t) reqStream.tellg() + 2 > reqStr.length())
-            throw InvalidRequestError("Invalid line ending");
-        _rawBody = &reqStr[(int) reqStream.tellg() + 2];
+        parseHeader(reqStream);
     }
 }
 
@@ -80,6 +89,7 @@ void Request::parseStartLine(std::stringstream &reqStream)
     // GET /background.png HTTP/1.0
     // POST / HTTP/1.1
     // DELETE /src/main.cpp HTTP/1.1
+
     std::string httpMethod;
     reqStream >> httpMethod;
     if (httpMethod.empty())
@@ -102,6 +112,11 @@ void Request::parseStartLine(std::stringstream &reqStream)
 
     if (httpVersion != "HTTP/1.0" && httpVersion != "HTTP/1.1")
         throw InvalidRequestError("Invalid start line");
+    checkLineEnding(reqStream);
+}
+
+void Request::checkLineEnding(std::stringstream &reqStream)
+{
     std::string lineEnding(2, '\0');
 
     reqStream >> std::noskipws >> lineEnding[0];
@@ -111,16 +126,38 @@ void Request::parseStartLine(std::stringstream &reqStream)
         throw InvalidRequestError("Invalid start line");
 }
 
-void Request::parseHeader(const std::string &header)
+void Request::parseHeader(std::stringstream &reqStream)
 {
-    (void) header;
+    std::string key;
+    reqStream >> key;
+    if (key.length() < 2)
+        throw InvalidRequestError("Invalid header");
+
+    char sep = *--key.end();
+    if (sep != ':')
+        throw InvalidRequestError("Invalid header");
+
+    std::string value;
+    char c = '\0';
+    reqStream >> std::noskipws;
+    while (reqStream.peek() != '\r' && !reqStream.eof())
+    {
+        reqStream >> c;
+        value.push_back(c);
+    }
+    if (reqStream.eof())
+        throw InvalidRequestError("Invalid header");
+
+    checkLineEnding(reqStream);
+    trimWhitespace(value);
+    _headers.insert(std::make_pair(key, value));
 }
 
 static bool testRequest(const char *req)
 {
     try
     {
-        Request request(req);
+        Request request(req, std::vector<ServerBlock>(1, createDefaultServerBlock()));
         return true;
     }
     catch (const std::exception &e)
@@ -157,22 +194,57 @@ void requestParsingTests()
     assert(testRequest("PUT /fds HTTP/1.0\r\n\r\nThis is a body") == true);
 
     // HTTP Method tests
-    Request delReq("DELETE /fds HTTP/1.0\r\n");
+    Request delReq("DELETE /fds HTTP/1.0\r\n",
+                   std::vector<ServerBlock>(1, createDefaultServerBlock()));
     assert(delReq.method() == DELETE);
-    Request getReq("GET /fds HTTP/1.0\r\n");
+
+    Request getReq("GET /fds HTTP/1.0\r\n",
+                   std::vector<ServerBlock>(1, createDefaultServerBlock()));
     assert(getReq.method() == GET);
-    Request postReq("POST /fds HTTP/1.0\r\n");
+
+    Request postReq("POST /fds HTTP/1.0\r\n",
+                    std::vector<ServerBlock>(1, createDefaultServerBlock()));
     assert(postReq.method() == POST);
-    Request putReq("PUT /fds HTTP/1.0\r\n");
+
+    Request putReq("PUT /fds HTTP/1.0\r\n",
+                   std::vector<ServerBlock>(1, createDefaultServerBlock()));
     assert(putReq.method() == PUT);
 
     // Header tests
-    // assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
-    //                    "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
-    //                    "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost: webserv.com\r\n") == true);
-    // assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
-    //                    "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
-    //                    "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost webserv.com\r\n") == false);
+    assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
+                       "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
+                       "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost: webserv.com\r\n") == true);
+    assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
+                       "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
+                       "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost webserv.com\r\n") == false);
+
+    // Test big GET with a bunch of headers and body should pass
+    assert(
+        testRequest(
+            "GET /favicon.ico HTTP/1.1\r\nHost: localhost:1234\r\nConnection: "
+            "keep-alive\r\nsec-ch-ua: "
+            "\"Not_A Brand\";v=\"99\", \"Google Chrome\";v=\"109\", "
+            "\"Chromium\";v=\"109\"\r\nsec-ch-ua-mobile: ?0\r\nUser-Agent: Mozilla/5.0 (Macintosh; "
+            "Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 "
+            "Safari/537.36\r\nsec-ch-ua-platform: \"macOS\"\r\nAccept: "
+            "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8\r\nSec-Fetch-Site: "
+            "same-origin\r\nSec-Fetch-Mode: no-cors\r\nSec-Fetch-Dest: image\r\nReferer: "
+            "http://localhost:1234/\r\nAccept-Encoding: gzip, deflate, br\r\nAccept-Language: "
+            "en-US,en;q=0.9,ar-XB;q=0.8,ar;q=0.7\r\n\r\nergrere") == true);
+
+    // Test big GET with a bunch of headers and body should fail
+    assert(
+        testRequest(
+            "GET /favicon.ico HTTP/1.1\r\nHost: localhost:1234\r\n: "
+            "keep-alive\r\nsec-ch-ua: "
+            "\"Not_A Brand\";v=\"99\", \"Google Chrome\";v=\"109\", "
+            "\"Chromium\";v=\"109\"\r\nsec-ch-ua-mobile: ?0\r\nUser-Agent: Mozilla/5.0 (Macintosh; "
+            "Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 "
+            "Safari/537.36\r\nsec-ch-ua-platform: \"macOS\"\r\nAccept: "
+            "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8\r\nSec-Fetch-Site: "
+            "same-origin\r\nSec-Fetch-Mode: no-cors\r\nSec-Fetch-Dest: image\r\nReferer: "
+            "http://localhost:1234/\r\nAccept-Encoding: gzip, deflate, br\r\nAccept-Language: "
+            "en-US,en;q=0.9,ar-XB;q=0.8,ar;q=0.7\r\n") == false);
 }
 
 Request::~Request()
