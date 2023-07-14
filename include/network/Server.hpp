@@ -27,14 +27,14 @@
 //     size_t totalBytesSent;
 // };
 
-typedef const std::vector<ServerBlock>& serverList;
+typedef std::vector<ServerBlock>& serverList;
 
 class Server
 {
   private:
     std::vector<pollfd> sockets;
     std::map<int, Connection> cons; // maps a socket fd to its connection data
-    std::map<int, const ServerBlock&> listeners;
+    std::map<int, std::vector<ServerBlock*> > listeners;
 
     // serverList virtualServers;
     // std::map<std::string route, Location location> locations;
@@ -43,8 +43,9 @@ class Server
   public:
     Server();
     Server(serverList virtualServers);
-    void initListener(const ServerBlock &config);
-    void bindSocket(addrinfo *servInfo, const ServerBlock &config);
+    std::vector<ServerBlock*> getServerBlocks(int port, serverList virtualServers);
+    void initListener(std::vector<ServerBlock*> config);
+    void bindSocket(addrinfo *servInfo, std::vector<ServerBlock*> config);
     void startListening();
     void acceptNewConnection(size_t listenerNo);
     void readRequest(size_t clientNo);

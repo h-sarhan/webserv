@@ -28,19 +28,34 @@ Server::Server()
     initListener(defaultConfig);
 }
 
+// Server::Server(serverList virtualServers = std::vector<ServerBlock>(1, createDefaultServerBlock()))
 Server::Server(serverList virtualServers)
 {
     std::cout << "Virtual servers - " << std::endl;
     std::cout << virtualServers << std::endl;
-    std::vector<ServerBlock>::const_iterator it;
+    std::vector<ServerBlock>::iterator it;
     for (it = virtualServers.begin(); it != virtualServers.end() ; it++)
     {
+        
         std::cout << "Setting up listener on port " << it->port << std::endl;
-        initListener(*it);
+        initListener(getServerBlocks(it->port, virtualServers));
     }
 }
 
-void Server::initListener(const ServerBlock &config)
+// bool Server::portAlreadyInUse()
+
+std::vector<ServerBlock*> Server::getServerBlocks(int port, serverList virtualServers)
+{
+    std::vector<ServerBlock>::iterator it;
+    std::vector<ServerBlock*> filteredServerBlocks;
+
+    for (it = virtualServers.begin(); it != virtualServers.end(); it++)
+        if (it->port == port)
+            filteredServerBlocks.push_back(it.base());
+    return filteredServerBlocks;
+}
+
+void Server::initListener(std::vector<ServerBlock*> config)
 {
     addrinfo hints = {};
     addrinfo *servInfo;
@@ -51,7 +66,7 @@ void Server::initListener(const ServerBlock &config)
     hints.ai_family = AF_UNSPEC;       // don't care IPv4 or IPv6
     hints.ai_socktype = SOCK_STREAM;   // TCP stream sockets
     hints.ai_flags = AI_PASSIVE;       // fill in my IP for me
-    ss << config.port;
+    ss << config[0]->port;
     ss >> port;
     status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
     if (status != 0)
@@ -78,7 +93,7 @@ static pollfd createPollFd(int fd, short events)
     return socket;
 }
 
-void Server::bindSocket(addrinfo *servInfo, const ServerBlock &config)
+void Server::bindSocket(addrinfo *servInfo, std::vector<ServerBlock*> config)
 {
     addrinfo *p;
     int reusePort = 1;

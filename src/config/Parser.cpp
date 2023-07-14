@@ -556,7 +556,7 @@ Parser::~Parser()
 {
 }
 
-const std::vector<ServerBlock> &Parser::getConfig() const
+std::vector<ServerBlock> &Parser::getConfig()
 {
     return _serverConfig;
 }
