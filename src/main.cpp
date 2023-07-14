@@ -34,6 +34,7 @@ int main(int argc, char **argv)
     inputValidatorTests();
     // Test that request parsing works
     requestParsingTests();
+
     try
     {
         if (argc == 2)
@@ -42,6 +43,13 @@ int main(int argc, char **argv)
             // ConfigTokenizer tokenizer(filename);
             // std::vector<Token> tokens = tokenizer.tokens();
             Parser parser(filename);
+
+            // std::string cashewTest = "GET /cashews/milk.html HTTP/1.1\r\n";
+            // Request reqTest(cashewTest, parser.getConfig(), 80);
+
+            // const RequestTarget &target = reqTest.target();
+            // std::cout << requestTypeToStr(target.type) << std::endl;
+            // std::cout << target.resource << std::endl;
             Server s(parser.getConfig());
             s.startListening();
         }

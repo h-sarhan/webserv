@@ -47,7 +47,13 @@ class Request
 
   public:
     // ! Take in strings by reference
+    // ! Make this a default constructor
     Request(const std::string rawReq, const std::vector<ServerBlock> &config, unsigned int port);
+
+    // ! Parse request, return false if headers not fully recieved
+
+    // ! Set body
+
     Request(const Request &req);
     Request &operator=(const Request &req);
     ~Request();
@@ -59,7 +65,7 @@ class Request
     const RequestTarget target();
 
     // ! Make these const when im not tired
-    // ! CACHE THESE GET REQUESTS
+    // ! CACHE THESE
     std::string userAgent();
     std::string host();
     bool keepAlive();
