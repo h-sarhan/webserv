@@ -14,6 +14,33 @@
 #include <iostream>
 #include <sstream>
 
+RequestType strToRequestType(const std::string &str)
+{
+    if (str == "OK")
+        return OK;
+    if (str == "REDIRECTION")
+        return REDIRECTION;
+    return NOT_FOUND;
+}
+
+std::string requestTypeToStr(RequestType tkn)
+{
+    switch (tkn)
+    {
+    case OK:
+        return "OK";
+    case REDIRECTION:
+        return "REDIRECTION";
+    case NOT_FOUND:
+        return "NOT_FOUND";
+    }
+}
+
+RequestTarget::RequestTarget(const RequestType &type, const std::string &resource)
+    : type(type), resource(resource)
+{
+}
+
 static void trimWhitespace(std::string &str)
 {
     // left trim
@@ -223,9 +250,40 @@ unsigned int Request::maxReconnections()
     return 100;
 }
 
-std::string Request::target() const
+const RequestTarget Request::target()
 {
-    return std::string("./assets/web/").append(_target);
+    // Go through the config and find what the location matches on
+
+    // Information needed: hostname, listening port, requested_target
+    // Ignore a server block whose hostname or port does not match
+    // Match the target against all the locations in that ServerBlock
+    // If no match then move on to the next server block
+
+    std::string biggestMatch;
+    for (std::vector<ServerBlock>::const_iterator blockIt = _config.begin();
+         blockIt != _config.end(); blockIt++)
+    {
+        if (blockIt->port == _port && blockIt->hostname == host())
+        {
+            // ! Put this into a function
+            for (std::map<std::string, Route>::const_iterator routeIt = blockIt->routes.begin();
+                 routeIt != blockIt->routes.end(); routeIt++)
+            {
+                const std::string &routeStr = routeIt->first;
+                if (routeStr.compare(0, routeStr.length(), _target) == 0 &&
+                    routeStr.length() > biggestMatch.length())
+                    biggestMatch = routeStr;
+            }
+            if (biggestMatch.length() == 0)
+                return RequestTarget(NOT_FOUND, "");
+            const Route &matchedRoute = blockIt->routes.at(biggestMatch);
+            if (matchedRoute.redirectTo.length() > 0)
+                return RequestTarget(REDIRECTION, matchedRoute.redirectTo);
+            if (matchedRoute.serveDir.length() > 0)
+                return RequestTarget(OK, matchedRoute.serveDir + "/" + biggestMatch);
+        }
+    }
+    return RequestTarget(NOT_FOUND, "");
 }
 
 static bool testRequest(const char *req)

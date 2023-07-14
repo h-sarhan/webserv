@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     inputValidatorTests();
     // Test that request parsing works
     requestParsingTests();
-    if (argc == 2)
+    try
     {
         if (argc == 2)
         {

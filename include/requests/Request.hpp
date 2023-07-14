@@ -13,6 +13,7 @@
 
 #include "config/ServerBlock.hpp"
 #include "enums/HTTPMethods.hpp"
+#include "enums/RequestTypes.hpp"
 #include <map>
 
 #define WHITESPACE " \t\n\r\f\v"
@@ -23,6 +24,13 @@
 // Keep-Alive: timeout=5, max=1000
 // ? Content-Length: 1000 // mehrins job i think
 // ? Transfer-encoding: chunked // mehrins job i think
+
+struct RequestTarget
+{
+    RequestTarget(const RequestType &type, const std::string &resource);
+    RequestType type;
+    std::string resource;
+};
 
 /**
  * @brief This class defines an HTTP request
@@ -47,13 +55,13 @@ class Request
     const HTTPMethod &method() const;
     const std::string &body() const;
 
-    // ! Severely hardcoded right. I need to go through the config file to serve the correct file
-    std::string target() const;
+    // ! Severely hardcoded. I need to go through the config file to serve the correct file
+    const RequestTarget target();
 
     // ! Make these const when im not tired
+    // ! CACHE THESE GET REQUESTS
     std::string userAgent();
     std::string host();
-
     bool keepAlive();
     unsigned int keepAliveTimer();
     unsigned int maxReconnections();
@@ -63,6 +71,8 @@ class Request
     void parseStartLine(std::stringstream &reqStream);
     void parseHeader(std::stringstream &reqStream);
     void checkLineEnding(std::stringstream &reqStream);
+    // ! Create function to decode request target
+    // void decodeUrl(std::string &url) const;
 
     void checkStream(const std::stringstream &reqStream, const std::string &token,
                      const std::string &errMsg);
