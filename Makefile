@@ -8,7 +8,7 @@ NETWORK_DIR = $(SRC_DIR)/network
 REQUEST_DIR = $(SRC_DIR)/requests
 
 CONFIG_SRC = Tokenizer.cpp Token.cpp Parser.cpp ParseError.cpp Validators.cpp ServerBlock.cpp
-NETWORK_SRC = Server.cpp
+NETWORK_SRC = Server.cpp Connection.cpp
 REQUEST_SRC = Request.cpp InvalidRequestError.cpp
 
 CONFIG_SRC := $(addprefix $(CONFIG_DIR)/, $(CONFIG_SRC))
@@ -36,10 +36,9 @@ RELEASE_FLAGS = -Ofast -march=native -funroll-loops -finline-functions \
 				-fvectorize -DNDEBUG
 
 # If valgrind is not available use the address sanitizer instead
-ifeq (, $(shell which valgrind))
-	DEBUG_FLAGS += -fsanitize=address,undefined
-endif
-
+# ifeq (, $(shell which valgrind))
+# 	DEBUG_FLAGS += -fsanitize=address,undefined
+# endif
 
 # Compile database for use with clangd
 COMPILE_DB = compile_commands.json

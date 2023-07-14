@@ -39,7 +39,7 @@ static Route createDefaultRoute()
 const ServerBlock createDefaultServerBlock()
 {
     ServerBlock defaultServerBlock;
-    defaultServerBlock.port = 80;
+    defaultServerBlock.port = 3000;
     defaultServerBlock.hostname = "localhost";
     defaultServerBlock.errorPages.insert(std::make_pair(404, "./assets/404.html"));
     defaultServerBlock.errorPages.insert(std::make_pair(502, "./assets/502.html"));
