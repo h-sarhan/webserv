@@ -16,7 +16,6 @@
 #include <set>
 #include <string>
 #include <vector>
-
 /**
  * @brief This struct holds the configuration of a single route
  */
@@ -41,6 +40,8 @@ struct ServerBlock
     std::map<unsigned int, std::string> errorPages;   // Optional
     std::map<std::string, Route> routes;              // At least one route
 };
+
+typedef std::vector<ServerBlock> &serverList;
 
 const ServerBlock createDefaultServerBlock();
 

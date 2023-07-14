@@ -263,8 +263,11 @@ void Parser::parseLocationBlock()
         throwParseError("expected valid path");
     assert(currentToken() == WORD);
 
-    const std::string &routePath = _currToken->contents();
+    std::string routePath = _currToken->contents();
 
+    // trim '/' from route path
+    if (routePath != "/" && *--routePath.end() == '/')
+        routePath = routePath.substr(0, routePath.length() - 1);
     _currRoute = _currServerBlock->routes.insert(std::make_pair(routePath, Route())).first;
 
     advanceToken();
@@ -556,7 +559,7 @@ Parser::~Parser()
 {
 }
 
-const std::vector<ServerBlock> &Parser::getConfig() const
+std::vector<ServerBlock> &Parser::getConfig()
 {
     return _serverConfig;
 }

@@ -42,17 +42,16 @@ class Request
     std::string _target;
     std::map<std::string, std::string> _headers;
     std::string _rawBody;
-    const std::vector<ServerBlock> &_config;
-    const unsigned int _port;
 
   public:
-    // ! Take in strings by reference
-    // ! Make this a default constructor
-    Request(const std::string rawReq, const std::vector<ServerBlock> &config, unsigned int port);
+    Request();
 
-    // ! Parse request, return false if headers not fully recieved
+    // Returns false if the request does not contain the full headers
+    // Throws InvalidRequestError if the request is detected to be invalid
+    bool parseRequest(const std::string &rawReq);
 
-    // ! Set body
+    //  Set body
+    void setBody(const std::string &body);
 
     Request(const Request &req);
     Request &operator=(const Request &req);
@@ -61,8 +60,7 @@ class Request
     const HTTPMethod &method() const;
     const std::string &body() const;
 
-    // ! Severely hardcoded. I need to go through the config file to serve the correct file
-    const RequestTarget target();
+    const RequestTarget target(serverList config);
 
     // ! Make these const when im not tired
     // ! CACHE THESE
@@ -73,10 +71,12 @@ class Request
     unsigned int maxReconnections();
 
   private:
-    void parseRequest(const std::string &reqStr);
     void parseStartLine(std::stringstream &reqStream);
     void parseHeader(std::stringstream &reqStream);
     void checkLineEnding(std::stringstream &reqStream);
+    const RequestTarget getTargetFromServerConfig(std::string &biggestMatch,
+                                                  const ServerBlock &serverConfig);
+
     // ! Create function to decode request target
     // void decodeUrl(std::string &url) const;
 

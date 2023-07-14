@@ -20,6 +20,7 @@ typedef enum
 {
     OK,
     REDIRECTION,
+    METHOD_NOT_ALLOWED,
     NOT_FOUND
 } RequestType;
 

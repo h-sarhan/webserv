@@ -30,7 +30,7 @@ class Parser
     Parser(const std::string &fileName);
     ~Parser();
 
-    const std::vector<ServerBlock> &getConfig() const;
+    std::vector<ServerBlock> &getConfig();
 
   private:
     Parser(const Parser &config);
