@@ -27,7 +27,7 @@
 //     size_t totalBytesSent;
 // };
 
-typedef const std::vector<ServerBlock>& serverList;
+// typedef const std::vector<ServerBlock>& serverList;
 
 class Server
 {
