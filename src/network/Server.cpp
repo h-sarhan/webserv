@@ -30,7 +30,7 @@ Server::Server(serverList virtualServers)
     }
 }
 
-bool Server::portAlreadyInUse(int port)
+bool Server::portAlreadyInUse(unsigned int port)
 {
     std::map<int, std::vector<ServerBlock *> >::iterator it;
     for (it = listeners.begin(); it != listeners.end(); it++)
@@ -50,7 +50,7 @@ static pollfd createPollFd(int fd, short events)
     return socket;
 }
 
-void Server::initListener(int port, serverList virtualServers)
+void Server::initListener(unsigned int port, serverList virtualServers)
 {
     std::vector<ServerBlock *> config;
     std::vector<ServerBlock>::iterator it;
@@ -187,11 +187,11 @@ static void sigInthandler(int sigNo)
 void Server::acceptNewConnection(size_t listenerNo)
 {
     int newFd;
-    sockaddr_storage their_addr;
-    socklen_t addr_size;
+    sockaddr_storage theirAddr;
+    socklen_t addrSize;
 
-    addr_size = sizeof(their_addr);
-    newFd = accept(sockets[listenerNo].fd, (sockaddr *) &their_addr, &addr_size);
+    addrSize = sizeof(theirAddr);
+    newFd = accept(sockets[listenerNo].fd, (sockaddr *) &theirAddr, &addrSize);
     if (newFd == -1)
     {
         std::cout << "Accept failed" << std::endl;
