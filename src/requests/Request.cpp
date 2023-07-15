@@ -115,7 +115,7 @@ static void decodeRequestURL(std::string &url)
     std::string::iterator it =
         std::find_first_of(url.begin(), url.end(), encodedChars.begin(), encodedChars.end());
 
-    while (it != url.end())
+    while (it < url.end())
     {
         if (*it == '+')
         {
@@ -129,13 +129,13 @@ static void decodeRequestURL(std::string &url)
             {
                 std::string::iterator toReplace = it;
                 std::string hexa;
-                hexa.push_back(*++it);
-                hexa.push_back(*++it);
-                if (!std::isdigit(hexa[0]) || !std::isdigit(hexa[1]))
+                if (!std::isdigit(*(it + 1)) || !std::isdigit(*(it + 2)))
                 {
                     it += 1;
                     continue;
                 }
+                hexa.push_back(*++it);
+                hexa.push_back(*++it);
                 std::stringstream converter(hexa);
                 unsigned int convertedChar;
                 converter >> std::hex >> convertedChar;
@@ -143,9 +143,9 @@ static void decodeRequestURL(std::string &url)
                 it = std::find_first_of(url.begin(), url.end(), encodedChars.begin(),
                                         encodedChars.end());
             }
-            else
-                it += 1;
         }
+        else
+            it += 1;
     }
 }
 
@@ -348,7 +348,13 @@ const RequestTarget Request::getTargetFromServerConfig(std::string &match,
             if (info.st_mode & S_IFREG)
                 return RequestTarget(FOUND, requestTarget);
             if (info.st_mode & S_IFDIR)
-                return RequestTarget(DIRECTORY, requestTarget);
+            {
+                if (matchedRoute.listDirectories == true)
+                    return RequestTarget(DIRECTORY, requestTarget);
+                if (matchedRoute.listDirectoriesFile.empty())
+                    return RequestTarget(NOT_FOUND, "");
+                return RequestTarget(FOUND, matchedRoute.listDirectoriesFile);
+            }
         }
     }
     return RequestTarget(NOT_FOUND, "");
