@@ -104,6 +104,8 @@ bool Request::parseRequest()
 {
     if (_length == 0)
         return false;
+    if (!_headers.empty())
+        return true;
     const std::string req(_buffer, _buffer + _length);
     const size_t bodyStart = req.find("\r\n\r\n");
     std::stringstream reqStream;
