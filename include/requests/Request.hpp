@@ -42,7 +42,9 @@ class Request
     std::string _target;
     std::map<std::string, std::string> _headers;
     std::string _rawBody;
-
+    char *_rawRequest;
+    unsigned int _requestSize;
+    
   public:
     Request();
 
@@ -69,6 +71,7 @@ class Request
     bool keepAlive();
     unsigned int keepAliveTimer();
     unsigned int maxReconnections();
+    void append(char *buf);
 
   private:
     void parseStartLine(std::stringstream &reqStream);

@@ -67,7 +67,7 @@ Request::Request()
 
 Request::Request(const Request &req)
     : _httpMethod(req.method()), _target(req._target), _headers(req._headers),
-      _rawBody(req._rawBody)
+      _rawBody(req._rawBody), _rawRequest(req._rawRequest)
 {
 }
 
@@ -79,6 +79,7 @@ Request &Request::operator=(const Request &req)
     _target = req._target;
     _headers = req._headers;
     _rawBody = req._rawBody;
+    _rawRequest = req._rawRequest;
     return *this;
 }
 
@@ -95,14 +96,13 @@ const std::string &Request::body() const
 bool Request::parseRequest(const std::string &reqStr)
 {
     if (reqStr.empty())
-        throw InvalidRequestError("Empty request");
+        return false;
+        // throw InvalidRequestError("Empty request");
     const size_t bodyStart = reqStr.find("\r\n\r\n");
     std::stringstream reqStream;
     if (bodyStart == std::string::npos)
         return false;
-    else
-        reqStream.str(reqStr.substr(0, bodyStart + 2));
-
+    reqStream.str(reqStr.substr(0, bodyStart + 2));
     parseStartLine(reqStream);
     while (reqStream.peek() != '\r' && !reqStream.eof())
         parseHeader(reqStream);
@@ -375,6 +375,11 @@ const RequestTarget Request::target(serverList serverBlocks)
 void Request::setBody(const std::string &body)
 {
     _rawBody = body;
+}
+
+void Request::append(char *buf)
+{
+    _rawRequest += buf;
 }
 
 static void testSingleURLDecoding(const std::string &str1, const std::string &str2)

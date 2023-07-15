@@ -68,7 +68,7 @@ void Server::initListener(unsigned int port, serverList virtualServers)
 }
 
 // change this to use fd directly and close stuff in caller func
-void Server::readRequest(size_t clientNo)
+void Server::readBody(size_t clientNo)
 {
     size_t contentLen = 200000;   // temporary contentLen until the one from the request is parsed
     char *buf = new char[contentLen];
@@ -184,6 +184,36 @@ static void sigInthandler(int sigNo)
     quit = true;
 }
 
+void Server::readHeaders(size_t clientNo)
+{
+    size_t limit = 200000;   // this will be a macro defining the limit of Request::_rawRequest 
+    char *buf = new char[limit];
+    Request &req = cons.at(sockets[clientNo].fd).request;
+    int bytesRec;
+
+    // receiving request
+    std::cout << "Received a request: " << std::endl;
+    bytesRec = recv(sockets[clientNo].fd, buf, limit, 0);
+    if (bytesRec < 0)
+        std::cout << "Failed to receive request: " << strerror(errno) << std::endl;
+    else if (bytesRec == 0)
+        std::cout << "Connection closed by client" << std::endl;
+    if (bytesRec <= 0)
+    {
+        close(sockets[clientNo].fd);
+        cons.erase(sockets[clientNo].fd);
+        sockets.erase(sockets.begin() + clientNo);
+        delete[] buf;
+        return;
+    }
+    req.append(buf, bytesRec);
+    std::cout << "bytes = " << bytesRec << ", msg: " << std::endl;
+    std::cout << "---------------------------------------------------------\n";
+    std::cout << buf;
+    std::cout << "---------------------------------------------------------\n";
+    delete[] buf;
+}
+
 void Server::acceptNewConnection(size_t listenerNo)
 {
     int newFd;
@@ -224,19 +254,16 @@ void Server::startListening()
             // server listener got something new to read
             if (sockets[i].revents & POLLIN)
             {
-                // if (sockets[i].fd == listener)
                 if (listeners.count(sockets[i].fd))
                     acceptNewConnection(i);
                 else   // its one of the clients
-                       // if we didnt receive the header for this connection yet,
-                    // readHeader();
-                    // ^this reads till the header (or more) and parses it to get info like
-                    // Content-Length or Transfer-encoding so we can decide how to read the
-                    // rest of the request
-                    // else
-                    readRequest(i);
-                // ^this will be only to read the rest of the request according to the
-                // header-specified requirements
+                {
+                    Request &req = cons.at(sockets[i].fd).request;
+                    if (!req.parseRequest()) // if headers arent parsed yet
+                        readHeaders(i);
+                    else
+                        readBody(i);
+                }
             }
             else if (sockets[i].revents & POLLOUT)
                 sendResponse(i);
