@@ -12,6 +12,7 @@
 #include "config/Validators.hpp"
 #include "network/Server.hpp"
 #include "requests/Request.hpp"
+#include "responses/DirectoryListing.hpp"
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -34,7 +35,7 @@ int main(int argc, char **argv)
     inputValidatorTests();
     // Test that request parsing works
     requestParsingTests();
-
+    generateDirectoryListing(".");
     try
     {
         if (argc == 2)

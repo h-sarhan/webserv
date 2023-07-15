@@ -44,7 +44,6 @@ std::string requestTypeToStr(RequestType tkn)
         return "METHOD_NOT_ALLOWED";
     case DIRECTORY:
         return "DIRECTORY";
-        break;
     }
 }
 
