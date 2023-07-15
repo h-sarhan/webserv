@@ -39,13 +39,15 @@ int main(int argc, char **argv)
             // ConfigTokenizer tokenizer(filename);
             // std::vector<Token> tokens = tokenizer.tokens();
             Parser parser(filename);
-            Server s(parser.getConfig());
+            std::vector<ServerBlock>& config = parser.getConfig();
+            Server s(config);
             s.startListening();
         }
         else
         {
             // uses default config
-            Server s;
+            std::vector<ServerBlock> config(1, createDefaultServerBlock());
+            Server s(config);
             s.startListening();
         }
     }

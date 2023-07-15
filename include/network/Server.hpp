@@ -41,9 +41,10 @@ class Server
     // std::map<int errCode, std::string pageLocation>	errorPages;
 
   public:
-    Server();
+    // Server();
     Server(serverList virtualServers);
     std::vector<ServerBlock*> getServerBlocks(int port, serverList virtualServers);
+    bool portAlreadyInUse(int port);
     void initListener(std::vector<ServerBlock*> config);
     void bindSocket(addrinfo *servInfo, std::vector<ServerBlock*> config);
     void startListening();

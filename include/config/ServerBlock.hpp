@@ -42,7 +42,7 @@ struct ServerBlock
     std::map<std::string, Route> routes;              // At least one route
 };
 
-const ServerBlock createDefaultServerBlock();
+ServerBlock createDefaultServerBlock();
 
 // Print ServerBlock
 std::ostream &operator<<(std::ostream &os, const ServerBlock &block);

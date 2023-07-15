@@ -36,7 +36,7 @@ static Route createDefaultRoute()
  *
  * @return ServerBlock
  */
-const ServerBlock createDefaultServerBlock()
+ServerBlock createDefaultServerBlock()
 {
     ServerBlock defaultServerBlock;
     defaultServerBlock.port = 3000;

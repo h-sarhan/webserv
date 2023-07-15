@@ -19,14 +19,17 @@ bool quit = false;
  * 
 */
 
-Server::Server()
-{
-    const ServerBlock defaultConfig = createDefaultServerBlock();
-    std::cout << "Default config - " << std::endl;
-    std::cout << defaultConfig;
-    std::cout << "Setting up listener on port " << defaultConfig.port << std::endl;
-    initListener(defaultConfig);
-}
+// Server::Server()
+// {
+//     ServerBlock defaultConfig = createDefaultServerBlock();
+//     std::vector<ServerBlock*> serverBlocks;
+    
+//     serverBlocks.push_back(&defaultConfig);
+//     std::cout << "Default config - " << std::endl;
+//     std::cout << defaultConfig;
+//     std::cout << "Setting up listener on port " << defaultConfig.port << std::endl;
+//     initListener(serverBlocks);
+// }
 
 // Server::Server(serverList virtualServers = std::vector<ServerBlock>(1, createDefaultServerBlock()))
 Server::Server(serverList virtualServers)
@@ -36,13 +39,21 @@ Server::Server(serverList virtualServers)
     std::vector<ServerBlock>::iterator it;
     for (it = virtualServers.begin(); it != virtualServers.end() ; it++)
     {
-        
+        if (portAlreadyInUse(it->port))
+            continue;
         std::cout << "Setting up listener on port " << it->port << std::endl;
         initListener(getServerBlocks(it->port, virtualServers));
     }
 }
 
-// bool Server::portAlreadyInUse()
+bool Server::portAlreadyInUse(int port)
+{
+    std::map<int, std::vector<ServerBlock *> >::iterator it;
+    for (it = listeners.begin(); it != listeners.end(); it++)
+        if (it->second[0]->port == port)
+            return true;
+    return false;
+}
 
 std::vector<ServerBlock*> Server::getServerBlocks(int port, serverList virtualServers)
 {
