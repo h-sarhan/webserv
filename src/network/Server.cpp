@@ -9,40 +9,24 @@
  */
 
 #include "network/Server.hpp"
-#include "network/network.hpp"
+#include "network/SystemCallException.hpp"
 
 bool quit = false;
 
-/**
- * @todo
- * make wrapper class for addrinfo so that freeaddrinfo can be called automatically for any exception
- * 
-*/
-
-// Server::Server()
-// {
-//     ServerBlock defaultConfig = createDefaultServerBlock();
-//     std::vector<ServerBlock*> serverBlocks;
-    
-//     serverBlocks.push_back(&defaultConfig);
-//     std::cout << "Default config - " << std::endl;
-//     std::cout << defaultConfig;
-//     std::cout << "Setting up listener on port " << defaultConfig.port << std::endl;
-//     initListener(serverBlocks);
-// }
-
-// Server::Server(serverList virtualServers = std::vector<ServerBlock>(1, createDefaultServerBlock()))
+// Server::Server(serverList virtualServers = std::vector<ServerBlock>(1,
+// createDefaultServerBlock()))
 Server::Server(serverList virtualServers)
 {
     std::cout << "Virtual servers - " << std::endl;
     std::cout << virtualServers << std::endl;
     std::vector<ServerBlock>::iterator it;
-    for (it = virtualServers.begin(); it != virtualServers.end() ; it++)
+    for (it = virtualServers.begin(); it != virtualServers.end(); it++)
     {
         if (portAlreadyInUse(it->port))
             continue;
         std::cout << "Setting up listener on port " << it->port << std::endl;
-        initListener(getServerBlocks(it->port, virtualServers));
+        // initListener(getServerBlocks(it->port, virtualServers));
+        initListener(it->port, virtualServers);
     }
 }
 
@@ -53,44 +37,6 @@ bool Server::portAlreadyInUse(int port)
         if (it->second[0]->port == port)
             return true;
     return false;
-}
-
-std::vector<ServerBlock*> Server::getServerBlocks(int port, serverList virtualServers)
-{
-    std::vector<ServerBlock>::iterator it;
-    std::vector<ServerBlock*> filteredServerBlocks;
-
-    for (it = virtualServers.begin(); it != virtualServers.end(); it++)
-        if (it->port == port)
-            filteredServerBlocks.push_back(it.base());
-    return filteredServerBlocks;
-}
-
-void Server::initListener(std::vector<ServerBlock*> config)
-{
-    addrinfo hints = {};
-    addrinfo *servInfo;
-    int status;
-    std::stringstream ss;
-    std::string port;
-
-    hints.ai_family = AF_UNSPEC;       // don't care IPv4 or IPv6
-    hints.ai_socktype = SOCK_STREAM;   // TCP stream sockets
-    hints.ai_flags = AI_PASSIVE;       // fill in my IP for me
-    ss << config[0]->port;
-    ss >> port;
-    status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
-    if (status != 0)
-        throw SystemCallException("getaddrinfo", gai_strerror(status));
-    bindSocket(servInfo, config);
-    freeaddrinfo(servInfo);
-}
-
-static int checkErr(std::string funcName, int retValue)
-{
-    if (retValue == -1)
-        throw SystemCallException(funcName, strerror(errno));
-    return (retValue);
 }
 
 static pollfd createPollFd(int fd, short events)
@@ -104,37 +50,21 @@ static pollfd createPollFd(int fd, short events)
     return socket;
 }
 
-void Server::bindSocket(addrinfo *servInfo, std::vector<ServerBlock*> config)
+void Server::initListener(int port, serverList virtualServers)
 {
-    addrinfo *p;
-    int reusePort = 1;
+    std::vector<ServerBlock *> config;
+    std::vector<ServerBlock>::iterator it;
+    ServerInfo servInfo;
     int listenerFd;
 
-    for (p = servInfo; p != NULL; p = p->ai_next)
-    {
-        listenerFd = socket(servInfo->ai_family, servInfo->ai_socktype, servInfo->ai_protocol);
-        if (listenerFd == -1)
-            std::cout << "socket: " << strerror(errno) << std::endl;
-        else
-        {
-            // Setting the socket to be non-blocking
-            checkErr("fcntl", fcntl(listenerFd, F_SETFL, O_NONBLOCK));
-            checkErr("setsockopt", setsockopt(listenerFd, SOL_SOCKET, SO_REUSEADDR, &reusePort,
-                                              sizeof(reusePort)));
-            // binding the socket to a port means - the port number
-            // will be used by the kernel to match an incoming packet
-            // to webserv's process socket descriptor.
-            if (bind(listenerFd, servInfo->ai_addr, servInfo->ai_addrlen) != -1)
-                break;
-            std::cout << "bind: " << strerror(errno) << std::endl;
-            close(listenerFd);
-        }
-    }
-    if (!p)
-        throw SystemCallException("failed to bind");
+    // filtering out the server blocks that use this port
+    for (it = virtualServers.begin(); it != virtualServers.end(); it++)
+        if (it->port == port)
+            config.push_back(it.base());
+    servInfo.getServerInfo(port);
+    listenerFd = servInfo.bindSocketToPort();
     sockets.push_back(createPollFd(listenerFd, POLLIN));
     listeners.insert(std::make_pair(listenerFd, config));
-    checkErr("listen", listen(listenerFd, QUEUE_LIMIT));
 }
 
 // change this to use fd directly and close stuff in caller func
@@ -165,15 +95,15 @@ void Server::readRequest(size_t clientNo)
     totalRec += bytesRec;
     req += buf;
 
-    // if we're here, the call to recv was successful and we should 
-    // at least have received the headers (check for a \r\n\r\n) 
+    // if we're here, the call to recv was successful and we should
+    // at least have received the headers (check for a \r\n\r\n)
     // at this point, the header of the request needs to be parsed to
     // determine content length / chunked encoding
 
     // if this is a POST req and totalRec != contentLength
-        // append buf to request;
-        // delete[] buf
-        // return here so that we dont set the events to start responding
+    // append buf to request;
+    // delete[] buf
+    // return here so that we dont set the events to start responding
     std::cout << "Request size = " << totalRec << std::endl;
     totalRec = 0;   // getting ready for next request
     sockets[clientNo].events = POLLIN | POLLOUT;
@@ -284,10 +214,11 @@ void Server::acceptNewConnection(size_t listenerNo)
 
 void Server::startListening()
 {
+    signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sigInthandler);
     while (true)
     {
-        checkErr("poll", poll(&sockets[0], sockets.size(), -1));
+        SystemCallException::checkErr("poll", poll(&sockets[0], sockets.size(), -1));
         for (size_t i = 0; i < sockets.size(); i++)
         {
             // server listener got something new to read
@@ -297,15 +228,15 @@ void Server::startListening()
                 if (listeners.count(sockets[i].fd))
                     acceptNewConnection(i);
                 else   // its one of the clients
-                    // if we didnt receive the header for this connection yet,
-                        // readHeader();
-                        // ^this reads till the header (or more) and parses it to get info like
-                        // Content-Length or Transfer-encoding so we can decide how to read the
-                        // rest of the request
+                       // if we didnt receive the header for this connection yet,
+                    // readHeader();
+                    // ^this reads till the header (or more) and parses it to get info like
+                    // Content-Length or Transfer-encoding so we can decide how to read the
+                    // rest of the request
                     // else
-                        readRequest(i);
-                        // ^this will be only to read the rest of the request according to the
-                        // header-specified requirements
+                    readRequest(i);
+                // ^this will be only to read the rest of the request according to the
+                // header-specified requirements
             }
             else if (sockets[i].revents & POLLOUT)
                 sendResponse(i);

@@ -12,10 +12,11 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include "SystemCallException.hpp"
-#include "network.hpp"
 #include "Connection.hpp"
+#include "SystemCallException.hpp"
 #include "config/ServerBlock.hpp"
+#include "network.hpp"
+#include "network/ServerInfo.hpp"
 
 #define MAX_CLIENTS 10
 
@@ -27,30 +28,24 @@
 //     size_t totalBytesSent;
 // };
 
-typedef std::vector<ServerBlock>& serverList;
+typedef std::vector<ServerBlock> &serverList;
 
 class Server
 {
   private:
     std::vector<pollfd> sockets;
-    std::map<int, Connection> cons; // maps a socket fd to its connection data
-    std::map<int, std::vector<ServerBlock*> > listeners;
+    std::map<int, Connection> cons;   // maps a socket fd to its connection data
+    std::map<int, std::vector<ServerBlock *> > listeners;
 
-    // serverList virtualServers;
-    // std::map<std::string route, Location location> locations;
-    // std::map<int errCode, std::string pageLocation>	errorPages;
-
-  public:
-    // Server();
-    Server(serverList virtualServers);
-    std::vector<ServerBlock*> getServerBlocks(int port, serverList virtualServers);
     bool portAlreadyInUse(int port);
-    void initListener(std::vector<ServerBlock*> config);
-    void bindSocket(addrinfo *servInfo, std::vector<ServerBlock*> config);
-    void startListening();
+    void initListener(int port, serverList virtualServers);
     void acceptNewConnection(size_t listenerNo);
     void readRequest(size_t clientNo);
     void sendResponse(size_t clientNo);
+
+  public:
+    Server(serverList virtualServers);
+    void startListening();
     ~Server();
 };
 

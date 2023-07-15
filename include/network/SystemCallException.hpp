@@ -13,9 +13,11 @@
 #ifndef SYSTEM_CALL_EXCEPTION_HPP
 #define SYSTEM_CALL_EXCEPTION_HPP
 
+#include <cstring>
 #include <exception>
 #include <iostream>
 #include <string>
+#include <errno.h>
 
 class SystemCallException : public std::exception
 {
@@ -38,6 +40,12 @@ class SystemCallException : public std::exception
     }
     ~SystemCallException() throw()
     {
+    }
+    static int checkErr(std::string funcName, int retValue)
+    {
+        if (retValue == -1)
+            throw SystemCallException(funcName, strerror(errno));
+        return (retValue);
     }
 };
 
