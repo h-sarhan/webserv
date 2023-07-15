@@ -7,11 +7,12 @@ Diagnostics:
         # bugprone-*,
         # clang-analyzer-*,
         # cppcoreguidelines-*,
+        readability-identifier-naming
        ]
     Remove: [modernize-use-nullptr, modernize-use-auto, modernize-loop-convert, 
             modernize-use-using, modernize-use-nodiscard,modernize-use-trailing-return-type]
     CheckOptions:
-      readability-identifier-naming.VariableCase: CamelCase
+      readability-identifier-naming.VariableCase: camelBack
 Hover:
   ShowAKA: Yes
 Index:
