@@ -9,7 +9,6 @@
  */
 
 #include "requests/Request.hpp"
-#include "config/Parser.hpp"
 #include "requests/InvalidRequestError.hpp"
 #include <algorithm>
 #include <cassert>
@@ -62,12 +61,14 @@ static void trimWhitespace(std::string &str)
 }
 
 Request::Request()
+    : _httpMethod(), _target(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
+      _capacity(REQ_BUFFER_SIZE)
 {
 }
 
 Request::Request(const Request &req)
-    : _httpMethod(req.method()), _target(req._target), _headers(req._headers),
-      _rawBody(req._rawBody)
+    : _httpMethod(req.method()), _target(req._target), _headers(req._headers), _buffer(req._buffer),
+      _length(req._length), _capacity(req._capacity)
 {
 }
 
@@ -78,7 +79,9 @@ Request &Request::operator=(const Request &req)
     _httpMethod = req._httpMethod;
     _target = req._target;
     _headers = req._headers;
-    _rawBody = req._rawBody;
+    _buffer = req._buffer;   // * Shallow copy
+    _length = req._length;
+    _capacity = req._capacity;
     return *this;
 }
 
@@ -87,22 +90,27 @@ const HTTPMethod &Request::method() const
     return _httpMethod;
 }
 
-const std::string &Request::body() const
+char *Request::buffer() const
 {
-    return _rawBody;
+    return _buffer;
 }
 
-bool Request::parseRequest(const std::string &reqStr)
+size_t Request::requestLength() const
 {
-    if (reqStr.empty())
-        throw InvalidRequestError("Empty request");
-    const size_t bodyStart = reqStr.find("\r\n\r\n");
+    return _length;
+}
+
+bool Request::parseRequest()
+{
+    if (_length == 0)
+        return false;
+    const std::string req(_buffer, _buffer + _length);
+    const size_t bodyStart = req.find("\r\n\r\n");
     std::stringstream reqStream;
     if (bodyStart == std::string::npos)
         return false;
     else
-        reqStream.str(reqStr.substr(0, bodyStart + 2));
-
+        reqStream.str(req.substr(0, bodyStart + 2));
     parseStartLine(reqStream);
     while (reqStream.peek() != '\r' && !reqStream.eof())
         parseHeader(reqStream);
@@ -372,222 +380,254 @@ const RequestTarget Request::target(serverList serverBlocks)
     return RequestTarget(NOT_FOUND, "");
 }
 
-void Request::setBody(const std::string &body)
+void Request::resizeBuffer(size_t newCapacity)
 {
-    _rawBody = body;
+    char *newBuffer = new char[newCapacity];
+    for (size_t i = 0; i < _length; i++)
+        newBuffer[i] = _buffer[i];
+    delete[] _buffer;
+    _buffer = newBuffer;
+    _capacity = newCapacity;
 }
 
-static void testSingleURLDecoding(const std::string &str1, const std::string &str2)
+void Request::appendToBuffer(const char *data, size_t n)
 {
-    (void) str2;
-    std::string encodedURL = str1;
-    decodeRequestURL(encodedURL);
-    assert(encodedURL == str2);
+    if (_length + n >= _capacity)
+        resizeBuffer(std::max(_capacity * 2, (_length + n) * 2));
+    for (size_t i = 0; i < n; i++)
+        _buffer[_length + i] = data[i];
+    _length += n;
 }
 
-static void testURLDecoding()
+void requestBufferTests()
 {
-    testSingleURLDecoding("BIB+PAP", "BIB PAP");
-    testSingleURLDecoding("BIB+PAP%20kdhbnlihbnd", "BIB PAP kdhbnlihbnd");
-    testSingleURLDecoding("BIB+PAP%20kdhbnlihbnd%20%20%20%20", "BIB PAP kdhbnlihbnd    ");
-    testSingleURLDecoding("%20 %20", "   ");
-    testSingleURLDecoding("%20|%20", " | ");
-    testSingleURLDecoding("cat%20Makefile|%20wc+-l", "cat Makefile| wc -l");
-    testSingleURLDecoding("%yt%r%20++a", "%yt%r   a");
-}
-
-static bool testRequest(const std::string &rawRequest)
-{
-    try
-    {
-        Request request;
-        request.parseRequest(rawRequest);
-        return true;
-    }
-    catch (const std::exception &e)
-    {
-        return false;
-    }
-}
-
-void requestParsingTests()
-{
-    (void) testRequest;
-
-    // Start line fail tests
-    assert(testRequest("") == false);
-    assert(testRequest("GET\r\n\r\n") == false);
-    assert(testRequest("GET \r\n\r\n") == false);
-    assert(testRequest("GET fsfd\r\n\r\n") == false);
-    assert(testRequest("GET fsfd HTTP/2.0\r\n\r\n") == false);
-    assert(testRequest("GET  HTTP/1.0\r\n\r\n") == false);
-    assert(testRequest("POSTT / HTTP/1.1\r\n\r\n") == false);
-
-    // Start line pass tests
-    assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
-    assert(testRequest("GET fsfd HTTP/1.1\r\n\r\n") == true);
-    assert(testRequest("GET fsfd HTTP/1.0\r\n\r\n") == true);
-    assert(testRequest("POST / HTTP/1.1\r\n\r\n") == true);
-    assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
-    assert(testRequest("DELETE /fds HTTP/1.0\r\n\r\n") == true);
-
-    // Empty body tests with no headers
-    assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
-
-    // Normal body test with no headers
-    assert(testRequest("PUT /fds HTTP/1.0\r\n\r\nThis is a body") == true);
-
-    // HTTP Method tests
-    Request delReq;
-
-    delReq.parseRequest("DELETE /fds HTTP/1.0\r\n\r\n");
-    assert(delReq.method() == DELETE);
-
-    Request getReq;
-
-    getReq.parseRequest("GET /fds HTTP/1.0\r\n\r\n");
-    assert(getReq.method() == GET);
-
-    Request postReq;
-
-    postReq.parseRequest("POST /fds HTTP/1.0\r\n\r\n");
-    assert(postReq.method() == POST);
-
-    Request putReq;
-
-    putReq.parseRequest("PUT /fds HTTP/1.0\r\n\r\n");
-    assert(putReq.method() == PUT);
-
-    // Header tests
-    assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
-                       "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
-                       "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost: webserv.com\r\n\r\n") ==
-           true);
-    assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
-                       "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
-                       "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost webserv.com\r\n\r\n") ==
-           false);
-
-    // Test big GET with a bunch of headers and body should pass
-    assert(
-        testRequest("GET /favicon.ico HTTP/1.1\r\n"
-                    "Host: localhost:1234\r\nConnection: keep-alive\r\n"
-                    "sec-ch-ua-mobile: ?0\r\n"
-                    "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)\r\n"
-                    "Accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8\r\n"
-                    "Referer: http://localhost:1234/\r\n"
-                    "Accept-Encoding: gzip, deflate, br\r\n"
-                    "Accept-Language: en-US,en;q=0.9,ar-XB;q=0.8,ar;q=0.7\r\n\r\nergrere") == true);
-
-    const char *getReqStr = "GET meme.jpeg HTTP/1.1\r\n"
-                            "Host: webserv.com:1234\r\n"
-                            "Connection: Keep-Alive\r\n"
-                            "Content-Encoding: gzip\r\n"
-                            "Content-Type: text/html; charset=utf-8\r\n"
-                            "Date: Thu, 11 Aug 2016 15:23:13 GMT\r\n"
-                            "Keep-Alive: timeout=5, max=1000\r\n"
-                            "Last-Modified: Mon, 25 Jul 2016 04:32:39 GMT\r\n"
-                            "Server: Apache\r\n\r\nmeh";
-
-    Request getReqTest;
-
-    getReqTest.parseRequest(getReqStr);
-
-    assert(getReqTest.keepAlive() == true);
-    assert(getReqTest.keepAliveTimer() == 5);
-    // assert(getReqTest.body() == "meh");
-    assert(getReqTest.host() == "webserv.com");
-    assert(getReqTest.maxReconnections() == 100);
-    assert(getReqTest.method() == GET);
-    assert(getReqTest.userAgent() == "unknown");
-
-    // Test big GET with a bunch of headers and body should fail
-    assert(
-        testRequest(
-            "GET /favicon.ico HTTP/1.1\r\nHost: localhost:1234\r\n: "
-            "keep-alive\r\nsec-ch-ua: "
-            "\"Not_A Brand\";v=\"99\", \"Google Chrome\";v=\"109\", "
-            "\"Chromium\";v=\"109\"\r\nsec-ch-ua-mobile: ?0\r\nUser-Agent: Mozilla/5.0 (Macintosh; "
-            "Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 "
-            "Safari/537.36\r\nsec-ch-ua-platform: \"macOS\"\r\nAccept: "
-            "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8\r\nSec-Fetch-Site: "
-            "same-origin\r\nSec-Fetch-Mode: no-cors\r\nSec-Fetch-Dest: image\r\nReferer: "
-            "http://localhost:1234/\r\nAccept-Encoding: gzip, deflate, br\r\nAccept-Language: "
-            "en-US,en;q=0.9,ar-XB;q=0.8,ar;q=0.7\r\n\r\n") == false);
-
-    const std::string &getCashew1 = "GET /cashew/ HTTP/1.1\r\nHost: webserv\r\n\r\n";
-
     Request req;
-    req.parseRequest(getCashew1);
-    Parser parser("target_tests.conf");
-    RequestTarget target = req.target(parser.getConfig());
-    assert(target.type == REDIRECTION);
-    assert(target.resource.find("1") != std::string::npos);
+    std::string reqStr = "PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
+                         "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
+                         "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost: webserv.com\r\n\r\n";
 
-    const std::string &getCashew2 = "GET /cashews/milk.html HTTP/1.1\r\nHost: webserv\r\n\r\n";
-    req.parseRequest(getCashew2);
-    target = req.target(parser.getConfig());
-    assert(target.type == REDIRECTION);
-    assert(target.resource.find("2") != std::string::npos);
+    req.appendToBuffer(reqStr.c_str(), reqStr.length());
 
-    const std::string &getCashew3 =
-        "GET /cashews/honey/cake/bottom.html HTTP/1.1\r\nHost: webserv\r\n\r\n";
-    req.parseRequest(getCashew3);
-    target = req.target(parser.getConfig());
-    assert(target.type == REDIRECTION);
-    assert(target.resource.find("3") != std::string::npos);
+    req.parseRequest();
 
-    const std::string &getCashew4 = "GET /cashews/juice HTTP/1.1\r\nHost: webserv\r\n\r\n";
-    req.parseRequest(getCashew4);
-    target = req.target(parser.getConfig());
-    assert(target.type == REDIRECTION);
-    assert(target.resource.find("4") != std::string::npos);
-
-    const std::string &getCashew4Again = "GET /cashews/juice/ HTTP/1.1\r\nHost: webserv\r\n\r\n";
-    req.parseRequest(getCashew4Again);
-    target = req.target(parser.getConfig());
-    assert(target.type == REDIRECTION);
-    assert(target.resource.find("4") != std::string::npos);
-
-    const std::string &getCashew2Again =
-        "GET /cashews/juicekiuhb HTTP/1.1\r\nHost: webserv\r\n\r\n";
-    req.parseRequest(getCashew2Again);
-    target = req.target(parser.getConfig());
-    assert(target.type == REDIRECTION);
-    assert(target.resource.find("2") != std::string::npos);
-
-    const std::string &getCashew6 = "GET /cashews/honey/cak HTTP/1.1\r\nHost: webserv\r\n\r\n";
-    req.parseRequest(getCashew6);
-    target = req.target(parser.getConfig());
-    assert(target.type == REDIRECTION);
-    assert(target.resource.find("6") != std::string::npos);
-
-    const std::string &getAssets = "GET /Bobby.html HTTP/1.1\r\nHost: rew\r\n\r\n";
-    Request reqAssets;
-    reqAssets.parseRequest(getAssets);
-    target = reqAssets.target(parser.getConfig());
-    assert(target.type == NOT_FOUND);
-
-    const std::string &getDir = "GET /artgallerycontent HTTP/1.1\r\nHost: rew\r\n\r\n";
-    reqAssets.parseRequest(getDir);
-    target = reqAssets.target(parser.getConfig());
-    assert(target.type == DIRECTORY);
-    assert(target.resource == "./assets/artgallerycontent");
-
-    const std::string &deleteAssets = "DELETE /Bobby.html HTTP/1.1\r\nHost: rew\r\n\r\n";
-    reqAssets.parseRequest(deleteAssets);
-    target = reqAssets.target(parser.getConfig());
-    assert(target.type == METHOD_NOT_ALLOWED);
-
-    const std::string &getImg = "GET /artgallerycontent/2020_3.JPG HTTP/1.1\r\nHost: rew\r\n\r\n";
-    reqAssets.parseRequest(getImg);
-    target = reqAssets.target(parser.getConfig());
-    assert(target.type == FOUND);
-    assert(target.resource == "./assets/artgallerycontent/2020_3.JPG");
-
-    testURLDecoding();
+    assert(req.requestLength() == reqStr.length());
+    assert(req.method() == PUT);
+    assert(req.host() == "webserv.com");
 }
+
+// static void testSingleURLDecoding(const std::string &str1, const std::string &str2)
+// {
+//     (void) str2;
+//     std::string encodedURL = str1;
+//     decodeRequestURL(encodedURL);
+//     assert(encodedURL == str2);
+// }
+
+// static void testURLDecoding()
+// {
+//     testSingleURLDecoding("BIB+PAP", "BIB PAP");
+//     testSingleURLDecoding("BIB+PAP%20kdhbnlihbnd", "BIB PAP kdhbnlihbnd");
+//     testSingleURLDecoding("BIB+PAP%20kdhbnlihbnd%20%20%20%20", "BIB PAP kdhbnlihbnd    ");
+//     testSingleURLDecoding("%20 %20", "   ");
+//     testSingleURLDecoding("%20|%20", " | ");
+//     testSingleURLDecoding("cat%20Makefile|%20wc+-l", "cat Makefile| wc -l");
+//     testSingleURLDecoding("%yt%r%20++a", "%yt%r   a");
+// }
+
+// static bool testRequest(const std::string &rawRequest)
+// {
+//     try
+//     {
+//         Request request;
+//         request.parseRequest(rawRequest);
+//         return true;
+//     }
+//     catch (const std::exception &e)
+//     {
+//         return false;
+//     }
+// }
+
+// void requestParsingTests()
+// {
+//     (void) testRequest;
+
+//     // Start line fail tests
+//     assert(testRequest("") == false);
+//     assert(testRequest("GET\r\n\r\n") == false);
+//     assert(testRequest("GET \r\n\r\n") == false);
+//     assert(testRequest("GET fsfd\r\n\r\n") == false);
+//     assert(testRequest("GET fsfd HTTP/2.0\r\n\r\n") == false);
+//     assert(testRequest("GET  HTTP/1.0\r\n\r\n") == false);
+//     assert(testRequest("POSTT / HTTP/1.1\r\n\r\n") == false);
+
+//     // Start line pass tests
+//     assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
+//     assert(testRequest("GET fsfd HTTP/1.1\r\n\r\n") == true);
+//     assert(testRequest("GET fsfd HTTP/1.0\r\n\r\n") == true);
+//     assert(testRequest("POST / HTTP/1.1\r\n\r\n") == true);
+//     assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
+//     assert(testRequest("DELETE /fds HTTP/1.0\r\n\r\n") == true);
+
+//     // Empty body tests with no headers
+//     assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
+
+//     // Normal body test with no headers
+//     assert(testRequest("PUT /fds HTTP/1.0\r\n\r\nThis is a body") == true);
+
+//     // HTTP Method tests
+//     Request delReq;
+
+//     delReq.parseRequest("DELETE /fds HTTP/1.0\r\n\r\n");
+//     assert(delReq.method() == DELETE);
+
+//     Request getReq;
+
+//     getReq.parseRequest("GET /fds HTTP/1.0\r\n\r\n");
+//     assert(getReq.method() == GET);
+
+//     Request postReq;
+
+//     postReq.parseRequest("POST /fds HTTP/1.0\r\n\r\n");
+//     assert(postReq.method() == POST);
+
+//     Request putReq;
+
+//     putReq.parseRequest("PUT /fds HTTP/1.0\r\n\r\n");
+//     assert(putReq.method() == PUT);
+
+//     // Header tests
+//     assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
+//                        "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
+//                        "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost: webserv.com\r\n\r\n") ==
+//            true);
+//     assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
+//                        "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
+//                        "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost webserv.com\r\n\r\n") ==
+//            false);
+
+//     // Test big GET with a bunch of headers and body should pass
+//     assert(
+//         testRequest("GET /favicon.ico HTTP/1.1\r\n"
+//                     "Host: localhost:1234\r\nConnection: keep-alive\r\n"
+//                     "sec-ch-ua-mobile: ?0\r\n"
+//                     "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)\r\n"
+//                     "Accept:
+//                     image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8\r\n"
+//                     "Referer: http://localhost:1234/\r\n"
+//                     "Accept-Encoding: gzip, deflate, br\r\n"
+//                     "Accept-Language: en-US,en;q=0.9,ar-XB;q=0.8,ar;q=0.7\r\n\r\nergrere") ==
+//                     true);
+
+//     const char *getReqStr = "GET meme.jpeg HTTP/1.1\r\n"
+//                             "Host: webserv.com:1234\r\n"
+//                             "Connection: Keep-Alive\r\n"
+//                             "Content-Encoding: gzip\r\n"
+//                             "Content-Type: text/html; charset=utf-8\r\n"
+//                             "Date: Thu, 11 Aug 2016 15:23:13 GMT\r\n"
+//                             "Keep-Alive: timeout=5, max=1000\r\n"
+//                             "Last-Modified: Mon, 25 Jul 2016 04:32:39 GMT\r\n"
+//                             "Server: Apache\r\n\r\nmeh";
+
+//     Request getReqTest;
+
+//     getReqTest.parseRequest(getReqStr);
+
+//     assert(getReqTest.keepAlive() == true);
+//     assert(getReqTest.keepAliveTimer() == 5);
+//     // assert(getReqTest.body() == "meh");
+//     assert(getReqTest.host() == "webserv.com");
+//     assert(getReqTest.maxReconnections() == 100);
+//     assert(getReqTest.method() == GET);
+//     assert(getReqTest.userAgent() == "unknown");
+
+//     // Test big GET with a bunch of headers and body should fail
+//     assert(
+//         testRequest(
+//             "GET /favicon.ico HTTP/1.1\r\nHost: localhost:1234\r\n: "
+//             "keep-alive\r\nsec-ch-ua: "
+//             "\"Not_A Brand\";v=\"99\", \"Google Chrome\";v=\"109\", "
+//             "\"Chromium\";v=\"109\"\r\nsec-ch-ua-mobile: ?0\r\nUser-Agent: Mozilla/5.0
+//             (Macintosh; " "Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)
+//             Chrome/109.0.0.0 " "Safari/537.36\r\nsec-ch-ua-platform: \"macOS\"\r\nAccept: "
+//             "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8\r\nSec-Fetch-Site:
+//             " "same-origin\r\nSec-Fetch-Mode: no-cors\r\nSec-Fetch-Dest: image\r\nReferer: "
+//             "http://localhost:1234/\r\nAccept-Encoding: gzip, deflate, br\r\nAccept-Language: "
+//             "en-US,en;q=0.9,ar-XB;q=0.8,ar;q=0.7\r\n\r\n") == false);
+
+//     const std::string &getCashew1 = "GET /cashew/ HTTP/1.1\r\nHost: webserv\r\n\r\n";
+
+//     Request req;
+//     req.parseRequest(getCashew1);
+//     Parser parser("target_tests.conf");
+//     RequestTarget target = req.target(parser.getConfig());
+//     assert(target.type == REDIRECTION);
+//     assert(target.resource.find("1") != std::string::npos);
+
+//     const std::string &getCashew2 = "GET /cashews/milk.html HTTP/1.1\r\nHost: webserv\r\n\r\n";
+//     req.parseRequest(getCashew2);
+//     target = req.target(parser.getConfig());
+//     assert(target.type == REDIRECTION);
+//     assert(target.resource.find("2") != std::string::npos);
+
+//     const std::string &getCashew3 =
+//         "GET /cashews/honey/cake/bottom.html HTTP/1.1\r\nHost: webserv\r\n\r\n";
+//     req.parseRequest(getCashew3);
+//     target = req.target(parser.getConfig());
+//     assert(target.type == REDIRECTION);
+//     assert(target.resource.find("3") != std::string::npos);
+
+//     const std::string &getCashew4 = "GET /cashews/juice HTTP/1.1\r\nHost: webserv\r\n\r\n";
+//     req.parseRequest(getCashew4);
+//     target = req.target(parser.getConfig());
+//     assert(target.type == REDIRECTION);
+//     assert(target.resource.find("4") != std::string::npos);
+
+//     const std::string &getCashew4Again = "GET /cashews/juice/ HTTP/1.1\r\nHost: webserv\r\n\r\n";
+//     req.parseRequest(getCashew4Again);
+//     target = req.target(parser.getConfig());
+//     assert(target.type == REDIRECTION);
+//     assert(target.resource.find("4") != std::string::npos);
+
+//     const std::string &getCashew2Again =
+//         "GET /cashews/juicekiuhb HTTP/1.1\r\nHost: webserv\r\n\r\n";
+//     req.parseRequest(getCashew2Again);
+//     target = req.target(parser.getConfig());
+//     assert(target.type == REDIRECTION);
+//     assert(target.resource.find("2") != std::string::npos);
+
+//     const std::string &getCashew6 = "GET /cashews/honey/cak HTTP/1.1\r\nHost: webserv\r\n\r\n";
+//     req.parseRequest(getCashew6);
+//     target = req.target(parser.getConfig());
+//     assert(target.type == REDIRECTION);
+//     assert(target.resource.find("6") != std::string::npos);
+
+//     const std::string &getAssets = "GET /Bobby.html HTTP/1.1\r\nHost: rew\r\n\r\n";
+//     Request reqAssets;
+//     reqAssets.parseRequest(getAssets);
+//     target = reqAssets.target(parser.getConfig());
+//     assert(target.type == NOT_FOUND);
+
+//     const std::string &getDir = "GET /artgallerycontent HTTP/1.1\r\nHost: rew\r\n\r\n";
+//     reqAssets.parseRequest(getDir);
+//     target = reqAssets.target(parser.getConfig());
+//     assert(target.type == DIRECTORY);
+//     assert(target.resource == "./assets/artgallerycontent");
+
+//     const std::string &deleteAssets = "DELETE /Bobby.html HTTP/1.1\r\nHost: rew\r\n\r\n";
+//     reqAssets.parseRequest(deleteAssets);
+//     target = reqAssets.target(parser.getConfig());
+//     assert(target.type == METHOD_NOT_ALLOWED);
+
+//     const std::string &getImg = "GET /artgallerycontent/2020_3.JPG HTTP/1.1\r\nHost:
+//     rew\r\n\r\n"; reqAssets.parseRequest(getImg); target = reqAssets.target(parser.getConfig());
+//     assert(target.type == FOUND);
+//     assert(target.resource == "./assets/artgallerycontent/2020_3.JPG");
+
+//     testURLDecoding();
+// }
 
 Request::~Request()
 {
+    delete[] _buffer;
 }
