@@ -87,12 +87,6 @@ const HTTPMethod &Request::method() const
     return _httpMethod;
 }
 
-// ! Also check if the request method is valid for the server block
-// const std::string &Request::target(const ServerBlock &config) const
-// {
-//     return _pathToTarget;
-// }
-
 const std::string &Request::body() const
 {
     return _rawBody;
@@ -107,17 +101,52 @@ bool Request::parseRequest(const std::string &reqStr)
     if (bodyStart == std::string::npos)
         return false;
     else
-    {
         reqStream.str(reqStr.substr(0, bodyStart + 2));
-        // _rawBody = reqStr.substr(bodyStart + 4);
-    }
 
     parseStartLine(reqStream);
     while (reqStream.peek() != '\r' && !reqStream.eof())
-    {
         parseHeader(reqStream);
-    }
     return true;
+}
+
+static void decodeRequestURL(std::string &url)
+{
+    const std::string encodedChars = "%+";
+    std::string::iterator it =
+        std::find_first_of(url.begin(), url.end(), encodedChars.begin(), encodedChars.end());
+
+    while (it != url.end())
+    {
+        if (*it == '+')
+        {
+            *it = ' ';
+            it = std::find_first_of(url.begin(), url.end(), encodedChars.begin(),
+                                    encodedChars.end());
+        }
+        else if (*it == '%')
+        {
+            if ((url.end() - it) > 2)
+            {
+                std::string::iterator toReplace = it;
+                std::string hexa;
+                hexa.push_back(*++it);
+                hexa.push_back(*++it);
+                if (!std::isdigit(hexa[0]) || !std::isdigit(hexa[1]))
+                {
+                    it += 1;
+                    continue;
+                }
+                std::stringstream converter(hexa);
+                unsigned int convertedChar;
+                converter >> std::hex >> convertedChar;
+                url.replace(toReplace - url.begin(), 3, std::string(1, convertedChar));
+                it = std::find_first_of(url.begin(), url.end(), encodedChars.begin(),
+                                        encodedChars.end());
+            }
+            else
+                it += 1;
+        }
+    }
 }
 
 void Request::parseStartLine(std::stringstream &reqStream)
@@ -138,6 +167,8 @@ void Request::parseStartLine(std::stringstream &reqStream)
 
     std::string requestTarget;
     reqStream >> requestTarget;
+    decodeRequestURL(requestTarget);
+
     if (requestTarget.empty())
         throw InvalidRequestError("Invalid start line");
     _target = requestTarget;
@@ -264,12 +295,6 @@ unsigned int Request::maxReconnections()
 
 static bool matchTargetToRoute(std::string target, std::string route)
 {
-    // /a/b/ == /a/b
-    // /a/b/ == /a/b/
-    // /a/b == /a/b
-
-    // /a/b/ == /a
-    // /a/b/ == /a/
     if (*--target.end() != '/')
         target.append("/");
     if (*--route.end() != '/')
@@ -344,6 +369,25 @@ const RequestTarget Request::target(serverList serverBlocks)
 void Request::setBody(const std::string &body)
 {
     _rawBody = body;
+}
+
+static void testSingleURLDecoding(const std::string &str1, const std::string &str2)
+{
+    (void) str2;
+    std::string encodedURL = str1;
+    decodeRequestURL(encodedURL);
+    assert(encodedURL == str2);
+}
+
+static void testURLDecoding()
+{
+    testSingleURLDecoding("BIB+PAP", "BIB PAP");
+    testSingleURLDecoding("BIB+PAP%20kdhbnlihbnd", "BIB PAP kdhbnlihbnd");
+    testSingleURLDecoding("BIB+PAP%20kdhbnlihbnd%20%20%20%20", "BIB PAP kdhbnlihbnd    ");
+    testSingleURLDecoding("%20 %20", "   ");
+    testSingleURLDecoding("%20|%20", " | ");
+    testSingleURLDecoding("cat%20Makefile|%20wc+-l", "cat Makefile| wc -l");
+    testSingleURLDecoding("%yt%r%20++a", "%yt%r   a");
 }
 
 static bool testRequest(const std::string &rawRequest)
@@ -534,6 +578,8 @@ void requestParsingTests()
     target = reqAssets.target(parser.getConfig());
     assert(target.type == OK);
     assert(target.resource == "./assets/artgallerycontent/2020_3.JPG");
+
+    testURLDecoding();
 }
 
 Request::~Request()

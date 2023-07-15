@@ -76,10 +76,6 @@ class Request
     void checkLineEnding(std::stringstream &reqStream);
     const RequestTarget getTargetFromServerConfig(std::string &biggestMatch,
                                                   const ServerBlock &serverConfig);
-
-    // ! Create function to decode request target
-    // void decodeUrl(std::string &url) const;
-
     void checkStream(const std::stringstream &reqStream, const std::string &token,
                      const std::string &errMsg);
     void checkEOF(const std::stringstream &reqStream);
