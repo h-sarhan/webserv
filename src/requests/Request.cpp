@@ -19,8 +19,8 @@
 
 RequestType strToRequestType(const std::string &str)
 {
-    if (str == "OK")
-        return OK;
+    if (str == "FOUND")
+        return FOUND;
     if (str == "REDIRECTION")
         return REDIRECTION;
     if (str == "METHOD_NOT_ALLOWED")
@@ -34,8 +34,8 @@ std::string requestTypeToStr(RequestType tkn)
 {
     switch (tkn)
     {
-    case OK:
-        return "OK";
+    case FOUND:
+        return "FOUND";
     case REDIRECTION:
         return "REDIRECTION";
     case NOT_FOUND:
@@ -346,7 +346,7 @@ const RequestTarget Request::getTargetFromServerConfig(std::string &match,
         {
             // Check if the target is a file or a directory
             if (info.st_mode & S_IFREG)
-                return RequestTarget(OK, requestTarget);
+                return RequestTarget(FOUND, requestTarget);
             if (info.st_mode & S_IFDIR)
                 return RequestTarget(DIRECTORY, requestTarget);
         }
@@ -576,7 +576,7 @@ void requestParsingTests()
     const std::string &getImg = "GET /artgallerycontent/2020_3.JPG HTTP/1.1\r\nHost: rew\r\n\r\n";
     reqAssets.parseRequest(getImg);
     target = reqAssets.target(parser.getConfig());
-    assert(target.type == OK);
+    assert(target.type == FOUND);
     assert(target.resource == "./assets/artgallerycontent/2020_3.JPG");
 
     testURLDecoding();

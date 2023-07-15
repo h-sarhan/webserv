@@ -18,7 +18,7 @@
  */
 typedef enum
 {
-    OK,
+    FOUND,
     REDIRECTION,
     METHOD_NOT_ALLOWED,
     DIRECTORY,
