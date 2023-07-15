@@ -15,6 +15,7 @@
 #include <cassert>
 #include <iostream>
 #include <sstream>
+#include <sys/stat.h>
 
 RequestType strToRequestType(const std::string &str)
 {
@@ -24,6 +25,8 @@ RequestType strToRequestType(const std::string &str)
         return REDIRECTION;
     if (str == "METHOD_NOT_ALLOWED")
         return METHOD_NOT_ALLOWED;
+    if (str == "DIRECTORY")
+        return DIRECTORY;
     return NOT_FOUND;
 }
 
@@ -39,6 +42,8 @@ std::string requestTypeToStr(RequestType tkn)
         return "NOT_FOUND";
     case METHOD_NOT_ALLOWED:
         return "METHOD_NOT_ALLOWED";
+    case DIRECTORY:
+        return "DIRECTORY";
         break;
     }
 }
@@ -272,6 +277,16 @@ static bool matchTargetToRoute(std::string target, std::string route)
     return target.find(route) != std::string::npos;
 }
 
+static void removeDoubleSlash(std::string &str)
+{
+    size_t slashPos = str.find("//");
+    while (slashPos != std::string::npos)
+    {
+        str.erase(slashPos, 1);
+        slashPos = str.find("//");
+    }
+}
+
 const RequestTarget Request::getTargetFromServerConfig(std::string &match,
                                                        const ServerBlock &serverConfig)
 {
@@ -284,7 +299,7 @@ const RequestTarget Request::getTargetFromServerConfig(std::string &match,
             match = routeStr;
             continue;
         }
-        if (matchTargetToRoute(_target, routeStr))
+        if (matchTargetToRoute(_target, routeStr) && routeStr.length() > match.length())
             match = routeStr;
     }
     if (match.length() == 0)
@@ -295,7 +310,22 @@ const RequestTarget Request::getTargetFromServerConfig(std::string &match,
     if (matchedRoute.redirectTo.length() > 0)
         return RequestTarget(REDIRECTION, matchedRoute.redirectTo);
     if (matchedRoute.serveDir.length() > 0)
-        return RequestTarget(OK, matchedRoute.serveDir + "/" + match);
+    {
+        std::string requestTarget =
+            matchedRoute.serveDir + "/" + _target.substr(_target.find(match));
+
+        removeDoubleSlash(requestTarget);
+        // Check if the target exists
+        struct stat info;
+        if (stat(requestTarget.c_str(), &info) == 0)
+        {
+            // Check if the target is a file or a directory
+            if (info.st_mode & S_IFREG)
+                return RequestTarget(OK, requestTarget);
+            if (info.st_mode & S_IFDIR)
+                return RequestTarget(DIRECTORY, requestTarget);
+        }
+    }
     return RequestTarget(NOT_FOUND, "");
 }
 
@@ -486,13 +516,24 @@ void requestParsingTests()
     Request reqAssets;
     reqAssets.parseRequest(getAssets);
     target = reqAssets.target(parser.getConfig());
-    assert(target.type == OK);
-    assert(target.resource.find("assets") != std::string::npos);
+    assert(target.type == NOT_FOUND);
+
+    const std::string &getDir = "GET /artgallerycontent HTTP/1.1\r\nHost: rew\r\n\r\n";
+    reqAssets.parseRequest(getDir);
+    target = reqAssets.target(parser.getConfig());
+    assert(target.type == DIRECTORY);
+    assert(target.resource == "./assets/artgallerycontent");
 
     const std::string &deleteAssets = "DELETE /Bobby.html HTTP/1.1\r\nHost: rew\r\n\r\n";
     reqAssets.parseRequest(deleteAssets);
     target = reqAssets.target(parser.getConfig());
     assert(target.type == METHOD_NOT_ALLOWED);
+
+    const std::string &getImg = "GET /artgallerycontent/2020_3.JPG HTTP/1.1\r\nHost: rew\r\n\r\n";
+    reqAssets.parseRequest(getImg);
+    target = reqAssets.target(parser.getConfig());
+    assert(target.type == OK);
+    assert(target.resource == "./assets/artgallerycontent/2020_3.JPG");
 }
 
 Request::~Request()
