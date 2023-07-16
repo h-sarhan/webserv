@@ -119,7 +119,7 @@ static std::string createResponse(std::string filename, std::string headers)
     return responseBuffer.str();
 }
 
-static std::string createDirectoryPage(std::string page, std::string headers)
+static std::string createHTMLResponse(std::string page, std::string headers)
 {
     std::stringstream responseBuffer;
 
@@ -146,22 +146,22 @@ void Server::sendResponse(size_t clientNo)
         std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
         switch (target.type)
         {
-            case FOUND:
-                c.response = createResponse(target.resource, HTTP_HEADERS);
-                break;
-            case REDIRECTION:
-                c.response = createResponse(target.resource, HTTP_HEADERS);
-                break;
-            case METHOD_NOT_ALLOWED:
-                c.response = createResponse("assets/404.html", HTTP_HEADERS);
-                break;
-            case DIRECTORY:
-                c.response = createDirectoryPage(generateDirectoryListing(target.resource), HTTP_HEADERS);
-                break;
-            case NOT_FOUND:
-                c.response = createResponse("assets/404.html", HTTP_HEADERS);
-                break;
-            }
+        case FOUND:
+            c.response = createResponse(target.resource, HTTP_HEADERS);
+            break;
+        case REDIRECTION:
+            c.response = createResponse(target.resource, HTTP_HEADERS);
+            break;
+        case METHOD_NOT_ALLOWED:
+            c.response = createHTMLResponse(errorPage(405), HTTP_HEADERS);
+            break;
+        case DIRECTORY:
+            c.response = createHTMLResponse(directoryListing(target.resource), HTTP_HEADERS);
+            break;
+        case NOT_FOUND:
+            c.response = createHTMLResponse(errorPage(404), HTTP_HEADERS);
+            break;
+        }
         c.totalBytesSent = 0;
         c.request.clear();
     }
@@ -180,8 +180,8 @@ void Server::sendResponse(size_t clientNo)
         c.totalBytesSent += bytesSent;
         if (c.totalBytesSent < c.response.length())   // partial send
         {
-            std::cout << "Response only sent partially: " << bytesSent << ". Total: " << c.totalBytesSent
-                      << std::endl;
+            std::cout << "Response only sent partially: " << bytesSent
+                      << ". Total: " << c.totalBytesSent << std::endl;
             return;
         }
         else   // everything got sent
@@ -265,6 +265,8 @@ void Server::acceptNewConnection(size_t listenerNo)
 
 void Server::startListening()
 {
+    int eventFd;
+
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sigInthandler);
     while (true)
@@ -272,17 +274,20 @@ void Server::startListening()
         SystemCallException::checkErr("poll", poll(&sockets[0], sockets.size(), -1));
         for (size_t i = 0; i < sockets.size(); i++)
         {
-            // server listener got something new to read
+            eventFd = sockets[i].fd;
+            // if one of the fds got something new to read
             if (sockets[i].revents & POLLIN)
             {
-                if (configBlocks.count(sockets[i].fd))
+                if (configBlocks.count(eventFd)) // this fd is one of the server listeners
                     acceptNewConnection(i);
                 else   // its one of the clients
                 {
                     recvData(i);
-                    // check if the headers are ready, parse them if they are
-                    if (cons[sockets[i].fd].request.parseRequest())
-                        readBody(i);   // this will only be run if the headers are parsed
+                    // if this fd is still alive and no errors so far
+                    if (cons.count(eventFd))
+                        // check if the headers are ready, parse them if they are
+                        if (cons[eventFd].request.parseRequest())
+                            readBody(i);   // this will only be run if the headers are parsed
                 }
             }
             else if (sockets[i].revents & POLLOUT)
