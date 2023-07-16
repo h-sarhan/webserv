@@ -11,7 +11,7 @@ RESPONSE_DIR = $(SRC_DIR)/responses
 CONFIG_SRC = Tokenizer.cpp Token.cpp Parser.cpp ParseError.cpp Validators.cpp ServerBlock.cpp
 NETWORK_SRC = Server.cpp ServerInfo.cpp Connection.cpp
 REQUEST_SRC = Request.cpp InvalidRequestError.cpp
-RESPONSE_SRC = DirectoryListing.cpp
+RESPONSE_SRC = DefaultPages.cpp
 
 CONFIG_SRC := $(addprefix $(CONFIG_DIR)/, $(CONFIG_SRC))
 NETWORK_SRC := $(addprefix $(NETWORK_DIR)/, $(NETWORK_SRC))

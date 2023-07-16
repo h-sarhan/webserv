@@ -119,7 +119,7 @@ static std::string createResponse(std::string filename, std::string headers)
     return responseBuffer.str();
 }
 
-static std::string createDirectoryPage(std::string page, std::string headers)
+static std::string createHTMLResponse(std::string page, std::string headers)
 {
     std::stringstream responseBuffer;
 
@@ -146,22 +146,22 @@ void Server::sendResponse(size_t clientNo)
         std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
         switch (target.type)
         {
-            case FOUND:
-                c.response = createResponse(target.resource, HTTP_HEADERS);
-                break;
-            case REDIRECTION:
-                c.response = createResponse(target.resource, HTTP_HEADERS);
-                break;
-            case METHOD_NOT_ALLOWED:
-                c.response = createResponse("assets/404.html", HTTP_HEADERS);
-                break;
-            case DIRECTORY:
-                c.response = createDirectoryPage(generateDirectoryListing(target.resource), HTTP_HEADERS);
-                break;
-            case NOT_FOUND:
-                c.response = createResponse("assets/404.html", HTTP_HEADERS);
-                break;
-            }
+        case FOUND:
+            c.response = createResponse(target.resource, HTTP_HEADERS);
+            break;
+        case REDIRECTION:
+            c.response = createResponse(target.resource, HTTP_HEADERS);
+            break;
+        case METHOD_NOT_ALLOWED:
+            c.response = createHTMLResponse(errorPage(405), HTTP_HEADERS);
+            break;
+        case DIRECTORY:
+            c.response = createHTMLResponse(directoryListing(target.resource), HTTP_HEADERS);
+            break;
+        case NOT_FOUND:
+            c.response = createHTMLResponse(errorPage(404), HTTP_HEADERS);
+            break;
+        }
         c.totalBytesSent = 0;
         c.request.clear();
     }
@@ -180,14 +180,15 @@ void Server::sendResponse(size_t clientNo)
         c.totalBytesSent += bytesSent;
         if (c.totalBytesSent < c.response.length())   // partial send
         {
-            std::cout << "Response only sent partially: " << bytesSent << ". Total: " << c.totalBytesSent
-                      << std::endl;
+            std::cout << "Response only sent partially: " << bytesSent
+                      << ". Total: " << c.totalBytesSent << std::endl;
             return;
         }
         else   // everything got sent
         {
             std::cout << "Response sent successfully to fd " << clientNo << ", "
-                      << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent << std::endl;
+                      << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent
+                      << std::endl;
             // if keep-alive was requested
             //      clear response string, set totalBytesSent to 0 and return here!!
         }

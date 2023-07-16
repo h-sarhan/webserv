@@ -17,7 +17,7 @@
 #include "config/ServerBlock.hpp"
 #include "network.hpp"
 #include "network/ServerInfo.hpp"
-#include "responses/DirectoryListing.hpp"
+#include "responses/DefaultPages.hpp"
 
 #define MAX_CLIENTS 10
 
