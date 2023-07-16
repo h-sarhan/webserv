@@ -9,43 +9,36 @@
  */
 
 #include "network/Server.hpp"
+#include "enums/RequestTypes.hpp"
+#include "network/SystemCallException.hpp"
 #include "network/network.hpp"
-#include <cstddef>
 
 bool quit = false;
-Server::Server() : name("webserv.com"), port("1234"), listener(-1)
-{
-    addrinfo hints = {};
-    int status;
 
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-    status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
-    if (status != 0)
-        throw SystemCallException("getaddrinfo", gai_strerror(status));
-    // virtualServers = getConfig();
+// Server::Server(serverList virtualServers = std::vector<ServerBlock>(1,
+// createDefaultServerBlock()))
+Server::Server(serverList virtualServers)
+{
+    std::cout << "Virtual servers - " << std::endl;
+    std::cout << virtualServers << std::endl;
+    std::vector<ServerBlock>::iterator it;
+    for (it = virtualServers.begin(); it != virtualServers.end(); it++)
+    {
+        if (portAlreadyInUse(it->port))
+            continue;
+        std::cout << "Setting up listener on port " << it->port << std::endl;
+        // initListener(getServerBlocks(it->port, virtualServers));
+        initListener(it->port, virtualServers);
+    }
 }
 
-Server::Server(std::string name, std::string port) : name(name), port(port), listener(-1)
+bool Server::portAlreadyInUse(unsigned int port)
 {
-    addrinfo hints = {};
-    int status;
-
-    hints.ai_family = AF_UNSPEC;       // don't care IPv4 or IPv6
-    hints.ai_socktype = SOCK_STREAM;   // TCP stream sockets
-    hints.ai_flags = AI_PASSIVE;       // fill in my IP for me
-    status = getaddrinfo(NULL, port.c_str(), &hints, &servInfo);
-    if (status != 0)
-        throw SystemCallException("getaddrinfo", gai_strerror(status));
-    // virtualServers = getConfig();
-}
-
-static int checkErr(std::string funcName, int retValue)
-{
-    if (retValue == -1)
-        throw SystemCallException(funcName, strerror(errno));
-    return (retValue);
+    std::map<int, std::vector<ServerBlock *> >::iterator it;
+    for (it = configBlocks.begin(); it != configBlocks.end(); it++)
+        if (it->second[0]->port == port)
+            return true;
+    return false;
 }
 
 static pollfd createPollFd(int fd, short events)
@@ -59,76 +52,55 @@ static pollfd createPollFd(int fd, short events)
     return socket;
 }
 
-void Server::bindSocket()
+void Server::initListener(unsigned int port, serverList virtualServers)
 {
-    addrinfo *p;
-    int reusePort = 1;
+    std::vector<ServerBlock *> config;
+    std::vector<ServerBlock>::iterator it;
+    ServerInfo servInfo;
+    int listenerFd;
 
-    for (p = servInfo; p != NULL; p = p->ai_next)
-    {
-        this->listener = socket(servInfo->ai_family, servInfo->ai_socktype, servInfo->ai_protocol);
-        if (this->listener == -1)
-            std::cout << "socket: " << strerror(errno) << std::endl;
-        else
-        {
-            // Setting the socket to be non-blocking
-            fcntl(this->listener, F_SETFL, O_NONBLOCK);
-            checkErr("setsockopt", setsockopt(this->listener, SOL_SOCKET, SO_REUSEADDR, &reusePort,
-                                              sizeof(reusePort)));
-            // binding the socket to a port means - the port number
-            // will be used by the kernel to match an incoming packet
-            // to webserv's process socket descriptor.
-            if (bind(this->listener, servInfo->ai_addr, servInfo->ai_addrlen) != -1)
-                break;
-            std::cout << "bind: " << strerror(errno) << std::endl;
-            close(this->listener);
-        }
-    }
-    if (!p)
-        throw SystemCallException("failed to bind");
-    clients.push_back(createPollFd(this->listener, POLLIN));
+    // filtering out the server blocks that use this port
+    for (it = virtualServers.begin(); it != virtualServers.end(); it++)
+        if (it->port == port)
+            config.push_back(it.base());
+    servInfo.getServerInfo(port);
+    listenerFd = servInfo.bindSocketToPort();
+    sockets.push_back(createPollFd(listenerFd, POLLIN));
+    configBlocks.insert(std::make_pair(listenerFd, config));
 }
 
 // change this to use fd directly and close stuff in caller func
-std::string Server::readRequest(size_t clientNo)
+void Server::readBody(size_t clientNo)
 {
-    int bytes_rec;
-    char *buf = new char[2000000];
-    std::string request;
+    Request &req = cons.at(sockets[clientNo].fd).request;
 
-    // receiving request
-    std::cout << "Received a request: " << std::endl;
-    bytes_rec = recv(clients[clientNo].fd, buf, 2000000, 0);
-    if (bytes_rec < 0)
-        std::cout << "Failed to receive request" << std::endl;
-    else if (bytes_rec == 0)
-        std::cout << "Connection closed by client" << std::endl;
-    if (bytes_rec <= 0)
+    if (req.headers().count("content-length"))
     {
-        close(clients[clientNo].fd);
-        clients.erase(clients.begin() + clientNo);
-        delete[] buf;
-        return std::string();
+        std::istringstream iss(req.headers()["content-length"]);
+        size_t contentLen;
+        iss >> contentLen;
+        if (req.requestLength() != contentLen)
+            return;
+        // return here so that we dont set the events to start responding
     }
-    buf[bytes_rec] = 0;
-    std::cout << "bytes = " << bytes_rec << ", msg: " << std::endl;
-    std::cout << "---------------------------------------------------------\n";
-    std::cout << buf;
-    std::cout << "---------------------------------------------------------\n";
+    else if (req.headers().count("transfer-encoding"))
+    {
+        // handle chunked transfer encoding
+        // here req.buffer() may contain a couple of chunks already or at least one
+        // my job here would be to extract the chunked data
+        // this means to skip over the chunk sizes at the start of a chunk and CRLF at the end
 
-    // example of how to save an image from a post req or any file
-
-    // std::ofstream file("img.png", std::ios::binary);
-    // std::string req(buf);
-    // int index = req.find("\r\n\r\n");
-    // file.write(buf + index + 4, bytes_rec - index - 4);
-    // file.close();
-    request = buf;
-    delete[] buf;
-    return (request);
+        // if chunk size is not 0, return
+        // return here so that we dont set the events to start responding
+    }
+    std::cout << "Full request size: " << req.requestLength() << std::endl;
+    sockets[clientNo].events = POLLIN | POLLOUT;
+    std::cout << "---------------------------------------------------------\n";
+    std::cout << std::string(req.buffer(), req.buffer() + req.requestLength());
+    std::cout << "---------------------------------------------------------\n";
 }
 
-std::string static createResponse(std::string filename, std::string headers)
+static std::string createResponse(std::string filename, std::string headers)
 {
     std::ifstream file;
     std::stringstream responseBuffer;
@@ -147,44 +119,84 @@ std::string static createResponse(std::string filename, std::string headers)
     return responseBuffer.str();
 }
 
-static int sendAll(int clientFd, std::string &msg, size_t msgLen)
+static std::string createHTMLResponse(std::string page, std::string headers)
 {
-    ssize_t bytesLeft = msgLen;
-    ssize_t bytesSent = 0;
-    ssize_t totalSent = 0;
+    std::stringstream responseBuffer;
 
-    while (bytesLeft > 0)
-    {
-        bytesSent = send(clientFd, msg.c_str() + totalSent, bytesLeft, 0);
-        if (bytesSent == -1)
-            return (-1);
-        bytesLeft -= bytesSent;
-        totalSent += bytesSent;
-    }
-    return (totalSent);
+    responseBuffer << headers;
+    responseBuffer << page.length() << "\r\n\r\n";
+    responseBuffer << page;
+    return responseBuffer.str();
 }
 
-void Server::sendResponse(size_t clientNo, std::string request)
+void Server::sendResponse(size_t clientNo)
 {
-    std::string msg;
-    int bytesSent;
+    ssize_t bytesSent;
+    Connection &c = cons[sockets[clientNo].fd];
 
-    if (request.length() == 0)
+    // Request &req = cons.at(sockets[clientNo].fd).request;
+    // int listener = cons.at()
+    // std::string &res = cons.at(sockets[clientNo].fd).response;
+    // size_t &totalSent = cons.at(sockets[clientNo].fd).totalBytesSent;
+
+    if (c.request.requestLength() > 0)
+    {
+        RequestTarget target = c.request.target(configBlocks[c.listener]);
+        std::cout << "resource found at: " << target.resource << std::endl;
+        std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+        switch (target.type)
+        {
+        case FOUND:
+            c.response = createResponse(target.resource, HTTP_HEADERS);
+            break;
+        case REDIRECTION:
+            c.response = createResponse(target.resource, HTTP_HEADERS);
+            break;
+        case METHOD_NOT_ALLOWED:
+            c.response = createHTMLResponse(errorPage(405), HTTP_HEADERS);
+            break;
+        case DIRECTORY:
+            c.response = createHTMLResponse(directoryListing(target.resource), HTTP_HEADERS);
+            break;
+        case NOT_FOUND:
+            c.response = createHTMLResponse(errorPage(404), HTTP_HEADERS);
+            break;
+        }
+        c.totalBytesSent = 0;
+        c.request.clear();
+    }
+    if (c.response.length() == 0)
+    {
+        std::cout << "Nothing to send >:(" << std::endl;
         return;
-    if (request.find("/artgallerycontent/2020_3.jpg") != std::string::npos)
-        msg = createResponse("artgallerycontent/2020_3.jpg", IMG_HEADERS);
-    else
-        msg = createResponse("artgallery.html", HTTP_HEADERS);
+    }
     std::cout << "Sending a response... " << std::endl;
-    bytesSent = sendAll(clients[clientNo].fd, msg, msg.length());
+    bytesSent = send(sockets[clientNo].fd, c.response.c_str() + c.totalBytesSent,
+                     c.response.length() - c.totalBytesSent, 0);
     if (bytesSent < 0)
-        std::cout << "Sending response failed" << std::endl;
+        std::cout << "Sending response failed: " << strerror(errno) << std::endl;
     else
-        std::cout << "Response sent to fd " << clientNo << ", " << clients[clientNo].fd
-                  << ", bytesSent = " << bytesSent << std::endl;
+    {
+        c.totalBytesSent += bytesSent;
+        if (c.totalBytesSent < c.response.length())   // partial send
+        {
+            std::cout << "Response only sent partially: " << bytesSent
+                      << ". Total: " << c.totalBytesSent << std::endl;
+            return;
+        }
+        else   // everything got sent
+        {
+            std::cout << "Response sent successfully to fd " << clientNo << ", "
+                      << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent
+                      << std::endl;
+            // if keep-alive was requested
+            //      clear response string, set totalBytesSent to 0 and return here!!
+        }
+    }
+    close(sockets[clientNo].fd);
+    cons.erase(sockets[clientNo].fd);
+    sockets.erase(sockets.begin() + clientNo);
     std::cout << "---------------------------------------------------------\n";
-    close(clients[clientNo].fd);
-    clients.erase(clients.begin() + clientNo);
 }
 
 static void sigInthandler(int sigNo)
@@ -193,22 +205,55 @@ static void sigInthandler(int sigNo)
     quit = true;
 }
 
-void Server::acceptNewConnection()
+void Server::recvData(size_t clientNo)
+{
+    char *buf = new char[REQ_BUFFER_SIZE];
+    Request &req = cons.at(sockets[clientNo].fd).request;
+    int bytesRec;
+
+    // receiving request
+    std::cout << "Receiving request data: " << std::endl;
+    bytesRec = recv(sockets[clientNo].fd, buf, REQ_BUFFER_SIZE, 0);
+    if (bytesRec < 0)
+        std::cout << "Failed to receive request: " << strerror(errno) << std::endl;
+    else if (bytesRec == 0)
+        std::cout << "Connection closed by client" << std::endl;
+    if (bytesRec <= 0)
+    {
+        close(sockets[clientNo].fd);
+        cons.erase(sockets[clientNo].fd);
+        sockets.erase(sockets.begin() + clientNo);
+        delete[] buf;
+        return;
+    }
+    req.appendToBuffer(buf, bytesRec);
+    // std::cout << "bytes = " << bytesRec << ", msg: " << std::endl;
+    // std::cout << "---------------------------------------------------------\n";
+    // std::cout << buf;
+    // std::cout << "---------------------------------------------------------\n";
+    delete[] buf;
+}
+
+void Server::acceptNewConnection(size_t listenerNo)
 {
     int newFd;
-    sockaddr_storage their_addr;
-    socklen_t addr_size;
+    sockaddr_storage theirAddr;
+    socklen_t addrSize;
 
-    addr_size = sizeof(their_addr);
-    newFd = accept(this->listener, (sockaddr *) &their_addr, &addr_size);
+    addrSize = sizeof(theirAddr);
+    newFd = accept(sockets[listenerNo].fd, (sockaddr *) &theirAddr, &addrSize);
     if (newFd == -1)
     {
         std::cout << "Accept failed" << std::endl;
         return;
     }
+    fcntl(newFd, F_SETFL, O_NONBLOCK);   // enable this when doing partial recv
     std::cout << "New connection! fd = " << newFd << std::endl;
-    if (clients.size() < MAX_CLIENTS)
-        clients.push_back(createPollFd(newFd, POLLIN | POLLOUT));
+    if (sockets.size() < MAX_CLIENTS)
+    {
+        cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd)));
+        sockets.push_back(createPollFd(newFd, POLLIN));
+    }
     else
     {
         std::cout << "Maximum clients reached, dropping this connection" << std::endl;
@@ -219,20 +264,33 @@ void Server::acceptNewConnection()
 
 void Server::startListening()
 {
+    int eventFd;
+
+    signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sigInthandler);
-    checkErr("listen", listen(this->listener, QUEUE_LIMIT));
-    std::cout << "Listening on port " << this->port << std::endl;
     while (true)
     {
-        checkErr("poll", poll(&clients[0], clients.size(), -1));
-        for (size_t i = 0; i < clients.size(); i++)
+        SystemCallException::checkErr("poll", poll(&sockets[0], sockets.size(), -1));
+        for (size_t i = 0; i < sockets.size(); i++)
         {
-            // server listener got something new to read
-            if ((clients[i].fd == listener) && (clients[i].revents & POLLIN))
-                acceptNewConnection();
-            // one of the clients is ready to send and recv
-            else if ((clients[i].revents & POLLIN) && (clients[i].revents & POLLOUT))
-                sendResponse(i, readRequest(i));
+            eventFd = sockets[i].fd;
+            // if one of the fds got something new to read
+            if (sockets[i].revents & POLLIN)
+            {
+                if (configBlocks.count(eventFd)) // this fd is one of the server listeners
+                    acceptNewConnection(i);
+                else   // its one of the clients
+                {
+                    recvData(i);
+                    // if this fd is still alive and no errors so far
+                    if (cons.count(eventFd))
+                        // check if the headers are ready, parse them if they are
+                        if (cons[eventFd].request.parseRequest())
+                            readBody(i);   // this will only be run if the headers are parsed
+                }
+            }
+            else if (sockets[i].revents & POLLOUT)
+                sendResponse(i);
         }
         if (quit)
             break;
@@ -242,7 +300,7 @@ void Server::startListening()
 Server::~Server()
 {
     std::cout << "Server destructor called" << std::endl;
-    freeaddrinfo(servInfo);
-    for (size_t i = 0; i < clients.size(); i++)
-        close(clients[i].fd);
+    // freeaddrinfo(servInfo);
+    for (size_t i = 0; i < sockets.size(); i++)
+        close(sockets[i].fd);
 }

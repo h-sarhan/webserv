@@ -5,12 +5,20 @@ CXX = clang++
 SRC_DIR = ./src
 CONFIG_DIR = $(SRC_DIR)/config
 NETWORK_DIR = $(SRC_DIR)/network
+REQUEST_DIR = $(SRC_DIR)/requests
+RESPONSE_DIR = $(SRC_DIR)/responses
+
 CONFIG_SRC = Tokenizer.cpp Token.cpp Parser.cpp ParseError.cpp Validators.cpp ServerBlock.cpp
-NETWORK_SRC = Server.cpp
+NETWORK_SRC = Server.cpp ServerInfo.cpp Connection.cpp
+REQUEST_SRC = Request.cpp InvalidRequestError.cpp
+RESPONSE_SRC = DefaultPages.cpp
+
 CONFIG_SRC := $(addprefix $(CONFIG_DIR)/, $(CONFIG_SRC))
 NETWORK_SRC := $(addprefix $(NETWORK_DIR)/, $(NETWORK_SRC))
+REQUEST_SRC := $(addprefix $(REQUEST_DIR)/, $(REQUEST_SRC))
+RESPONSE_SRC := $(addprefix $(RESPONSE_DIR)/, $(RESPONSE_SRC))
 
-SRC := $(SRC_DIR)/main.cpp $(CONFIG_SRC) $(NETWORK_SRC)
+SRC := $(SRC_DIR)/main.cpp $(CONFIG_SRC) $(NETWORK_SRC) $(REQUEST_SRC) $(RESPONSE_SRC)
 
 # Release and debug object files
 OBJ_DIR = .build
@@ -41,18 +49,26 @@ COMPILE_DB = compile_commands.json
 # Dependency files needed for recompiling with header file changes
 DEPENDS := $(RELEASE_OBJ:.o=.d) $(DBG_OBJ:.o=.d)
 
+OS := $(shell uname)
+ifeq ($(OS), Linux)
+	SED_SCRIPT = sed -e '1s/^/[\n/' -e '$$s/,$$/\n]/' $(OBJ_DIR)/src/**/*.o.json $(OBJ_DIR)/src/*.o.json
+else
+	SED_SCRIPT = sed -e '1s/^/[\'$$'\n''/' -e '$$s/,$$/\'$$'\n'']/' $(OBJ_DIR)/src/**/*.o.json $(OBJ_DIR)/src/*.o.json
+endif
+
 # Build debug and release executables
 all:
 	make -j 10 build
+	make db
 
-build: $(RELEASE_BUILD) $(DBG_BUILD) db
+build: $(RELEASE_BUILD) $(DBG_BUILD)
 
 # Run release build
-run: $(RELEASE_BUILD) db
+run: $(RELEASE_BUILD)
 	./$(RELEASE_BUILD)
 
 # Run debug build
-dbg: $(DBG_BUILD) db
+dbg: $(DBG_BUILD)
 	./$(DBG_BUILD)
 
 # Release objs
@@ -80,7 +96,7 @@ $(DBG_BUILD): $(DBG_OBJ) Makefile
 db: $(COMPILE_DB)
 
 $(COMPILE_DB): Makefile
-	sed -e '1s/^/[\'$$'\n''/' -e '$$s/,$$/\'$$'\n'']/' $(OBJ_DIR)/src/**/*.o.json $(OBJ_DIR)/src/*.o.json > compile_commands.json
+	$(SED_SCRIPT) > compile_commands.json
 
 # Remove object files
 clean:
@@ -100,5 +116,6 @@ docs:
 # Remove object files and builds and re-compile release and debug builds
 re: fclean
 	make -j 10 build
+	make db
 
-.PHONY: all re fclean clean run dbg db docs build
+.PHONY: all re fclean clean run dbg db docs build $(COMPILE_DB)

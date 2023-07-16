@@ -1,7 +1,7 @@
 /**
  * @file HTTPMethods.hpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file HTTP Methods as enums
+ * @brief This file defines HTTP Methods as enums
  * @date 2023-05-23
  *
  * @copyright Copyright (c) 2023
@@ -22,7 +22,7 @@ typedef enum
     POST,
     PUT,
     DELETE,
-    ERROR
+    OTHER
 } HTTPMethod;
 
 HTTPMethod strToHTTPMethod(const std::string &str);

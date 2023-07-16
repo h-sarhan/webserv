@@ -48,7 +48,7 @@ HTTPMethod strToHTTPMethod(const std::string &str)
         return DELETE;
     if (str == "PUT")
         return PUT;
-    return ERROR;
+    return OTHER;
 }
 
 std::string httpMethodtoStr(HTTPMethod tkn)
@@ -263,8 +263,11 @@ void Parser::parseLocationBlock()
         throwParseError("expected valid path");
     assert(currentToken() == WORD);
 
-    const std::string &routePath = _currToken->contents();
+    std::string routePath = _currToken->contents();
 
+    // trim '/' from route path
+    if (routePath != "/" && *--routePath.end() == '/')
+        routePath = routePath.substr(0, routePath.length() - 1);
     _currRoute = _currServerBlock->routes.insert(std::make_pair(routePath, Route())).first;
 
     advanceToken();
@@ -393,7 +396,7 @@ void Parser::parseHTTPMethods()
     while (!atEnd() && currentToken() == WORD)
     {
         const HTTPMethod method = strToHTTPMethod(_currToken->contents());
-        if (method == ERROR)
+        if (method == OTHER)
             throwParseError("invalid HTTP `method` specified");
 
         if (methods.count(method) != 0)
@@ -556,7 +559,7 @@ Parser::~Parser()
 {
 }
 
-const std::vector<ServerBlock> &Parser::getConfig() const
+std::vector<ServerBlock> &Parser::getConfig()
 {
     return _serverConfig;
 }

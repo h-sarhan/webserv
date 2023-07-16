@@ -16,7 +16,6 @@
 #include <set>
 #include <string>
 #include <vector>
-
 /**
  * @brief This struct holds the configuration of a single route
  */
@@ -36,13 +35,15 @@ struct Route
  */
 struct ServerBlock
 {
-    int port;                                         // Required
+    unsigned int port;                                // Required
     std::string hostname;                             // Optional
     std::map<unsigned int, std::string> errorPages;   // Optional
     std::map<std::string, Route> routes;              // At least one route
 };
 
-const ServerBlock createDefaultServerBlock();
+typedef std::vector<ServerBlock> &serverList;
+
+ServerBlock createDefaultServerBlock();
 
 // Print ServerBlock
 std::ostream &operator<<(std::ostream &os, const ServerBlock &block);
