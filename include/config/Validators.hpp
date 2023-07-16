@@ -26,4 +26,5 @@ bool validateHTMLMethod(const std::string &bodySizeStr);
 
 // A function that tests out all the input validators
 void inputValidatorTests();
+
 #endif
