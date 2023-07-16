@@ -11,7 +11,6 @@
 #include "config/Parser.hpp"
 #include "config/Validators.hpp"
 #include "network/Server.hpp"
-#include "requests/Request.hpp"
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -33,7 +32,7 @@ int main(int argc, char **argv)
     // Test that validators work
     inputValidatorTests();
     // Test that request parsing works
-    requestParsingTests();
+    // requestParsingTests();
 
     try
     {

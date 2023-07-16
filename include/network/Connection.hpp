@@ -23,7 +23,11 @@ class Connection
         std::string response; // this will be an object of its respective class later and not just str
         size_t totalBytesRec;
         size_t totalBytesSent;
+
+        Connection();
         Connection(int listener);
+        Connection(const Connection &c);
+        Connection& operator=(const Connection &c);
         ~Connection();
 };
 

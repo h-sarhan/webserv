@@ -9,6 +9,7 @@
  */
 
 #include "network/Server.hpp"
+#include "enums/RequestTypes.hpp"
 #include "network/SystemCallException.hpp"
 
 bool quit = false;
@@ -70,48 +71,32 @@ void Server::initListener(unsigned int port, serverList virtualServers)
 // change this to use fd directly and close stuff in caller func
 void Server::readBody(size_t clientNo)
 {
-    size_t contentLen = 200000;   // temporary contentLen until the one from the request is parsed
-    char *buf = new char[contentLen];
-    std::string &req = cons.at(sockets[clientNo].fd).request;
-    size_t &totalRec = cons.at(sockets[clientNo].fd).totalBytesRec;
-    int bytesRec;
+    Request &req = cons.at(sockets[clientNo].fd).request;
 
-    // receiving request
-    std::cout << "Received a request: " << std::endl;
-    bytesRec = recv(sockets[clientNo].fd, buf, contentLen, 0);
-    if (bytesRec < 0)
-        std::cout << "Failed to receive request: " << strerror(errno) << std::endl;
-    else if (bytesRec == 0)
-        std::cout << "Connection closed by client" << std::endl;
-    if (bytesRec <= 0)
+    if (req.headers().count("content-length"))
     {
-        close(sockets[clientNo].fd);
-        cons.erase(sockets[clientNo].fd);
-        sockets.erase(sockets.begin() + clientNo);
-        delete[] buf;
-        return;
+        std::istringstream iss(req.headers()["content-length"]);
+        size_t contentLen;
+        iss >> contentLen;
+        if (req.requestLength() != contentLen)
+            return;
+        // return here so that we dont set the events to start responding
     }
-    buf[bytesRec] = 0;
-    totalRec += bytesRec;
-    req += buf;
+    else if (req.headers().count("transfer-encoding"))
+    {
+        // handle chunked transfer encoding
+        // here req.buffer() may contain a couple of chunks already or at least one
+        // my job here would be to extract the chunked data
+        // this means to skip over the chunk sizes at the start of a chunk and CRLF at the end
 
-    // if we're here, the call to recv was successful and we should
-    // at least have received the headers (check for a \r\n\r\n)
-    // at this point, the header of the request needs to be parsed to
-    // determine content length / chunked encoding
-
-    // if this is a POST req and totalRec != contentLength
-    // append buf to request;
-    // delete[] buf
-    // return here so that we dont set the events to start responding
-    std::cout << "Request size = " << totalRec << std::endl;
-    totalRec = 0;   // getting ready for next request
+        // if chunk size is not 0, return
+        // return here so that we dont set the events to start responding
+    }
+    std::cout << "Full request size: " << req.requestLength() << std::endl;
     sockets[clientNo].events = POLLIN | POLLOUT;
-    std::cout << "bytes = " << bytesRec << ", msg: " << std::endl;
     std::cout << "---------------------------------------------------------\n";
-    std::cout << buf;
+    std::cout << req.buffer();
     std::cout << "---------------------------------------------------------\n";
-    delete[] buf;
 }
 
 std::string static createResponse(std::string filename, std::string headers)
@@ -136,38 +121,62 @@ std::string static createResponse(std::string filename, std::string headers)
 void Server::sendResponse(size_t clientNo)
 {
     ssize_t bytesSent;
-    std::string &req = cons.at(sockets[clientNo].fd).request;
-    std::string &res = cons.at(sockets[clientNo].fd).response;
-    size_t &totalSent = cons.at(sockets[clientNo].fd).totalBytesSent;
+    Connection &c = cons[sockets[clientNo].fd];
 
-    if (req.length() > 0)
+    // Request &req = cons.at(sockets[clientNo].fd).request;
+    // int listener = cons.at()
+    // std::string &res = cons.at(sockets[clientNo].fd).response;
+    // size_t &totalSent = cons.at(sockets[clientNo].fd).totalBytesSent;
+
+    if (c.request.requestLength() > 0)
     {
-        res = createResponse("assets/artgallery.html", HTTP_HEADERS);
-        totalSent = 0;
-        req.clear();
+        RequestTarget target = c.request.target(listeners[c.listener]);
+        std::cout << "resource found at: " << target.resource << std::endl;
+        std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+        switch (target.type)
+        {
+            case FOUND:
+                c.response = createResponse(target.resource, HTTP_HEADERS);
+                break;
+            case REDIRECTION:
+                c.response = createResponse(target.resource, HTTP_HEADERS);
+                break;
+            case METHOD_NOT_ALLOWED:
+                c.response = createResponse("assets/404.html", HTTP_HEADERS);
+                break;
+            case DIRECTORY:
+                c.response = createResponse("assets/404.html", HTTP_HEADERS);
+                break;
+            case NOT_FOUND:
+                c.response = createResponse("assets/404.html", HTTP_HEADERS);
+                break;
+            }
+        c.totalBytesSent = 0;
+        c.request.clear();
     }
-    if (res.length() == 0)
+    else if (c.request.requestLength() == 0)
     {
         std::cout << "Nothing to send >:(" << std::endl;
         return;
     }
     std::cout << "Sending a response... " << std::endl;
-    bytesSent = send(sockets[clientNo].fd, res.c_str() + totalSent, res.length() - totalSent, 0);
+    bytesSent = send(sockets[clientNo].fd, c.response.c_str() + c.totalBytesSent,
+                     c.response.length() - c.totalBytesSent, 0);
     if (bytesSent < 0)
         std::cout << "Sending response failed: " << strerror(errno) << std::endl;
     else
     {
-        totalSent += bytesSent;
-        if (totalSent < res.length())   // partial send
+        c.totalBytesSent += bytesSent;
+        if (c.totalBytesSent < c.response.length())   // partial send
         {
-            std::cout << "Response only sent partially: " << bytesSent << ". Total: " << totalSent
+            std::cout << "Response only sent partially: " << bytesSent << ". Total: " << c.totalBytesSent
                       << std::endl;
             return;
         }
         else   // everything got sent
         {
             std::cout << "Response sent successfully to fd " << clientNo << ", "
-                      << sockets[clientNo].fd << ", total bytes sent = " << totalSent << std::endl;
+                      << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent << std::endl;
             // if keep-alive was requested
             // clear response string, set totalBytesSent to 0 and return here!!
         }
@@ -184,16 +193,15 @@ static void sigInthandler(int sigNo)
     quit = true;
 }
 
-void Server::readHeaders(size_t clientNo)
+void Server::recvData(size_t clientNo)
 {
-    size_t limit = 200000;   // this will be a macro defining the limit of Request::_rawRequest 
-    char *buf = new char[limit];
+    char *buf = new char[REQ_BUFFER_SIZE];
     Request &req = cons.at(sockets[clientNo].fd).request;
     int bytesRec;
 
     // receiving request
-    std::cout << "Received a request: " << std::endl;
-    bytesRec = recv(sockets[clientNo].fd, buf, limit, 0);
+    std::cout << "Receiving request data: " << std::endl;
+    bytesRec = recv(sockets[clientNo].fd, buf, REQ_BUFFER_SIZE, 0);
     if (bytesRec < 0)
         std::cout << "Failed to receive request: " << strerror(errno) << std::endl;
     else if (bytesRec == 0)
@@ -206,7 +214,7 @@ void Server::readHeaders(size_t clientNo)
         delete[] buf;
         return;
     }
-    req.append(buf, bytesRec);
+    req.appendToBuffer(buf, bytesRec);
     std::cout << "bytes = " << bytesRec << ", msg: " << std::endl;
     std::cout << "---------------------------------------------------------\n";
     std::cout << buf;
@@ -258,11 +266,10 @@ void Server::startListening()
                     acceptNewConnection(i);
                 else   // its one of the clients
                 {
-                    Request &req = cons.at(sockets[i].fd).request;
-                    if (!req.parseRequest()) // if headers arent parsed yet
-                        readHeaders(i);
-                    else
-                        readBody(i);
+                    recvData(i);
+                    // check if the headers are ready, parse them if they are
+                    if (cons[sockets[i].fd].request.parseRequest())
+                        readBody(i);   // this will only be run if the headers are parsed
                 }
             }
             else if (sockets[i].revents & POLLOUT)

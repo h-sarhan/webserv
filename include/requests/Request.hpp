@@ -16,7 +16,8 @@
 #include "enums/RequestTypes.hpp"
 #include <map>
 
-#define WHITESPACE " \t\n\r\f\v"
+#define REQ_BUFFER_SIZE 3000
+#define WHITESPACE      " \t\n\r\f\v"
 
 // * Important headers
 // Host: webserv.com
@@ -41,38 +42,40 @@ class Request
     HTTPMethod _httpMethod;
     std::string _target;
     std::map<std::string, std::string> _headers;
-    std::string _rawBody;
-    char *_rawRequest;
-    unsigned int _requestSize;
-    
+    char *_buffer;
+    size_t _length;
+    size_t _capacity;
+
   public:
     Request();
 
     // Returns false if the request does not contain the full headers
     // Throws InvalidRequestError if the request is detected to be invalid
-    bool parseRequest(const std::string &rawReq);
-
-    //  Set body
-    void setBody(const std::string &body);
+    bool parseRequest();
 
     Request(const Request &req);
     Request &operator=(const Request &req);
     ~Request();
 
     const HTTPMethod &method() const;
-    const std::string &body() const;
 
-    const RequestTarget target(serverList config);
+    char *buffer() const;
+    size_t requestLength() const;
+
+    const RequestTarget target(std::vector<ServerBlock *> config);
+
+    void appendToBuffer(const char *data, size_t n);
 
     // ! Make these const when im not tired
     // ! CACHE THESE
     std::string userAgent();
     std::string host();
+    std::map<std::string, std::string>& headers();
     bool keepAlive();
     unsigned int keepAliveTimer();
     unsigned int maxReconnections();
-    void append(char *buf);
-
+    void clear();
+  
   private:
     void parseStartLine(std::stringstream &reqStream);
     void parseHeader(std::stringstream &reqStream);
@@ -82,8 +85,11 @@ class Request
     void checkStream(const std::stringstream &reqStream, const std::string &token,
                      const std::string &errMsg);
     void checkEOF(const std::stringstream &reqStream);
+    void resizeBuffer(size_t newCapacity);
 };
 
-void requestParsingTests();
+// void requestParsingTests();
+
+void requestBufferTests();
 
 #endif
