@@ -67,9 +67,12 @@ Request::Request()
 }
 
 Request::Request(const Request &req)
-    : _httpMethod(req.method()), _target(req._target), _headers(req._headers), _buffer(req._buffer),
+    : _httpMethod(req.method()), _target(req._target), _headers(req._headers),
       _length(req._length), _capacity(req._capacity)
 {
+    _buffer = new char[REQ_BUFFER_SIZE];
+    for (size_t i = 0; i < _length; i++)
+        _buffer[i] = req._buffer[i];
 }
 
 Request &Request::operator=(const Request &req)
@@ -79,9 +82,13 @@ Request &Request::operator=(const Request &req)
     _httpMethod = req._httpMethod;
     _target = req._target;
     _headers = req._headers;
-    _buffer = req._buffer;   // * Shallow copy
+    // _buffer = req._buffer;   // * Shallow copy
     _length = req._length;
     _capacity = req._capacity;
+    delete[] _buffer;
+    _buffer = new char[REQ_BUFFER_SIZE];
+    for (size_t i = 0; i < _length; i++)
+        _buffer[i] = req._buffer[i];
     return *this;
 }
 
@@ -377,15 +384,6 @@ const RequestTarget Request::getTargetFromServerConfig(std::string &match,
 
 const RequestTarget Request::target(std::vector<ServerBlock *> serverBlocks)
 {
-    // std::string biggestMatch;
-    // for (std::vector<ServerBlock>::const_iterator blockIt = serverBlocks.begin();
-    //      blockIt != serverBlocks.end(); blockIt++)
-    // {
-    //     if (blockIt->hostname == host())
-    //         return getTargetFromServerConfig(biggestMatch, *blockIt);
-    // }
-    // return RequestTarget(NOT_FOUND, "");
-
     std::string biggestMatch;
     for (std::vector<ServerBlock *>::iterator blockIt = serverBlocks.begin();
          blockIt != serverBlocks.end(); blockIt++)

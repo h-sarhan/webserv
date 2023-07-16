@@ -95,7 +95,7 @@ void Server::readBody(size_t clientNo)
     std::cout << "Full request size: " << req.requestLength() << std::endl;
     sockets[clientNo].events = POLLIN | POLLOUT;
     std::cout << "---------------------------------------------------------\n";
-    std::cout << req.buffer();
+    std::cout << std::string(req.buffer(), req.buffer() + req.requestLength());
     std::cout << "---------------------------------------------------------\n";
 }
 
@@ -130,7 +130,8 @@ void Server::sendResponse(size_t clientNo)
 
     if (c.request.requestLength() > 0)
     {
-        RequestTarget target = c.request.target(listeners[c.listener]);
+        std::vector<ServerBlock *> blocks = listeners[c.listener];
+        RequestTarget target = c.request.target(blocks);
         std::cout << "resource found at: " << target.resource << std::endl;
         std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
         switch (target.type)
@@ -154,7 +155,7 @@ void Server::sendResponse(size_t clientNo)
         c.totalBytesSent = 0;
         c.request.clear();
     }
-    else if (c.request.requestLength() == 0)
+    if (c.response.length() == 0)
     {
         std::cout << "Nothing to send >:(" << std::endl;
         return;
@@ -178,7 +179,7 @@ void Server::sendResponse(size_t clientNo)
             std::cout << "Response sent successfully to fd " << clientNo << ", "
                       << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent << std::endl;
             // if keep-alive was requested
-            // clear response string, set totalBytesSent to 0 and return here!!
+            //      clear response string, set totalBytesSent to 0 and return here!!
         }
     }
     close(sockets[clientNo].fd);
@@ -215,10 +216,10 @@ void Server::recvData(size_t clientNo)
         return;
     }
     req.appendToBuffer(buf, bytesRec);
-    std::cout << "bytes = " << bytesRec << ", msg: " << std::endl;
-    std::cout << "---------------------------------------------------------\n";
-    std::cout << buf;
-    std::cout << "---------------------------------------------------------\n";
+    // std::cout << "bytes = " << bytesRec << ", msg: " << std::endl;
+    // std::cout << "---------------------------------------------------------\n";
+    // std::cout << buf;
+    // std::cout << "---------------------------------------------------------\n";
     delete[] buf;
 }
 
