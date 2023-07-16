@@ -6,14 +6,14 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/13 20:38:22 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/16 20:43:26 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "network/Connection.hpp"
 #include "requests/Request.hpp"
 
-Connection::Connection() : request()
+Connection::Connection() :  listener(-1), request(), response(), totalBytesRec(0), totalBytesSent(0)
 {
 }
 

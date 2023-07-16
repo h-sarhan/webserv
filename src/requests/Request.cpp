@@ -431,7 +431,10 @@ void requestBufferTests()
 // very temporary clear method!!! MUST clear other stuff too here or else it will break!!!
 void Request::clear()
 {
+    _headers.clear();
+    _target.clear();
     _length = 0;
+    _httpMethod = OTHER;
 }
 
 // static void testSingleURLDecoding(const std::string &str1, const std::string &str2)

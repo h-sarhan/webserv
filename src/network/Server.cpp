@@ -264,6 +264,8 @@ void Server::acceptNewConnection(size_t listenerNo)
 
 void Server::startListening()
 {
+    int eventFd;
+
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sigInthandler);
     while (true)
@@ -271,17 +273,20 @@ void Server::startListening()
         SystemCallException::checkErr("poll", poll(&sockets[0], sockets.size(), -1));
         for (size_t i = 0; i < sockets.size(); i++)
         {
-            // server listener got something new to read
+            eventFd = sockets[i].fd;
+            // if one of the fds got something new to read
             if (sockets[i].revents & POLLIN)
             {
-                if (configBlocks.count(sockets[i].fd))
+                if (configBlocks.count(eventFd)) // this fd is one of the server listeners
                     acceptNewConnection(i);
                 else   // its one of the clients
                 {
                     recvData(i);
-                    // check if the headers are ready, parse them if they are
-                    if (cons[sockets[i].fd].request.parseRequest())
-                        readBody(i);   // this will only be run if the headers are parsed
+                    // if this fd is still alive and no errors so far
+                    if (cons.count(eventFd))
+                        // check if the headers are ready, parse them if they are
+                        if (cons[eventFd].request.parseRequest())
+                            readBody(i);   // this will only be run if the headers are parsed
                 }
             }
             else if (sockets[i].revents & POLLOUT)
