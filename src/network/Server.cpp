@@ -188,6 +188,8 @@ void Server::sendResponse(size_t clientNo)
         {
             std::cout << "Response sent successfully to fd " << clientNo << ", "
                       << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent << std::endl;
+            // if (c.request.headers().count("connection"))
+                // if (c.request.headers()["connection"] == "keep-alive")
             // if keep-alive was requested
             //      clear response string, set totalBytesSent to 0 and return here!!
         }
@@ -294,7 +296,6 @@ void Server::startListening()
 Server::~Server()
 {
     std::cout << "Server destructor called" << std::endl;
-    // freeaddrinfo(servInfo);
     for (size_t i = 0; i < sockets.size(); i++)
         close(sockets[i].fd);
 }
