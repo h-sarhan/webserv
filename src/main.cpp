@@ -33,7 +33,7 @@ int main(int argc, char **argv)
     inputValidatorTests();
     // Test that request parsing works
     // requestParsingTests();
-
+    // generateDirectoryListing(".");
     try
     {
         if (argc == 2)

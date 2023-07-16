@@ -11,6 +11,7 @@
 #include "network/Server.hpp"
 #include "enums/RequestTypes.hpp"
 #include "network/SystemCallException.hpp"
+#include "network/network.hpp"
 
 bool quit = false;
 
@@ -34,7 +35,7 @@ Server::Server(serverList virtualServers)
 bool Server::portAlreadyInUse(unsigned int port)
 {
     std::map<int, std::vector<ServerBlock *> >::iterator it;
-    for (it = listeners.begin(); it != listeners.end(); it++)
+    for (it = configBlocks.begin(); it != configBlocks.end(); it++)
         if (it->second[0]->port == port)
             return true;
     return false;
@@ -65,7 +66,7 @@ void Server::initListener(unsigned int port, serverList virtualServers)
     servInfo.getServerInfo(port);
     listenerFd = servInfo.bindSocketToPort();
     sockets.push_back(createPollFd(listenerFd, POLLIN));
-    listeners.insert(std::make_pair(listenerFd, config));
+    configBlocks.insert(std::make_pair(listenerFd, config));
 }
 
 // change this to use fd directly and close stuff in caller func
@@ -99,7 +100,7 @@ void Server::readBody(size_t clientNo)
     std::cout << "---------------------------------------------------------\n";
 }
 
-std::string static createResponse(std::string filename, std::string headers)
+static std::string createResponse(std::string filename, std::string headers)
 {
     std::ifstream file;
     std::stringstream responseBuffer;
@@ -118,6 +119,16 @@ std::string static createResponse(std::string filename, std::string headers)
     return responseBuffer.str();
 }
 
+static std::string createDirectoryPage(std::string page, std::string headers)
+{
+    std::stringstream responseBuffer;
+
+    responseBuffer << headers;
+    responseBuffer << page.length() << "\r\n\r\n";
+    responseBuffer << page;
+    return responseBuffer.str();
+}
+
 void Server::sendResponse(size_t clientNo)
 {
     ssize_t bytesSent;
@@ -130,8 +141,7 @@ void Server::sendResponse(size_t clientNo)
 
     if (c.request.requestLength() > 0)
     {
-        std::vector<ServerBlock *> blocks = listeners[c.listener];
-        RequestTarget target = c.request.target(blocks);
+        RequestTarget target = c.request.target(configBlocks[c.listener]);
         std::cout << "resource found at: " << target.resource << std::endl;
         std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
         switch (target.type)
@@ -146,7 +156,7 @@ void Server::sendResponse(size_t clientNo)
                 c.response = createResponse("assets/404.html", HTTP_HEADERS);
                 break;
             case DIRECTORY:
-                c.response = createResponse("assets/404.html", HTTP_HEADERS);
+                c.response = createDirectoryPage(generateDirectoryListing(target.resource), HTTP_HEADERS);
                 break;
             case NOT_FOUND:
                 c.response = createResponse("assets/404.html", HTTP_HEADERS);
@@ -263,7 +273,7 @@ void Server::startListening()
             // server listener got something new to read
             if (sockets[i].revents & POLLIN)
             {
-                if (listeners.count(sockets[i].fd))
+                if (configBlocks.count(sockets[i].fd))
                     acceptNewConnection(i);
                 else   // its one of the clients
                 {

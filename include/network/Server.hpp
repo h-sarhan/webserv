@@ -17,6 +17,7 @@
 #include "config/ServerBlock.hpp"
 #include "network.hpp"
 #include "network/ServerInfo.hpp"
+#include "responses/DirectoryListing.hpp"
 
 #define MAX_CLIENTS 10
 
@@ -35,7 +36,7 @@ class Server
   private:
     std::vector<pollfd> sockets;
     std::map<int, Connection> cons;   // maps a socket fd to its connection data
-    std::map<int, std::vector<ServerBlock *> > listeners;
+    std::map<int, std::vector<ServerBlock *> > configBlocks;
 
     bool portAlreadyInUse(unsigned int port);
     void initListener(unsigned int port, serverList virtualServers);
