@@ -10,6 +10,7 @@
 
 #include "network/Server.hpp"
 #include "enums/RequestTypes.hpp"
+#include "enums/conversions.hpp"
 #include "network/SystemCallException.hpp"
 #include "network/network.hpp"
 
@@ -143,7 +144,7 @@ void Server::sendResponse(size_t clientNo)
     {
         RequestTarget target = c.request.target(configBlocks[c.listener]);
         std::cout << "resource found at: " << target.resource << std::endl;
-        std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+        std::cout << "request type: " << enumToStr(target.type) << std::endl;
         switch (target.type)
         {
         case FOUND:

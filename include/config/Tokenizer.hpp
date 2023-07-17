@@ -35,12 +35,6 @@ class Tokenizer
 
     const std::vector<Token> &tokens() const;
 
-    // Map strings to tokens
-    static std::map<std::string, const TokenType> strToToken;
-
-    // Maps tokens to strings
-    static std::map<TokenType, const std::string> tokenToStr;
-
   private:
     Tokenizer(const Tokenizer &old);
     Tokenizer &operator=(const Tokenizer &old);

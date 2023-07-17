@@ -87,7 +87,7 @@ class Parser
     void resetLocationBlockAttributes();
 
     // Functions to throw errors and assert conditions
-    void checkThat(bool condition, const std::string &throwMsg) const;
+    void assertThat(bool condition, const std::string &throwMsg) const;
     void matchToken(const TokenType token, const std::string &throwMsg) const;
     void throwParseError(const std::string &str) const;
 };

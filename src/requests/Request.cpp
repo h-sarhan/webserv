@@ -9,42 +9,13 @@
  */
 
 #include "requests/Request.hpp"
+#include "enums/conversions.hpp"
 #include "requests/InvalidRequestError.hpp"
 #include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <sstream>
 #include <sys/stat.h>
-
-RequestType strToRequestType(const std::string &str)
-{
-    if (str == "FOUND")
-        return FOUND;
-    if (str == "REDIRECTION")
-        return REDIRECTION;
-    if (str == "METHOD_NOT_ALLOWED")
-        return METHOD_NOT_ALLOWED;
-    if (str == "DIRECTORY")
-        return DIRECTORY;
-    return NOT_FOUND;
-}
-
-std::string requestTypeToStr(RequestType tkn)
-{
-    switch (tkn)
-    {
-    case FOUND:
-        return "FOUND";
-    case REDIRECTION:
-        return "REDIRECTION";
-    case NOT_FOUND:
-        return "NOT_FOUND";
-    case METHOD_NOT_ALLOWED:
-        return "METHOD_NOT_ALLOWED";
-    case DIRECTORY:
-        return "DIRECTORY";
-    }
-}
 
 RequestTarget::RequestTarget(const RequestType &type, const std::string &resource,
                              const std::string &route)
@@ -177,7 +148,7 @@ void Request::parseStartLine(std::stringstream &reqStream)
     reqStream >> httpMethod;
     if (httpMethod.empty())
         throw InvalidRequestError("Invalid start line");
-    _httpMethod = strToHTTPMethod(httpMethod);
+    _httpMethod = strToEnum<HTTPMethod>(httpMethod);
 
     if (_httpMethod == OTHER)
         throw InvalidRequestError("Invalid start line");
@@ -317,10 +288,6 @@ unsigned int Request::maxReconnections()
 
 static bool matchTargetToRoute(std::string target, std::string route)
 {
-    // // if (*--target.end() != '/')
-    // //     target.append("/");
-    // if (*--route.end() != '/')
-    //     route.append("/");
     return target.find(route) != std::string::npos;
 }
 

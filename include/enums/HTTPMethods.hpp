@@ -25,7 +25,4 @@ typedef enum
     OTHER
 } HTTPMethod;
 
-HTTPMethod strToHTTPMethod(const std::string &str);
-std::string httpMethodtoStr(HTTPMethod tkn);
-
 #endif

@@ -25,7 +25,4 @@ typedef enum
     NOT_FOUND
 } RequestType;
 
-RequestType strToRequestType(const std::string &str);
-std::string requestTypeToStr(RequestType tkn);
-
 #endif

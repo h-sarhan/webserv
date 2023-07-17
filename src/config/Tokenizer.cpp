@@ -10,6 +10,7 @@
 
 // ! USE ITERATORS INSTEAD OF ARRAY INDICES
 #include "config/Tokenizer.hpp"
+#include "enums/conversions.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -132,11 +133,7 @@ void Tokenizer::addWord(unsigned int &wordIdx, const std::string &wordStr,
     const std::string tokenStr = wordStr.substr(wordStart, wordEnd);
 
     // Check if the token is a reserved keyword
-    TokenType type;
-    if (strToToken.count(tokenStr) != 0)
-        type = strToToken[tokenStr];
-    else
-        type = WORD;
+    TokenType type = strToEnum<TokenType>(tokenStr);
 
     _tokens.push_back(Token(type, tokenStr, lineNum, column));
 }
@@ -161,7 +158,7 @@ void Tokenizer::tokenizeWord(const std::string &wordStr, const unsigned int word
         if (isSingleCharToken(c))
         {
             const std::string tokenStr(1, c);
-            const TokenType type = strToToken[tokenStr];
+            const TokenType type = strToEnum<TokenType>(tokenStr);
             const Token token(type, tokenStr, lineNum, column);
             _tokens.push_back(token);
         }
@@ -172,66 +169,8 @@ void Tokenizer::tokenizeWord(const std::string &wordStr, const unsigned int word
 }
 
 /**
- * @brief Helper function to generate the strToToken map
- *
- */
-static const std::map<std::string, const TokenType> createStrToToken()
-{
-    std::map<std::string, const TokenType> tokenMap;
-    tokenMap.insert(std::make_pair("server", SERVER));
-    tokenMap.insert(std::make_pair("listen", LISTEN));
-    tokenMap.insert(std::make_pair("server_name", SERVER_NAME));
-    tokenMap.insert(std::make_pair("error_page", ERROR_PAGE));
-    tokenMap.insert(std::make_pair("methods", METHODS));
-    tokenMap.insert(std::make_pair("directory_listing", DIRECTORY_TOGGLE));
-    tokenMap.insert(std::make_pair("directory_listing_file", DIRECTORY_FILE));
-    tokenMap.insert(std::make_pair("cgi_extensions", CGI_EXTENSION));
-    tokenMap.insert(std::make_pair("redirect", REDIRECT));
-    tokenMap.insert(std::make_pair("location", LOCATION));
-    tokenMap.insert(std::make_pair("try_files", TRY_FILES));
-    tokenMap.insert(std::make_pair("body_size", BODY_SIZE));
-    tokenMap.insert(std::make_pair("{", LEFT_BRACE));
-    tokenMap.insert(std::make_pair("}", RIGHT_BRACE));
-    tokenMap.insert(std::make_pair("#", POUND));
-    tokenMap.insert(std::make_pair(";", SEMICOLON));
-    return tokenMap;
-}
-
-/**
- * @brief Helper function to generate the tokenToStr map
- *
- */
-static const std::map<TokenType, const std::string> createTokenToStr()
-{
-    std::map<TokenType, const std::string> tokenMap;
-    tokenMap.insert(std::make_pair(SERVER, "SERVER"));
-    tokenMap.insert(std::make_pair(LISTEN, "LISTEN"));
-    tokenMap.insert(std::make_pair(SERVER_NAME, "SERVER_NAME"));
-    tokenMap.insert(std::make_pair(ERROR_PAGE, "ERROR_PAGE"));
-    tokenMap.insert(std::make_pair(METHODS, "METHODS"));
-    tokenMap.insert(std::make_pair(DIRECTORY_TOGGLE, "DIRECTORY_LISTING"));
-    tokenMap.insert(std::make_pair(DIRECTORY_FILE, "DIRECTORY_LISTING_FILE"));
-    tokenMap.insert(std::make_pair(CGI_EXTENSION, "CGI_EXTENSIONS"));
-    tokenMap.insert(std::make_pair(REDIRECT, "REDIRECT"));
-    tokenMap.insert(std::make_pair(LOCATION, "LOCATION"));
-    tokenMap.insert(std::make_pair(TRY_FILES, "TRY_FILES"));
-    tokenMap.insert(std::make_pair(BODY_SIZE, "BODY_SIZE"));
-
-    tokenMap.insert(std::make_pair(LEFT_BRACE, "LEFT_BRACE"));
-    tokenMap.insert(std::make_pair(RIGHT_BRACE, "RIGHT_BRACE"));
-    tokenMap.insert(std::make_pair(POUND, "POUND"));
-    tokenMap.insert(std::make_pair(SEMICOLON, "SEMICOLON"));
-    tokenMap.insert(std::make_pair(WORD, "WORD"));
-    return tokenMap;
-}
-
-/**
  * @brief Destroy the Config Tokenizer object
  */
 Tokenizer::~Tokenizer()
 {
 }
-
-// Assigning the static maps
-std::map<std::string, const TokenType> Tokenizer::strToToken = createStrToToken();
-std::map<TokenType, const std::string> Tokenizer::tokenToStr = createTokenToStr();

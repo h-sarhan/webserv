@@ -9,7 +9,7 @@
  */
 
 #include "config/Token.hpp"
-#include "config/Tokenizer.hpp"
+#include "enums/conversions.hpp"
 #include <iostream>
 
 Token::Token(const TokenType &type, const std::string &contents, unsigned int line,
@@ -60,7 +60,7 @@ unsigned int Token::column() const
 
 std::ostream &operator<<(std::ostream &os, const Token &tkn)
 {
-    std::cout << "{type: " << Tokenizer::tokenToStr[tkn.type()] << ", str: " << tkn.contents()
+    std::cout << "{type: " << enumToStr(tkn.type()) << ", str: " << tkn.contents()
               << ", line: " << tkn.line() << ", col: " << tkn.column() << "}";
     return os;
 }

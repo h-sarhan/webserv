@@ -22,9 +22,6 @@ typedef enum
     POUND,
     SEMICOLON,
 
-    // Literals.
-    WORD,
-
     // Keywords.
     SERVER,
     LISTEN,
@@ -37,8 +34,10 @@ typedef enum
     DIRECTORY_TOGGLE,
     DIRECTORY_FILE,
     CGI_EXTENSION,
-    REDIRECT
+    REDIRECT,
 
+    // Literals.
+    WORD
 } TokenType;
 
 #endif

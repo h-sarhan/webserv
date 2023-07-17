@@ -12,6 +12,7 @@
 #include "config/ParseError.hpp"
 #include "config/Tokenizer.hpp"
 #include "config/Validators.hpp"
+#include "enums/conversions.hpp"
 #include "utils.hpp"
 #include <cassert>
 #include <limits>
@@ -34,40 +35,12 @@
 // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path ;
 // CGI := "cgi_extensions" ("php" | "python")... ;
 
-// ! Better way to do this
-HTTPMethod strToHTTPMethod(const std::string &str)
-{
-    if (str == "GET")
-        return GET;
-    if (str == "POST")
-        return POST;
-    if (str == "DELETE")
-        return DELETE;
-    if (str == "PUT")
-        return PUT;
-    return OTHER;
-}
-
-// ! Better way to do this
-std::string httpMethodtoStr(HTTPMethod tkn)
-{
-    if (tkn == GET)
-        return "GET";
-    if (tkn == POST)
-        return "POST";
-    if (tkn == DELETE)
-        return "DELETE";
-    if (tkn == PUT)
-        return "PUT";
-    return "ERROR";
-}
-
 Parser::Parser(const std::string &configFile) : _filename(configFile)
 {
     const Tokenizer tokenizer(configFile);
 
     const std::vector<Token> &tokens = tokenizer.tokens();
-    checkThat(!tokens.empty(), EMPTY_CONFIG);
+    assertThat(!tokens.empty(), EMPTY_CONFIG);
 
     _currToken = tokens.begin();
     _lastToken = tokens.end();
@@ -84,7 +57,7 @@ void Parser::parseConfig()
         parseServerBlock();
         advanceToken();
     }
-    checkThat(atEnd(), EXPECTED_SERVER);
+    assertThat(atEnd(), EXPECTED_SERVER);
 }
 
 void Parser::matchToken(const TokenType token, const std::string &errMsg) const
@@ -93,7 +66,7 @@ void Parser::matchToken(const TokenType token, const std::string &errMsg) const
         throwParseError(errMsg);
 }
 
-void Parser::checkThat(bool condition, const std::string &throwMsg) const
+void Parser::assertThat(bool condition, const std::string &throwMsg) const
 {
     if (!condition)
         throwParseError(throwMsg);
@@ -122,7 +95,7 @@ void Parser::parseServerBlock()
     matchToken(LEFT_BRACE, EXPECTED_BLOCK_START("server"));
 
     advanceToken();
-    checkThat(atServerOption(), EXPECTED_OPTION("server"));
+    assertThat(atServerOption(), EXPECTED_OPTION("server"));
 
     while (!atEnd() && atServerOption())
     {
@@ -132,8 +105,8 @@ void Parser::parseServerBlock()
 
     matchToken(RIGHT_BRACE, EXPECTED_BLOCK_END("server"));
 
-    checkThat(_parsedAttributes.count(LISTEN) != 0, SERVER_MISSING("listen"));
-    checkThat(_parsedAttributes.count(LOCATION) != 0, SERVER_MISSING("location"));
+    assertThat(_parsedAttributes.count(LISTEN) != 0, SERVER_MISSING("listen"));
+    assertThat(_parsedAttributes.count(LOCATION) != 0, SERVER_MISSING("location"));
 }
 
 void Parser::parseServerOption()
@@ -160,12 +133,12 @@ void Parser::parseServerOption()
 void Parser::parseListenRule()
 {
     // LISTEN := "listen" valid_port SEMICOLON
-    checkThat(_parsedAttributes.count(LISTEN) == 0, DUPLICATE("listen"));
+    assertThat(_parsedAttributes.count(LISTEN) == 0, DUPLICATE("listen"));
     advanceToken();
 
     matchToken(WORD, INVALID("port"));
 
-    checkThat(validatePort(_currToken->contents()), INVALID("port"));
+    assertThat(validatePort(_currToken->contents()), INVALID("port"));
 
     fromStr(_currToken->contents(), _currServerBlock->port);
 
@@ -178,12 +151,12 @@ void Parser::parseListenRule()
 void Parser::parseServerName()
 {
     // SERVER_NAME := "server_name" valid_hostname SEMICOLON
-    checkThat(_parsedAttributes.count(SERVER_NAME) == 0, DUPLICATE("server_name"));
+    assertThat(_parsedAttributes.count(SERVER_NAME) == 0, DUPLICATE("server_name"));
     advanceToken();
 
     matchToken(WORD, INVALID("hostname"));
 
-    checkThat(validateHostName(_currToken->contents()), INVALID("hostname"));
+    assertThat(validateHostName(_currToken->contents()), INVALID("hostname"));
 
     _currServerBlock->hostname = _currToken->contents();
 
@@ -200,17 +173,17 @@ void Parser::parseErrorPage()
 
     matchToken(WORD, INVALID_ERROR_RESPONSE);
 
-    checkThat(validateErrorResponse(_currToken->contents()), INVALID_ERROR_RESPONSE);
+    assertThat(validateErrorResponse(_currToken->contents()), INVALID_ERROR_RESPONSE);
 
     int response;
     fromStr(_currToken->contents(), response);
 
-    checkThat(_parsedErrorPages.count(response) == 0, DUPLICATE("error_reponse"));
+    assertThat(_parsedErrorPages.count(response) == 0, DUPLICATE("error_reponse"));
     advanceToken();
 
     matchToken(WORD, INVALID("HTML file"));
 
-    checkThat(validateHTMLFile(_currToken->contents()), INVALID("HTML file"));
+    assertThat(validateHTMLFile(_currToken->contents()), INVALID("HTML file"));
 
     _currServerBlock->errorPages.insert(std::make_pair(response, _currToken->contents()));
 
@@ -259,7 +232,7 @@ void Parser::parseLocationBlock()
     matchToken(LEFT_BRACE, EXPECTED_BLOCK_START("location"));
 
     advanceToken();
-    checkThat(atLocationOption(), INVALID("location option"));
+    assertThat(atLocationOption(), INVALID("location option"));
 
     while (!atEnd() && atLocationOption())
     {
@@ -267,12 +240,12 @@ void Parser::parseLocationBlock()
         advanceToken();
     }
 
-    checkThat(!atEnd(), UNEXPECTED_EOF);
+    assertThat(!atEnd(), UNEXPECTED_EOF);
 
     matchToken(RIGHT_BRACE, EXPECTED_BLOCK_END("location"));
 
-    checkThat(_parsedAttributes.count(REDIRECT) != 0 || _parsedAttributes.count(TRY_FILES) != 0,
-              MISSING_LOCATION_OPTION);
+    assertThat(_parsedAttributes.count(REDIRECT) != 0 || _parsedAttributes.count(TRY_FILES) != 0,
+               MISSING_LOCATION_OPTION);
 
     _parsedAttributes.insert(LOCATION);
 }
@@ -311,14 +284,14 @@ void Parser::parseLocationOption()
 void Parser::parseTryFiles()
 {
     // TRY_FILES := "try_files" valid_dir SEMICOLON
-    checkThat(_parsedAttributes.count(TRY_FILES) == 0, DUPLICATE("try_files"));
+    assertThat(_parsedAttributes.count(TRY_FILES) == 0, DUPLICATE("try_files"));
 
-    checkThat(_parsedAttributes.count(REDIRECT) == 0, ADDITIONAL_LOCATION_OPTION);
+    assertThat(_parsedAttributes.count(REDIRECT) == 0, ADDITIONAL_LOCATION_OPTION);
 
     advanceToken();
     matchToken(WORD, INVALID("directory"));
 
-    checkThat(validateDirectory(_currToken->contents()), INVALID("directory"));
+    assertThat(validateDirectory(_currToken->contents()), INVALID("directory"));
 
     _currRoute->second.serveDir = _currToken->contents();
 
@@ -330,12 +303,12 @@ void Parser::parseTryFiles()
 void Parser::parseBodySize()
 {
     // BODY_SIZE := "body_size" positive_number SEMICOLON
-    checkThat(_parsedAttributes.count(BODY_SIZE) == 0, DUPLICATE("body_size"));
+    assertThat(_parsedAttributes.count(BODY_SIZE) == 0, DUPLICATE("body_size"));
 
     advanceToken();
     matchToken(WORD, INVALID("body size [10 - 2^32]"));
 
-    checkThat(validateBodySize(_currToken->contents()), INVALID("body size [10 - 2^32]"));
+    assertThat(validateBodySize(_currToken->contents()), INVALID("body size [10 - 2^32]"));
 
     fromStr(_currToken->contents(), _currRoute->second.bodySize);
 
@@ -351,17 +324,17 @@ void Parser::parseHTTPMethods()
     std::set<HTTPMethod> &methods = _currRoute->second.methodsAllowed;
     methods.clear();
 
-    checkThat(_parsedAttributes.count(METHODS) == 0, DUPLICATE("method"));
+    assertThat(_parsedAttributes.count(METHODS) == 0, DUPLICATE("method"));
 
     advanceToken();
     matchToken(WORD, INVALID("method"));
 
     while (!atEnd() && currentToken() == WORD)
     {
-        const HTTPMethod method = strToHTTPMethod(_currToken->contents());
+        const HTTPMethod method = strToEnum<HTTPMethod>(_currToken->contents());
 
-        checkThat(method != OTHER, INVALID("method"));
-        checkThat(methods.count(method) == 0, DUPLICATE_METHOD);
+        assertThat(method != OTHER, INVALID("method"));
+        assertThat(methods.count(method) == 0, DUPLICATE_METHOD);
 
         methods.insert(method);
         advanceToken();
@@ -374,13 +347,13 @@ void Parser::parseHTTPMethods()
 void Parser::parseRedirect()
 {
     // REDIRECT := "redirect" valid_URL SEMICOLON
-    checkThat(_parsedAttributes.count(REDIRECT) == 0, DUPLICATE("redirect"));
-    checkThat(_parsedAttributes.count(TRY_FILES) == 0, ADDITIONAL_LOCATION_OPTION);
+    assertThat(_parsedAttributes.count(REDIRECT) == 0, DUPLICATE("redirect"));
+    assertThat(_parsedAttributes.count(TRY_FILES) == 0, ADDITIONAL_LOCATION_OPTION);
 
     advanceToken();
     matchToken(WORD, INVALID("URL"));
 
-    checkThat(validateURL(_currToken->contents()) == true, INVALID("URL"));
+    assertThat(validateURL(_currToken->contents()) == true, INVALID("URL"));
 
     _currRoute->second.redirectTo = _currToken->contents();
 
@@ -393,13 +366,13 @@ void Parser::parseRedirect()
 void Parser::parseDirectoryToggle()
 {
     // DIR_LISTING := "directory_listing" ("true" | "false") SEMICOLON
-    checkThat(_parsedAttributes.count(DIRECTORY_TOGGLE) == 0, DUPLICATE("directory_listing"));
+    assertThat(_parsedAttributes.count(DIRECTORY_TOGGLE) == 0, DUPLICATE("directory_listing"));
 
     advanceToken();
     matchToken(WORD, INVALID("bool. `true` or `false`"));
 
-    checkThat(_currToken->contents() == "true" || _currToken->contents() == "false",
-              INVALID("bool. `true` or `false`"));
+    assertThat(_currToken->contents() == "true" || _currToken->contents() == "false",
+               INVALID("bool. `true` or `false`"));
 
     bool &toggle = _currRoute->second.listDirectories;
     if (_currToken->contents() == "true")
@@ -416,12 +389,12 @@ void Parser::parseDirectoryToggle()
 void Parser::parseDirectoryFile()
 {
     // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path SEMICOLON
-    checkThat(_parsedAttributes.count(DIRECTORY_FILE) == 0, DUPLICATE("directory_listing_file"));
+    assertThat(_parsedAttributes.count(DIRECTORY_FILE) == 0, DUPLICATE("directory_listing_file"));
 
     advanceToken();
     matchToken(WORD, INVALID("path to an HTML file"));
 
-    checkThat(validateHTMLFile(_currToken->contents()) == true, INVALID("path to an HTML file"));
+    assertThat(validateHTMLFile(_currToken->contents()) == true, INVALID("path to an HTML file"));
 
     _currRoute->second.listDirectoriesFile = _currToken->contents();
 

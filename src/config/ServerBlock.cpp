@@ -9,6 +9,7 @@
  */
 
 #include "config/ServerBlock.hpp"
+#include "enums/conversions.hpp"
 #include <limits>
 #include <sstream>
 
@@ -70,7 +71,7 @@ static void printRoute(std::stringstream &ss, const std::pair<std::string, Route
     ss << "\t\tMethods allowed: ";
     for (std::set<HTTPMethod>::const_iterator it = route.second.methodsAllowed.begin();
          it != route.second.methodsAllowed.end(); it++)
-        ss << httpMethodtoStr(*it) << " ";
+        ss << enumToStr(*it) << " ";
     ss << "\n";
     ss << "\t\tCGI extensions: ";
     if (route.second.cgiExtensions.empty())
