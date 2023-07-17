@@ -110,4 +110,13 @@ char getHex(const std::string &str);
  */
 void sanitizeURL(std::string &url);
 
+/**
+ * @brief Get a line as a string from a file given the line number
+ *
+ * @param filename Name of the file
+ * @param lineNum Line number
+ * @return const std::string The line as a string
+ */
+const std::string getLine(const std::string &filename, const unsigned int lineNum);
+
 #endif

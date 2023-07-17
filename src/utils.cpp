@@ -10,6 +10,7 @@
 
 #include "utils.hpp"
 #include <algorithm>
+#include <fstream>
 
 void rightTrimStr(std::string &str, const std::string &anyOf)
 {
@@ -51,9 +52,9 @@ void sanitizeURL(std::string &url)
     {
         if (*it == '%' && (url.end() - it) > 2)
         {
+            // Get the url encoded character and check if it is valid
             const std::string hexStr(it + 1, it + 3);
-
-            if (!std::isxdigit(hexStr[1]) || std::isxdigit(hexStr[2]))
+            if (!std::isxdigit(hexStr[0]) || !std::isxdigit(hexStr[1]))
                 continue;
 
             // Replace the `%` with the hex character
@@ -66,6 +67,17 @@ void sanitizeURL(std::string &url)
             it = url.begin();
         }
     }
+}
+
+const std::string getLine(const std::string &filename, const unsigned int lineNum)
+{
+    std::ifstream file(filename.c_str());
+
+    unsigned int currLine = 0;
+    std::string line;
+    while (currLine != lineNum && std::getline(file, line))
+        currLine++;
+    return line;
 }
 
 // void sanitizeURLTests()

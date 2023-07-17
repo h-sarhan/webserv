@@ -8,20 +8,9 @@
  *
  */
 #include "config/ParseError.hpp"
+#include "utils.hpp"
 #include <fstream>
 #include <sstream>
-
-// ! DUMB IMPLEMENTATION: Consider storing the line somewhere
-static const std::string getLine(const std::string &filename, const unsigned int errLine)
-{
-    std::ifstream file(filename.c_str());
-
-    unsigned int lineNum = 0;
-    std::string line;
-    while (lineNum != errLine && std::getline(file, line))
-        lineNum++;
-    return line;
-}
 
 ParseError::ParseError(const std::string &errorMsg, const Token &token, const std::string &filename)
 

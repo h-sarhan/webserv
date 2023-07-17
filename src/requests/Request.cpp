@@ -224,7 +224,7 @@ unsigned int Request::maxReconnections()
 
     std::stringstream maxConnStream(keepAliveValue.substr(keepAliveValue.find("max=")));
     getNext<std::string>(maxConnStream);
-    unsigned int maxConnections = getNext<unsigned int>(maxConnStream);
+    const unsigned int maxConnections = getNext<unsigned int>(maxConnStream);
     if (maxConnStream.good() && maxConnections < 20)
         return maxConnections;
     return 20;
