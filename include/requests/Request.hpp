@@ -13,10 +13,10 @@
 
 #include "config/ServerBlock.hpp"
 #include "enums/HTTPMethods.hpp"
-#include "enums/RequestTypes.hpp"
+#include "requests/RequestTarget.hpp"
 #include <map>
 
-#define REQ_BUFFER_SIZE 3000
+#define REQ_BUFFER_SIZE 2000
 #define WHITESPACE      " \t\n\r\f\v"
 
 // * Important headers
@@ -25,15 +25,6 @@
 // Keep-Alive: timeout=5, max=1000
 // ? Content-Length: 1000 // mehrins job i think
 // ? Transfer-encoding: chunked // mehrins job i think
-
-struct RequestTarget
-{
-    RequestTarget(const RequestType &type, const std::string &resource = "",
-                  const std::string &route = "");
-    RequestType type;
-    std::string resource;
-    std::string route;
-};
 
 /**
  * @brief This class defines an HTTP request

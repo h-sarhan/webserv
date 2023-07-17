@@ -14,15 +14,10 @@
 #include "utils.hpp"
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <sys/stat.h>
-
-RequestTarget::RequestTarget(const RequestType &type, const std::string &resource,
-                             const std::string &route)
-    : type(type), resource(resource), route(route)
-{
-}
 
 Request::Request()
     : _httpMethod(), _target(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
@@ -31,12 +26,10 @@ Request::Request()
 }
 
 Request::Request(const Request &req)
-    : _httpMethod(req.method()), _target(req._target), _headers(req._headers), _length(req._length),
-      _capacity(req._capacity)
+    : _httpMethod(req.method()), _target(req._target), _headers(req._headers),
+      _buffer(new char[req._capacity]), _length(req._length), _capacity(req._capacity)
 {
-    _buffer = new char[REQ_BUFFER_SIZE];
-    for (size_t i = 0; i < _length; i++)
-        _buffer[i] = req._buffer[i];
+    std::memcpy(_buffer, req._buffer, _length);
 }
 
 Request &Request::operator=(const Request &req)
@@ -46,13 +39,11 @@ Request &Request::operator=(const Request &req)
     _httpMethod = req._httpMethod;
     _target = req._target;
     _headers = req._headers;
-    // _buffer = req._buffer;   // * Shallow copy
     _length = req._length;
     _capacity = req._capacity;
     delete[] _buffer;
-    _buffer = new char[REQ_BUFFER_SIZE];
-    for (size_t i = 0; i < _length; i++)
-        _buffer[i] = req._buffer[i];
+    _buffer = new char[_capacity];
+    std::memcpy(_buffer, req._buffer, _length);
     return *this;
 }
 
@@ -79,55 +70,16 @@ bool Request::parseRequest()
         return true;
     const std::string req(_buffer, _buffer + _length);
     const size_t bodyStart = req.find("\r\n\r\n");
-    std::stringstream reqStream;
     if (bodyStart == std::string::npos)
         return false;
-    else
-        reqStream.str(req.substr(0, bodyStart + 2));
+
+    std::stringstream reqStream;
+    reqStream.str(req.substr(0, bodyStart + 2));
+
     parseStartLine(reqStream);
     while (reqStream.peek() != '\r' && !reqStream.eof())
         parseHeader(reqStream);
     return true;
-}
-
-static void decodeRequestURL(std::string &url)
-{
-    const std::string encodedChars = "%+";
-    std::string::iterator it =
-        std::find_first_of(url.begin(), url.end(), encodedChars.begin(), encodedChars.end());
-
-    while (it < url.end())
-    {
-        if (*it == '+')
-        {
-            *it = ' ';
-            it = std::find_first_of(url.begin(), url.end(), encodedChars.begin(),
-                                    encodedChars.end());
-        }
-        else if (*it == '%')
-        {
-            if ((url.end() - it) > 2)
-            {
-                std::string::iterator toReplace = it;
-                std::string hexa;
-                if (!std::isdigit(*(it + 1)) || !std::isdigit(*(it + 2)))
-                {
-                    it += 1;
-                    continue;
-                }
-                hexa.push_back(*++it);
-                hexa.push_back(*++it);
-                std::stringstream converter(hexa);
-                unsigned int convertedChar;
-                converter >> std::hex >> convertedChar;
-                url.replace(toReplace - url.begin(), 3, std::string(1, convertedChar));
-                it = std::find_first_of(url.begin(), url.end(), encodedChars.begin(),
-                                        encodedChars.end());
-            }
-        }
-        else
-            it += 1;
-    }
 }
 
 void Request::parseStartLine(std::stringstream &reqStream)
@@ -148,7 +100,7 @@ void Request::parseStartLine(std::stringstream &reqStream)
 
     std::string requestTarget;
     reqStream >> requestTarget;
-    decodeRequestURL(requestTarget);
+    sanitizeURL(requestTarget);
 
     if (requestTarget.empty())
         throw InvalidRequestError("Invalid start line");
@@ -358,8 +310,7 @@ const RequestTarget Request::target(std::vector<ServerBlock *> serverBlocks)
 void Request::resizeBuffer(size_t newCapacity)
 {
     char *newBuffer = new char[newCapacity];
-    for (size_t i = 0; i < _length; i++)
-        newBuffer[i] = _buffer[i];
+    std::memcpy(newBuffer, _buffer, _length);
     delete[] _buffer;
     _buffer = newBuffer;
     _capacity = newCapacity;
@@ -369,8 +320,7 @@ void Request::appendToBuffer(const char *data, size_t n)
 {
     if (_length + n >= _capacity)
         resizeBuffer(std::max(_capacity * 2, (_length + n) * 2));
-    for (size_t i = 0; i < n; i++)
-        _buffer[_length + i] = data[i];
+    std::memcpy(_buffer + _length, data, n);
     _length += n;
 }
 
@@ -394,6 +344,8 @@ void requestBufferTests()
 void Request::clear()
 {
     _length = 0;
+    _headers.clear();
+    _target = "";
 }
 
 // static void testSingleURLDecoding(const std::string &str1, const std::string &str2)

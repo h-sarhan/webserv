@@ -9,8 +9,8 @@
  */
 
 #include "config/Parser.hpp"
-#include "config/Validators.hpp"
 #include "network/Server.hpp"
+#include <cassert>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -23,6 +23,7 @@
  */
 int main(int argc, char **argv)
 {
+    (void) argv;
     if (argc > 2)
     {
         std::cerr << "" << std::endl;
@@ -30,10 +31,10 @@ int main(int argc, char **argv)
     }
 
     // Test that validators work
-    inputValidatorTests();
     // Test that request parsing works
     // requestParsingTests();
     // generateDirectoryListing(".");
+
     try
     {
         if (argc == 2)
@@ -42,7 +43,7 @@ int main(int argc, char **argv)
             // ConfigTokenizer tokenizer(filename);
             // std::vector<Token> tokens = tokenizer.tokens();
             Parser parser(filename);
-            std::vector<ServerBlock>& config = parser.getConfig();
+            std::vector<ServerBlock> &config = parser.getConfig();
             Server s(config);
             s.startListening();
         }
