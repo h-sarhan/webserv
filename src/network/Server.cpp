@@ -155,10 +155,8 @@ void Server::sendResponse(size_t clientNo)
             // }
         }
     }
-    std::cout << "sockets size = " << sockets.size() << std::endl;
     std::cout << "Closing connection " << sockets[clientNo].fd << std::endl;
     closeConnection(clientNo);
-    std::cout << "sockets size = " << sockets.size() << std::endl;
     std::cout << "---------------------------------------------------------\n";
 }
 

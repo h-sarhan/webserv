@@ -15,8 +15,18 @@
 
 class Response
 {
-    char *response;
-    
+    private:
+        char *buffer;
+        size_t length;
+        size_t totalBytesSent;
+        int statusCode;
+    public:
+        Response();
+        Response(const Response& r);
+        Response& operator=(const Response& r);
+        void setResponse(char *newBuf, size_t bufLen);
+        void clearResponse();
+        ~Response();
 };
 
 
