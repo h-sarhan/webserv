@@ -13,18 +13,22 @@
 #include "network/Connection.hpp"
 #include "requests/Request.hpp"
 
-Connection::Connection() :  listener(-1), request(), response(), totalBytesRec(0), totalBytesSent(0)
+Connection::Connection()
+    : listener(-1), request(), response(), totalBytesRec(0), totalBytesSent(0), keepAlive(false),
+      timeOut(0), startTime(0)
 {
 }
 
 Connection::Connection(int listener)
-    : listener(listener), request(), response(), totalBytesRec(0), totalBytesSent(0)
+    : listener(listener), request(), response(), totalBytesRec(0), totalBytesSent(0),
+      keepAlive(false), timeOut(0), startTime(0)
 {
 }
 
 Connection::Connection(const Connection &c)
     : listener(c.listener), request(c.request), response(c.response),
-      totalBytesRec(c.totalBytesRec), totalBytesSent(c.totalBytesSent)
+      totalBytesRec(c.totalBytesRec), totalBytesSent(c.totalBytesSent), keepAlive(c.keepAlive),
+      timeOut(c.timeOut), startTime(c.startTime)
 {
 }
 
