@@ -11,6 +11,7 @@
 #include "requests/Request.hpp"
 #include "enums/conversions.hpp"
 #include "requests/InvalidRequestError.hpp"
+#include "utils.hpp"
 #include <algorithm>
 #include <cassert>
 #include <iostream>
@@ -21,14 +22,6 @@ RequestTarget::RequestTarget(const RequestType &type, const std::string &resourc
                              const std::string &route)
     : type(type), resource(resource), route(route)
 {
-}
-
-static void trimWhitespace(std::string &str)
-{
-    // left trim
-    str.erase(0, str.find_first_not_of(WHITESPACE));
-    // right trim
-    str.erase(str.find_last_not_of(WHITESPACE) + 1);
 }
 
 Request::Request()
@@ -205,7 +198,7 @@ void Request::parseHeader(std::stringstream &reqStream)
         throw InvalidRequestError("Invalid header");
 
     checkLineEnding(reqStream);
-    trimWhitespace(value);
+    trimStr(value, WHITESPACE);
     std::transform(key.begin(), key.end(), key.begin(), ::tolower);
     _headers.insert(std::make_pair(key.substr(0, key.length() - 1), value));
 }

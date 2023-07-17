@@ -43,4 +43,28 @@ template <typename T> std::string toStr(const T &val)
     return ss.str();
 }
 
+/**
+ * @brief
+ *
+ * @param str
+ * @param anyOf
+ */
+void rightTrimStr(std::string &str, const std::string &anyOf);
+
+/**
+ * @brief
+ *
+ * @param str
+ * @param anyOf
+ */
+void leftTrimStr(std::string &str, const std::string &anyOf);
+
+/**
+ * @brief
+ *
+ * @param str
+ * @param anyOf
+ */
+void trimStr(std::string &str, const std::string &anyOf);
+
 #endif

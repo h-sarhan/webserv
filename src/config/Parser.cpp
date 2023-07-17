@@ -216,10 +216,8 @@ void Parser::parseLocationBlock()
     std::string routePath = _currToken->contents();
 
     // Trim '/' from route path
-    // ! Could be refactored
-    // ! Create trim functions
-    if (routePath != "/" && *--routePath.end() == '/')
-        routePath = routePath.substr(0, routePath.length() - 1);
+    if (routePath != "/")
+        rightTrimStr(routePath, "/");
 
     // Insert an empty route block
     _currRoute = _currServerBlock->routes.insert(std::make_pair(routePath, Route())).first;
