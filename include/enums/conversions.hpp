@@ -13,14 +13,9 @@
 
 #define sizeOfArray(array) sizeof(array) / sizeof(array[0])
 
-#include "enums/HTTPMethods.hpp"
-#include "enums/RequestTypes.hpp"
-#include "enums/TokenTypes.hpp"
+#include <string>
 
-std::string enumToStr(const HTTPMethod &enumVal);
-std::string enumToStr(const RequestType &enumVal);
-std::string enumToStr(const TokenType &enumVal);
-
+template <typename E> std::string enumToStr(const E &enumVal);
 template <typename E> E strToEnum(const std::string &str);
 
 #endif

@@ -8,9 +8,12 @@
  *
  */
 
+#include "enums/HTTPMethods.hpp"
+#include "enums/RequestTypes.hpp"
+#include "enums/TokenTypes.hpp"
 #include "enums/conversions.hpp"
 
-std::string enumToStr(const HTTPMethod &enumVal)
+template <> std::string enumToStr(const HTTPMethod &enumVal)
 {
     switch (enumVal)
     {
@@ -27,7 +30,7 @@ std::string enumToStr(const HTTPMethod &enumVal)
     }
 }
 
-std::string enumToStr(const RequestType &enumVal)
+template <> std::string enumToStr(const RequestType &enumVal)
 {
     switch (enumVal)
     {
@@ -44,7 +47,7 @@ std::string enumToStr(const RequestType &enumVal)
     }
 }
 
-std::string enumToStr(const TokenType &enumVal)
+template <> std::string enumToStr(const TokenType &enumVal)
 {
     switch (enumVal)
     {
