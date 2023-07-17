@@ -129,23 +129,15 @@ static std::string createHTMLResponse(std::string page, std::string headers)
     return responseBuffer.str();
 }
 
-void Server::sendResponse(size_t clientNo)
+void Server::processRequest(Connection &c)
 {
-    ssize_t bytesSent;
-    Connection &c = cons[sockets[clientNo].fd];
-
-    // Request &req = cons.at(sockets[clientNo].fd).request;
-    // int listener = cons.at()
-    // std::string &res = cons.at(sockets[clientNo].fd).response;
-    // size_t &totalSent = cons.at(sockets[clientNo].fd).totalBytesSent;
-
-    if (c.request.requestLength() > 0)
+    if (c.request.requestLength() == 0)
+        return;
+    RequestTarget target = c.request.target(configBlocks[c.listener]);
+    std::cout << "resource found at: " << target.resource << std::endl;
+    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+    switch (target.type)
     {
-        RequestTarget target = c.request.target(configBlocks[c.listener]);
-        std::cout << "resource found at: " << target.resource << std::endl;
-        std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
-        switch (target.type)
-        {
         case FOUND:
             c.response = createResponse(target.resource, HTTP_HEADERS);
             break;
@@ -161,13 +153,36 @@ void Server::sendResponse(size_t clientNo)
         case NOT_FOUND:
             c.response = createHTMLResponse(errorPage(404), HTTP_HEADERS);
             break;
-        }
-        c.totalBytesSent = 0;
-        c.request.clear();
     }
+    // c.keepAlive = c.request.keepAlive();
+    // c.timeOut = c.request.keepAliveTimer();
+    c.totalBytesSent = 0;
+    c.request.clear();
+}
+
+void Server::closeConnection(int clientNo)
+{
+    close(sockets[clientNo].fd);
+    cons.erase(sockets[clientNo].fd);
+    sockets.erase(sockets.begin() + clientNo);
+}
+
+void Server::sendResponse(size_t clientNo)
+{
+    ssize_t bytesSent;
+    Connection &c = cons[sockets[clientNo].fd];
+    // time_t curTime;
+
+    processRequest(c);
     if (c.response.length() == 0)
     {
-        std::cout << "Nothing to send >:(" << std::endl;
+        std::cout << "Connection is idle: " << sockets[clientNo].fd << std::endl;
+        // time(&curTime);
+        // if (curTime - c.startTime >= c.timeOut)
+        // {
+        //     closeConnection(clientNo);
+        //     std::cout << "Connection timed out! (idle for " << c.timeOut << "s): " << sockets[clientNo].fd << std::endl;
+        // }
         return;
     }
     std::cout << "Sending a response... " << std::endl;
@@ -187,15 +202,21 @@ void Server::sendResponse(size_t clientNo)
         else   // everything got sent
         {
             std::cout << "Response sent successfully to fd " << clientNo << ", "
-                      << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent
-                      << std::endl;
-            // if keep-alive was requested
-            //      clear response string, set totalBytesSent to 0 and return here!!
+                      << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent << std::endl;
+            // if (c.keepAlive) // if keep-alive was requested
+            // {
+            //     std::cout << "Connection is keep alive" << std::endl;
+            //     c.request.clear();
+            //     c.response.clear();
+            //     c.totalBytesSent = 0;
+            //     time(&c.startTime); // reset timer
+            //     return ;
+            //     clear response string, set totalBytesSent to 0 and return here!!
+            // }
         }
     }
-    close(sockets[clientNo].fd);
-    cons.erase(sockets[clientNo].fd);
-    sockets.erase(sockets.begin() + clientNo);
+    std::cout << "Closing connection " << sockets[clientNo].fd << std::endl;
+    closeConnection(clientNo);
     std::cout << "---------------------------------------------------------\n";
 }
 
@@ -220,9 +241,7 @@ void Server::recvData(size_t clientNo)
         std::cout << "Connection closed by client" << std::endl;
     if (bytesRec <= 0)
     {
-        close(sockets[clientNo].fd);
-        cons.erase(sockets[clientNo].fd);
-        sockets.erase(sockets.begin() + clientNo);
+        closeConnection(clientNo);
         delete[] buf;
         return;
     }
@@ -300,7 +319,6 @@ void Server::startListening()
 Server::~Server()
 {
     std::cout << "Server destructor called" << std::endl;
-    // freeaddrinfo(servInfo);
     for (size_t i = 0; i < sockets.size(); i++)
         close(sockets[i].fd);
 }
