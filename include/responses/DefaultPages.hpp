@@ -16,8 +16,8 @@
     "\t\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n"                \
     "\t\t<style>"                                                                                  \
     "\t\t\t* {"                                                                                    \
-    "\t\t\t\tfont-family: \"Lucida Console\", \"Courier New\", monospace;\n"                           \
-    "\t\t\t\tbackground-color: white;\n"                                                      \
+    "\t\t\t\tfont-family: \"Lucida Console\", \"Courier New\", monospace;\n"                       \
+    "\t\t\t\tbackground-color: white;\n"                                                           \
     "\t\t\t\tfont-size: 22px;\n"                                                                   \
     "\t\t\t}"                                                                                      \
     "\t\t</style>"

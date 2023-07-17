@@ -46,8 +46,9 @@ std::string requestTypeToStr(RequestType tkn)
     }
 }
 
-RequestTarget::RequestTarget(const RequestType &type, const std::string &resource)
-    : type(type), resource(resource)
+RequestTarget::RequestTarget(const RequestType &type, const std::string &resource,
+                             const std::string &route)
+    : type(type), resource(resource), route(route)
 {
 }
 
@@ -66,8 +67,8 @@ Request::Request()
 }
 
 Request::Request(const Request &req)
-    : _httpMethod(req.method()), _target(req._target), _headers(req._headers),
-      _length(req._length), _capacity(req._capacity)
+    : _httpMethod(req.method()), _target(req._target), _headers(req._headers), _length(req._length),
+      _capacity(req._capacity)
 {
     _buffer = new char[REQ_BUFFER_SIZE];
     for (size_t i = 0; i < _length; i++)
@@ -258,7 +259,7 @@ std::string Request::host()
     return "localhost";
 }
 
-std::map<std::string, std::string>& Request::headers()
+std::map<std::string, std::string> &Request::headers()
 {
     return _headers;
 }
@@ -316,10 +317,10 @@ unsigned int Request::maxReconnections()
 
 static bool matchTargetToRoute(std::string target, std::string route)
 {
-    if (*--target.end() != '/')
-        target.append("/");
-    if (*--route.end() != '/')
-        route.append("/");
+    // // if (*--target.end() != '/')
+    // //     target.append("/");
+    // if (*--route.end() != '/')
+    //     route.append("/");
     return target.find(route) != std::string::npos;
 }
 
@@ -357,9 +358,10 @@ const RequestTarget Request::getTargetFromServerConfig(std::string &match,
         return RequestTarget(REDIRECTION, matchedRoute.redirectTo);
     if (matchedRoute.serveDir.length() > 0)
     {
-        std::string requestTarget =
-            matchedRoute.serveDir + "/" + _target.substr(_target.find(match));
+        std::string requestTarget = matchedRoute.serveDir + "/";
 
+        std::string resource = _target.substr(_target.find(match) + match.length());
+        requestTarget += resource;
         removeDoubleSlash(requestTarget);
         // Check if the target exists
         struct stat info;
@@ -367,14 +369,14 @@ const RequestTarget Request::getTargetFromServerConfig(std::string &match,
         {
             // Check if the target is a file or a directory
             if (info.st_mode & S_IFREG)
-                return RequestTarget(FOUND, requestTarget);
+                return RequestTarget(FOUND, requestTarget, match);
             if (info.st_mode & S_IFDIR)
             {
                 if (matchedRoute.listDirectories == true)
-                    return RequestTarget(DIRECTORY, requestTarget);
+                    return RequestTarget(DIRECTORY, requestTarget, match);
                 if (matchedRoute.listDirectoriesFile.empty())
                     return RequestTarget(NOT_FOUND, "");
-                return RequestTarget(FOUND, matchedRoute.listDirectoriesFile);
+                return RequestTarget(FOUND, matchedRoute.listDirectoriesFile, match);
             }
         }
     }

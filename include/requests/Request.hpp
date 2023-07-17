@@ -28,9 +28,11 @@
 
 struct RequestTarget
 {
-    RequestTarget(const RequestType &type, const std::string &resource);
+    RequestTarget(const RequestType &type, const std::string &resource = "",
+                  const std::string &route = "");
     RequestType type;
     std::string resource;
+    std::string route;
 };
 
 /**
@@ -70,12 +72,12 @@ class Request
     // ! CACHE THESE
     std::string userAgent();
     std::string host();
-    std::map<std::string, std::string>& headers();
+    std::map<std::string, std::string> &headers();
     bool keepAlive();
     unsigned int keepAliveTimer();
     unsigned int maxReconnections();
     void clear();
-  
+
   private:
     void parseStartLine(std::stringstream &reqStream);
     void parseHeader(std::stringstream &reqStream);
