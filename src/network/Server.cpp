@@ -154,8 +154,8 @@ void Server::processRequest(Connection &c)
             c.response = createHTMLResponse(errorPage(404), HTTP_HEADERS);
             break;
     }
-    c.keepAlive = c.request.keepAlive();
-    c.timeOut = c.request.keepAliveTimer();
+    // c.keepAlive = c.request.keepAlive();
+    // c.timeOut = c.request.keepAliveTimer();
     c.totalBytesSent = 0;
     c.request.clear();
 }
@@ -171,18 +171,18 @@ void Server::sendResponse(size_t clientNo)
 {
     ssize_t bytesSent;
     Connection &c = cons[sockets[clientNo].fd];
-    time_t curTime;
+    // time_t curTime;
 
     processRequest(c);
     if (c.response.length() == 0)
     {
         std::cout << "Connection is idle: " << sockets[clientNo].fd << std::endl;
-        time(&curTime);
-        if (curTime - c.startTime >= c.timeOut)
-        {
-            closeConnection(clientNo);
-            std::cout << "Connection timed out! (idle for " << c.timeOut << "s): " << sockets[clientNo].fd << std::endl;
-        }
+        // time(&curTime);
+        // if (curTime - c.startTime >= c.timeOut)
+        // {
+        //     closeConnection(clientNo);
+        //     std::cout << "Connection timed out! (idle for " << c.timeOut << "s): " << sockets[clientNo].fd << std::endl;
+        // }
         return;
     }
     std::cout << "Sending a response... " << std::endl;
@@ -203,19 +203,19 @@ void Server::sendResponse(size_t clientNo)
         {
             std::cout << "Response sent successfully to fd " << clientNo << ", "
                       << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent << std::endl;
-            if (c.keepAlive)
-            {
-                std::cout << "Connection is keep alive" << std::endl;
-                c.request.clear();
-                c.response.clear();
-                c.totalBytesSent = 0;
-                time(&c.startTime); // reset timer
-                return ;
-            }
-            // if keep-alive was requested
-            //      clear response string, set totalBytesSent to 0 and return here!!
+            // if (c.keepAlive) // if keep-alive was requested
+            // {
+            //     std::cout << "Connection is keep alive" << std::endl;
+            //     c.request.clear();
+            //     c.response.clear();
+            //     c.totalBytesSent = 0;
+            //     time(&c.startTime); // reset timer
+            //     return ;
+            //     clear response string, set totalBytesSent to 0 and return here!!
+            // }
         }
     }
+    std::cout << "Closing connection " << sockets[clientNo].fd << std::endl;
     closeConnection(clientNo);
     std::cout << "---------------------------------------------------------\n";
 }

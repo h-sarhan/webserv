@@ -14,7 +14,7 @@
 #include "network.hpp"
 #include "requests/Request.hpp"
 #include <iostream>
-#include <ctime>
+// #include <ctime>
 
 class Connection
 {
@@ -24,9 +24,9 @@ class Connection
         std::string response; // this will be an object of its respective class later and not just str
         size_t totalBytesRec;
         size_t totalBytesSent;
-        bool keepAlive;
-        time_t timeOut;
-        time_t startTime;
+        // bool keepAlive;
+        // time_t timeOut;
+        // time_t startTime;
 
         Connection();
         Connection(int listener);
