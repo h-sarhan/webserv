@@ -89,7 +89,7 @@ template <> HTTPMethod strToEnum<HTTPMethod>(const std::string &str)
 {
     static const std::string methods[] = {"GET", "POST", "PUT", "DELETE", "OTHER"};
 
-    for (int i = 0; i < 5; i++)
+    for (size_t i = 0; i < sizeOfArray(methods); i++)
         if (methods[i] == str)
             return static_cast<HTTPMethod>(i);
     return OTHER;
@@ -100,7 +100,7 @@ template <> RequestType strToEnum<RequestType>(const std::string &str)
     static const std::string requestTypes[] = {"FOUND", "REDIRECTION", "METHOD_NOT_ALLOWED",
                                                "DIRECTORY", "NOT_FOUND"};
 
-    for (int i = 0; i < 5; i++)
+    for (size_t i = 0; i < sizeOfArray(requestTypes); i++)
         if (requestTypes[i] == str)
             return static_cast<RequestType>(i);
     return NOT_FOUND;
@@ -125,7 +125,7 @@ template <> TokenType strToEnum<TokenType>(const std::string &str)
                                              "cgi_extensions",
                                              "redirect"};
 
-    for (int i = 0; i < 16; i++)
+    for (size_t i = 0; i < sizeOfArray(tokenTypes); i++)
         if (tokenTypes[i] == str)
             return static_cast<TokenType>(i);
     return WORD;
