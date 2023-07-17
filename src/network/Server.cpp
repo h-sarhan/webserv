@@ -100,66 +100,6 @@ void Server::readBody(size_t clientNo)
     std::cout << "---------------------------------------------------------\n";
 }
 
-static std::string createResponse(std::string filename, std::string headers)
-{
-    std::ifstream file;
-    std::stringstream responseBuffer;
-    std::stringstream fileBuffer;
-    std::string fileContents;
-
-    file.open(filename.c_str());
-    // if (!file.good())
-    // return 404 page as response
-    fileBuffer << file.rdbuf();
-    file.close();
-    fileContents = fileBuffer.str();
-    responseBuffer << headers;
-    responseBuffer << fileContents.length() << "\r\n\r\n";
-    responseBuffer << fileContents;
-    return responseBuffer.str();
-}
-
-static std::string createHTMLResponse(std::string page, std::string headers)
-{
-    std::stringstream responseBuffer;
-
-    responseBuffer << headers;
-    responseBuffer << page.length() << "\r\n\r\n";
-    responseBuffer << page;
-    return responseBuffer.str();
-}
-
-void Server::processRequest(Connection &c)
-{
-    if (c.request.requestLength() == 0)
-        return;
-    RequestTarget target = c.request.target(configBlocks[c.listener]);
-    std::cout << "resource found at: " << target.resource << std::endl;
-    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
-    switch (target.type)
-    {
-        case FOUND:
-            c.response = createResponse(target.resource, HTTP_HEADERS);
-            break;
-        case REDIRECTION:
-            c.response = createResponse(target.resource, HTTP_HEADERS);
-            break;
-        case METHOD_NOT_ALLOWED:
-            c.response = createHTMLResponse(errorPage(405), HTTP_HEADERS);
-            break;
-        case DIRECTORY:
-            c.response = createHTMLResponse(directoryListing(target.resource), HTTP_HEADERS);
-            break;
-        case NOT_FOUND:
-            c.response = createHTMLResponse(errorPage(404), HTTP_HEADERS);
-            break;
-    }
-    // c.keepAlive = c.request.keepAlive();
-    // c.timeOut = c.request.keepAliveTimer();
-    c.totalBytesSent = 0;
-    c.request.clear();
-}
-
 void Server::closeConnection(int clientNo)
 {
     close(sockets[clientNo].fd);
@@ -173,7 +113,7 @@ void Server::sendResponse(size_t clientNo)
     Connection &c = cons[sockets[clientNo].fd];
     // time_t curTime;
 
-    processRequest(c);
+    c.processRequest(configBlocks[c.listener]);
     if (c.response.length() == 0)
     {
         std::cout << "Connection is idle: " << sockets[clientNo].fd << std::endl;
@@ -215,8 +155,10 @@ void Server::sendResponse(size_t clientNo)
             // }
         }
     }
+    std::cout << "sockets size = " << sockets.size() << std::endl;
     std::cout << "Closing connection " << sockets[clientNo].fd << std::endl;
     closeConnection(clientNo);
+    std::cout << "sockets size = " << sockets.size() << std::endl;
     std::cout << "---------------------------------------------------------\n";
 }
 

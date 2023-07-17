@@ -32,7 +32,9 @@ class Connection
         Connection(int listener);
         Connection(const Connection &c);
         Connection& operator=(const Connection &c);
+        void processRequest(std::vector<ServerBlock *>& config);
         ~Connection();
+
 };
 
 #endif

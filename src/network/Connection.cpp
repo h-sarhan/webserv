@@ -6,12 +6,13 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/17 16:18:23 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/17 18:55:52 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "network/Connection.hpp"
 #include "requests/Request.hpp"
+#include "responses/DefaultPages.hpp"
 
 Connection::Connection()
     : listener(-1), request(), response(), totalBytesRec(0), totalBytesSent(0)
@@ -56,6 +57,66 @@ Connection &Connection::operator=(const Connection &c)
         this->totalBytesSent = c.totalBytesSent;
     }
     return (*this);
+}
+
+static std::string createResponse(std::string filename, std::string headers)
+{
+    std::ifstream file;
+    std::stringstream responseBuffer;
+    std::stringstream fileBuffer;
+    std::string fileContents;
+
+    file.open(filename.c_str());
+    // if (!file.good())
+    // return 404 page as response
+    fileBuffer << file.rdbuf();
+    file.close();
+    fileContents = fileBuffer.str();
+    responseBuffer << headers;
+    responseBuffer << fileContents.length() << "\r\n\r\n";
+    responseBuffer << fileContents;
+    return responseBuffer.str();
+}
+
+static std::string createHTMLResponse(std::string page, std::string headers)
+{
+    std::stringstream responseBuffer;
+
+    responseBuffer << headers;
+    responseBuffer << page.length() << "\r\n\r\n";
+    responseBuffer << page;
+    return responseBuffer.str();
+}
+
+void Connection::processRequest(std::vector<ServerBlock *>& config)
+{
+    if (request.requestLength() == 0)
+        return;
+    RequestTarget target = request.target(config);
+    std::cout << "resource found at: " << target.resource << std::endl;
+    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+    switch (target.type)
+    {
+        case FOUND:
+            response = createResponse(target.resource, HTTP_HEADERS);
+            break;
+        case REDIRECTION:
+            response = createResponse(target.resource, HTTP_HEADERS);
+            break;
+        case METHOD_NOT_ALLOWED:
+            response = createHTMLResponse(errorPage(405), HTTP_HEADERS);
+            break;
+        case DIRECTORY:
+            response = createHTMLResponse(directoryListing(target.resource), HTTP_HEADERS);
+            break;
+        case NOT_FOUND:
+            response = createHTMLResponse(errorPage(404), HTTP_HEADERS);
+            break;
+    }
+    // keepAlive = request.keepAlive();
+    // timeOut = request.keepAliveTimer();
+    totalBytesSent = 0;
+    request.clear();
 }
 
 Connection::~Connection()
