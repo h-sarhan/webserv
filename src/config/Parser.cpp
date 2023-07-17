@@ -140,7 +140,7 @@ void Parser::parseListenRule()
 
     assertThat(validatePort(_currToken->contents()), INVALID("port"));
 
-    fromStr(_currToken->contents(), _currServerBlock->port);
+    _currServerBlock->port = fromStr<unsigned int>(_currToken->contents());
 
     advanceToken();
     matchToken(SEMICOLON, EXPECTED_SEMICOLON);
@@ -176,7 +176,7 @@ void Parser::parseErrorPage()
     assertThat(validateErrorResponse(_currToken->contents()), INVALID_ERROR_RESPONSE);
 
     int response;
-    fromStr(_currToken->contents(), response);
+    response = fromStr<int>(_currToken->contents());
 
     assertThat(_parsedErrorPages.count(response) == 0, DUPLICATE("error_reponse"));
     advanceToken();
@@ -310,7 +310,7 @@ void Parser::parseBodySize()
 
     assertThat(validateBodySize(_currToken->contents()), INVALID("body size [10 - 2^32]"));
 
-    fromStr(_currToken->contents(), _currRoute->second.bodySize);
+    _currRoute->second.bodySize = fromStr<size_t>(_currToken->contents());
 
     advanceToken();
     matchToken(SEMICOLON, "expected `;`");

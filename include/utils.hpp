@@ -19,12 +19,14 @@
  *
  * @tparam T Type of the value to retrieve from the string
  * @param str The string to retrieve the value from
- * @param val A reference to the value
+ * @return T Retrieved value
  */
-template <typename T> void fromStr(const std::string &str, T &val)
+template <typename T> T fromStr(const std::string &str)
 {
+    T val;
     std::stringstream ss(str);
     ss >> val;
+    return val;
 }
 
 /**
