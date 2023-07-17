@@ -19,6 +19,8 @@
 #include <sstream>
 #include <sys/stat.h>
 
+// ! Remove magic numbers
+
 Request::Request()
     : _httpMethod(), _target(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
       _capacity(REQ_BUFFER_SIZE)
@@ -29,6 +31,7 @@ Request::Request(const Request &req)
     : _httpMethod(req.method()), _target(req._target), _headers(req._headers),
       _buffer(new char[req._capacity]), _length(req._length), _capacity(req._capacity)
 {
+    // Deep copy
     std::memcpy(_buffer, req._buffer, _length);
 }
 
@@ -41,6 +44,7 @@ Request &Request::operator=(const Request &req)
     _headers = req._headers;
     _length = req._length;
     _capacity = req._capacity;
+    // Deep copy
     delete[] _buffer;
     _buffer = new char[_capacity];
     std::memcpy(_buffer, req._buffer, _length);
@@ -62,21 +66,35 @@ size_t Request::requestLength() const
     return _length;
 }
 
+void Request::assertThat(bool condition, const std::string &throwMsg) const
+{
+    if (!condition)
+        throw InvalidRequestError(throwMsg);
+}
+
 bool Request::parseRequest()
 {
     if (_length == 0)
         return false;
     if (!_headers.empty())
         return true;
+
+    // ! Form this string after finding the message body start
     const std::string req(_buffer, _buffer + _length);
+
+    // ! Use std::find() instead because I dont need to form the string at this point
     const size_t bodyStart = req.find("\r\n\r\n");
     if (bodyStart == std::string::npos)
         return false;
 
-    std::stringstream reqStream;
-    reqStream.str(req.substr(0, bodyStart + 2));
+    // ! Try catch here and set an invalid request flag or something like that then return true
+
+    // Create stringstream containing the start line and headers
+    std::stringstream reqStream(req.substr(0, bodyStart + 2));
 
     parseStartLine(reqStream);
+
+    // Parse headers
     while (reqStream.peek() != '\r' && !reqStream.eof())
         parseHeader(reqStream);
     return true;
@@ -89,30 +107,25 @@ void Request::parseStartLine(std::stringstream &reqStream)
     // POST / HTTP/1.1
     // DELETE /src/main.cpp HTTP/1.1
 
-    std::string httpMethod;
-    reqStream >> httpMethod;
-    if (httpMethod.empty())
-        throw InvalidRequestError("Invalid start line");
+    // Parse HTTP method as a string
+    const std::string &httpMethod = getNext<std::string>(reqStream);
+    assertThat(!httpMethod.empty(), "Invalid start line");
+
+    // Convert HTTP method to an enum
     _httpMethod = strToEnum<HTTPMethod>(httpMethod);
+    assertThat(_httpMethod != OTHER, "Invalid start line");
 
-    if (_httpMethod == OTHER)
-        throw InvalidRequestError("Invalid start line");
+    // Parse the requested resource
+    _target = getNext<std::string>(reqStream);
+    assertThat(!_target.empty(), "Invalid start line");
 
-    std::string requestTarget;
-    reqStream >> requestTarget;
-    sanitizeURL(requestTarget);
+    // Clean the URL
+    sanitizeURL(_target);
 
-    if (requestTarget.empty())
-        throw InvalidRequestError("Invalid start line");
-    _target = requestTarget;
+    // Check HTTP version
+    const std::string &httpVersion = getNext<std::string>(reqStream);
+    assertThat(httpVersion == "HTTP/1.0" || httpVersion == "HTTP/1.1", "Invalid start line");
 
-    std::string httpVersion;
-    reqStream >> httpVersion;
-    if (httpVersion.empty() || httpVersion.length() <= 2)
-        throw InvalidRequestError("Invalid start line");
-
-    if (httpVersion != "HTTP/1.0" && httpVersion != "HTTP/1.1")
-        throw InvalidRequestError("Invalid start line");
     checkLineEnding(reqStream);
 }
 
@@ -120,59 +133,54 @@ void Request::checkLineEnding(std::stringstream &reqStream)
 {
     std::string lineEnding(2, '\0');
 
-    reqStream >> std::noskipws >> lineEnding[0];
-    reqStream >> lineEnding[1];
-    reqStream >> std::skipws;
-    if (lineEnding[0] != '\r' || lineEnding[1] != '\n')
-        throw InvalidRequestError("Invalid start line");
+    // Check that the line ends with CRLF
+    assertThat(!reqStream.eof(), "Invalid header");
+    reqStream >> std::noskipws >> lineEnding[0] >> lineEnding[1] >> std::skipws;
+    assertThat(lineEnding == "\r\n", "Invalid start line");
 }
 
 void Request::parseHeader(std::stringstream &reqStream)
 {
-    std::string key;
-    reqStream >> key;
-    if (key.length() < 2)
-        throw InvalidRequestError("Invalid header");
+    // Get the key part of the header
+    std::string key = getNext<std::string>(reqStream);
+    assertThat(key.length() >= 2, "Invalid header");
 
-    char sep = *--key.end();
-    if (sep != ':')
-        throw InvalidRequestError("Invalid header");
+    // Check that the colon separator is there
+    const char sep = key[key.length() - 1];
+    assertThat(sep == ':', "Invalid header");
 
+    // Remove colon separator
+    rightTrimStr(key, ":");
+
+    // Get the value. We read character by character here because whitespace is included
     std::string value;
-    char c = '\0';
     reqStream >> std::noskipws;
     while (reqStream.peek() != '\r' && !reqStream.eof())
-    {
-        reqStream >> c;
-        value.push_back(c);
-    }
-    if (reqStream.eof())
-        throw InvalidRequestError("Invalid header");
+        value += getNext<char>(reqStream);
+    assertThat(!value.empty() && !reqStream.eof(), "Invalid header");
 
-    checkLineEnding(reqStream);
+    // Trim value of whitespace and transform to lowercase
     trimStr(value, WHITESPACE);
     std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-    _headers.insert(std::make_pair(key.substr(0, key.length() - 1), value));
+
+    checkLineEnding(reqStream);
+
+    // Insert header into map
+    _headers.insert(std::make_pair(key, value));
 }
 
 std::string Request::userAgent()
 {
-    if (_headers.count("user-agent") != 0)
-        return _headers["user-agent"];
-    return "unknown";
+    return _headers["user-agent"].empty() ? "unknown" : _headers["user-agent"];
 }
 
+// ! This could be wrong if the HOST header only contains a port number
 std::string Request::host()
 {
-    if (_headers.count("host") != 0)
-    {
-        std::string hostValue = _headers["host"];
-        const size_t colonPos = hostValue.find(":");
-        if (colonPos != std::string::npos)
-            return hostValue.substr(0, colonPos);
-        return hostValue;
-    }
-    return "localhost";
+    const std::string &hostValue = _headers["host"];
+    if (hostValue.empty())
+        return "localhost";
+    return hostValue.substr(0, hostValue.find(":"));
 }
 
 std::map<std::string, std::string> &Request::headers()
@@ -182,53 +190,44 @@ std::map<std::string, std::string> &Request::headers()
 
 bool Request::keepAlive()
 {
-    if (_headers.count("connection") != 0)
-    {
-        if (_headers["connection"] == "closed")
-            return false;
+    if (_headers["connection"].empty() || _headers["connection"] != "closed")
         return true;
-    }
-    return true;
+    return false;
 }
 
 unsigned int Request::keepAliveTimer()
 {
-    if (_headers.count("keep-alive") != 0)
-    {
-        const std::string &keepAliveValue = _headers["keep-alive"];
-        const size_t timeoutPos = keepAliveValue.find("timeout");
-        if (timeoutPos == std::string::npos || timeoutPos + 8 > keepAliveValue.length())
-            return 5;
-        std::stringstream timeoutStream(keepAliveValue.substr(timeoutPos + 8));
-        unsigned int timeout;
-        timeoutStream >> timeout;
-        if (timeoutStream.good() && timeout < 20)
-            return timeout;
-        return 5;
-    }
     if (!keepAlive())
         return 0;
+
+    const std::string &keepAliveValue = _headers["keep-alive"];
+    if (keepAliveValue.empty() || keepAliveValue.find("timeout=") == std::string::npos)
+        return 5;
+
+    std::stringstream timeOutStream(keepAliveValue.substr(keepAliveValue.find("timeout=")));
+    getNext<std::string>(timeOutStream);
+    unsigned int timeout = getNext<unsigned int>(timeOutStream);
+    if (timeOutStream.good() && timeout < 20)
+        return timeout;
     return 5;
 }
 
+// We might not use this function
 unsigned int Request::maxReconnections()
 {
-    if (_headers.count("keep-alive") != 0)
-    {
-        const std::string &keepAliveValue = _headers["keep-alive"];
-        const size_t maxPos = keepAliveValue.find("max");
-        if (maxPos == std::string::npos || maxPos + 4 > keepAliveValue.length())
-            return 20;
-        std::stringstream timeoutStream(keepAliveValue.substr(maxPos + 4));
-        unsigned int maxReconnections;
-        timeoutStream >> maxReconnections;
-        if (timeoutStream.good() && maxReconnections < 200)
-            return maxReconnections;
-        return 100;
-    }
     if (!keepAlive())
         return 1;
-    return 100;
+
+    const std::string &keepAliveValue = _headers["keep-alive"];
+    if (keepAliveValue.empty())
+        return 20;
+
+    std::stringstream maxConnStream(keepAliveValue.substr(keepAliveValue.find("max=")));
+    getNext<std::string>(maxConnStream);
+    unsigned int maxConnections = getNext<unsigned int>(maxConnStream);
+    if (maxConnStream.good() && maxConnections < 20)
+        return maxConnections;
+    return 20;
 }
 
 static bool matchTargetToRoute(std::string target, std::string route)
@@ -324,6 +323,19 @@ void Request::appendToBuffer(const char *data, size_t n)
     _length += n;
 }
 
+// very temporary clear method!!! MUST clear other stuff too here or else it will break!!!
+void Request::clear()
+{
+    _length = 0;
+    _headers.clear();
+    _target = "";
+}
+
+Request::~Request()
+{
+    delete[] _buffer;
+}
+
 void requestBufferTests()
 {
     Request req;
@@ -338,14 +350,6 @@ void requestBufferTests()
     assert(req.requestLength() == reqStr.length());
     assert(req.method() == PUT);
     assert(req.host() == "webserv.com");
-}
-
-// very temporary clear method!!! MUST clear other stuff too here or else it will break!!!
-void Request::clear()
-{
-    _length = 0;
-    _headers.clear();
-    _target = "";
 }
 
 // static void testSingleURLDecoding(const std::string &str1, const std::string &str2)
@@ -559,8 +563,3 @@ void Request::clear()
 
 //     testURLDecoding();
 // }
-
-Request::~Request()
-{
-    delete[] _buffer;
-}

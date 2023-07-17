@@ -23,8 +23,6 @@
 // Host: webserv.com
 // Connection: keep-alive
 // Keep-Alive: timeout=5, max=1000
-// ? Content-Length: 1000 // mehrins job i think
-// ? Transfer-encoding: chunked // mehrins job i think
 
 /**
  * @brief This class defines an HTTP request
@@ -38,6 +36,8 @@ class Request
     char *_buffer;
     size_t _length;
     size_t _capacity;
+    // ! Add flag to see whether the request was parsed correctly
+    // bool _valid;
 
   public:
     Request();
@@ -79,6 +79,8 @@ class Request
                      const std::string &errMsg);
     void checkEOF(const std::stringstream &reqStream);
     void resizeBuffer(size_t newCapacity);
+
+    void assertThat(bool condition, const std::string &throwMsg) const;
 };
 
 // void requestParsingTests();

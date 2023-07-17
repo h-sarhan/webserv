@@ -133,6 +133,7 @@ void Parser::parseServerOption()
 void Parser::parseListenRule()
 {
     // LISTEN := "listen" valid_port SEMICOLON
+
     assertThat(_parsedAttributes.count(LISTEN) == 0, DUPLICATE("listen"));
     advanceToken();
 
@@ -151,6 +152,7 @@ void Parser::parseListenRule()
 void Parser::parseServerName()
 {
     // SERVER_NAME := "server_name" valid_hostname SEMICOLON
+
     assertThat(_parsedAttributes.count(SERVER_NAME) == 0, DUPLICATE("server_name"));
     advanceToken();
 
@@ -175,8 +177,7 @@ void Parser::parseErrorPage()
 
     assertThat(validateErrorResponse(_currToken->contents()), INVALID_ERROR_RESPONSE);
 
-    int response;
-    response = fromStr<int>(_currToken->contents());
+    const int response = fromStr<int>(_currToken->contents());
 
     assertThat(_parsedErrorPages.count(response) == 0, DUPLICATE("error_reponse"));
     advanceToken();

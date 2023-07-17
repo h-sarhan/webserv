@@ -30,6 +30,20 @@ template <typename T> T fromStr(const std::string &str)
 }
 
 /**
+ * @brief Templated function to read a value from an stringstream
+ *
+ * @tparam T Type of the value to retrieve from the stringstream
+ * @param stream The stringstream to retrieve the value from
+ * @return T Retrieved value
+ */
+template <typename T> T getNext(std::iostream &stream)
+{
+    T val;
+    stream >> val;
+    return val;
+}
+
+/**
  * @brief Templated function to write to a string
  *
  * @tparam T Type of the value to be converted
