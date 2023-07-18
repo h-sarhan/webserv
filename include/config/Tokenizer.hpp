@@ -50,7 +50,7 @@ class Tokenizer
     bool isSingleCharToken(const char c) const;
 
     // Add a token to the list of tokens
-    void addWordToken(unsigned int &wordIdx, const std::string &wordStr, const unsigned int lineNum,
-                      const unsigned int column);
+    void addWordToken(std::string::const_iterator &wordIt, const std::string &wordStr,
+                      const unsigned int lineNum, const unsigned int column);
 };
 #endif

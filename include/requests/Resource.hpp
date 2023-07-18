@@ -13,7 +13,7 @@
 
 #include "enums/ResourceTypes.hpp"
 
-// ! Give it access to the route the request belongs to
+// ! Give this class access to the route the request belongs to
 struct Resource
 {
     Resource(const ResourceType &type, const std::string &path = "");

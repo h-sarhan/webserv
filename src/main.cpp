@@ -16,6 +16,9 @@
 #include <iostream>
 #include <vector>
 
+// ! Catch std::bad_alloc and other exceptions here
+// ! Clean this up
+// ! Check if we can replace usage of std::stringstream with toStr() and fromStr()
 /**
  * @brief Entrypoint to our program
  *
@@ -40,8 +43,6 @@ int main(int argc, char **argv)
         if (argc == 2)
         {
             std::string filename = argv[1];
-            // ConfigTokenizer tokenizer(filename);
-            // std::vector<Token> tokens = tokenizer.tokens();
             Parser parser(filename);
             std::vector<ServerBlock> &config = parser.getConfig();
             Server s(config);
@@ -50,7 +51,7 @@ int main(int argc, char **argv)
         else
         {
             // uses default config
-            std::vector<ServerBlock> config(1, createDefaultServerBlock());
+            std::vector<ServerBlock> config = ServerBlock::createDefaultConfig();
             Server s(config);
             s.startListening();
         }

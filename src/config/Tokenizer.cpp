@@ -43,6 +43,8 @@ void Tokenizer::tokenizeFile(std::ifstream &configStream)
 {
     std::string lineStr;
     unsigned int lineNum = 1;
+
+    // Loop through every line tokenizing each one
     while (std::getline(configStream, lineStr))
     {
         if (!configStream)
@@ -63,21 +65,21 @@ void Tokenizer::tokenizeFile(std::ifstream &configStream)
 void Tokenizer::tokenizeLine(std::string &lineStr, const unsigned int lineNum)
 {
     // Trim out comments
-    size_t commentPos = lineStr.find('#');
-    if (commentPos != std::string::npos)
-        lineStr = lineStr.substr(0, commentPos);
+    lineStr = lineStr.substr(0, lineStr.find('#'));
 
     std::stringstream lineStream(lineStr);
     tokenIterator wordsStart(lineStream);
 
     for (tokenIterator it = wordsStart; it != tokenIterator(); it++)
     {
-        const std::string wordStr = *it;
-        unsigned int wordPos;
-        if (lineStream.tellg() == -1)
-            wordPos = lineStr.length() - wordStr.length();
-        else
-            wordPos = (unsigned int) lineStream.tellg() - wordStr.length();
+        const std::string &wordStr = *it;
+
+        // Get the word position
+        int wordPos = lineStream.tellg();
+        if (wordPos == -1)
+            wordPos = lineStr.length();
+        wordPos -= wordStr.length();
+
         tokenizeWord(wordStr, wordPos, lineNum);
     }
 }
@@ -109,27 +111,27 @@ bool Tokenizer::isSingleCharToken(const char c) const
  * @brief Adds a WORD token to the token list. This also checks if the word is a
  * reserved word and changes its type appropriately
  *
- * @param wordIdx The index to where we are in the wordStr
+ * @param wordIt The iterator to where we are in the wordStr
  * @param wordStr The string containing the word
  * @param lineNum The line number we are currently in
  * @param column The column we are currently in
  */
-void Tokenizer::addWordToken(unsigned int &wordIdx, const std::string &wordStr,
+void Tokenizer::addWordToken(std::string::const_iterator &wordIt, const std::string &wordStr,
                              const unsigned int lineNum, const unsigned int column)
 {
-    const unsigned int wordStart = wordIdx;
+    const unsigned int wordStart = wordIt - wordStr.begin();
 
-    while (wordIdx < wordStr.length() && !isSingleCharToken(wordStr[wordIdx]))
-        wordIdx++;
+    while (wordIt < wordStr.end() && !isSingleCharToken(*wordIt))
+        wordIt++;
 
-    const unsigned int wordEnd = wordIdx;
-    if (wordIdx < wordStr.length() && isSingleCharToken(wordStr[wordIdx]) && wordIdx > 0)
-        wordIdx--;
+    const unsigned int wordEnd = wordIt - wordStr.begin();
+    if (wordIt < wordStr.end() && isSingleCharToken(*wordIt) && wordIt > wordStr.begin())
+        wordIt--;
 
-    const std::string tokenStr = wordStr.substr(wordStart, wordEnd);
+    const std::string &tokenStr = wordStr.substr(wordStart, wordEnd);
 
     // Check if the token is a reserved keyword
-    const TokenType type = strToEnum<TokenType>(tokenStr);
+    const TokenType &type = strToEnum<TokenType>(tokenStr);
 
     _tokens.push_back(Token(type, tokenStr, lineNum, column));
 }
@@ -144,23 +146,24 @@ void Tokenizer::addWordToken(unsigned int &wordIdx, const std::string &wordStr,
 void Tokenizer::tokenizeWord(const std::string &wordStr, const unsigned int wordPos,
                              const unsigned int lineNum)
 {
-    unsigned int wordIdx = 0;
-    while (wordIdx < wordStr.length())
+    // unsigned int wordIdx = 0;
+    std::string::const_iterator wordIt = wordStr.begin();
+    while (wordIt < wordStr.end())
     {
-        const char c = wordStr[wordIdx];
+        const char c = *wordIt;
         if (c == '#')
             return;
-        unsigned int column = wordPos + wordIdx + 1;
+        const unsigned int column = wordPos + (wordIt - wordStr.begin()) + 1;
         if (isSingleCharToken(c))
         {
             const std::string tokenStr(1, c);
-            const TokenType type = strToEnum<TokenType>(tokenStr);
+            const TokenType &type = strToEnum<TokenType>(tokenStr);
             const Token token(type, tokenStr, lineNum, column);
             _tokens.push_back(token);
         }
         else
-            addWordToken(wordIdx, wordStr, lineNum, column);
-        wordIdx++;
+            addWordToken(wordIt, wordStr, lineNum, column);
+        wordIt++;
     }
 }
 

@@ -57,14 +57,11 @@ void sanitizeURL(std::string &url)
             if (!std::isxdigit(hexStr[0]) || !std::isxdigit(hexStr[1]))
                 continue;
 
-            // Replace the `%` with the hex character
+            // Replace the `%` with the decoded hex character
             *it = getHex(hexStr);
 
-            // Erase the next two characters
-            url.erase(it + 1, it + 3);
-
-            // Get a valid iterator to the start of the URL
-            it = url.begin();
+            // Erase the next two characters and get a valid iterator
+            it = url.erase(it + 1, it + 3);
         }
     }
 }
@@ -73,40 +70,11 @@ const std::string getLine(const std::string &filename, const unsigned int lineNu
 {
     std::ifstream file(filename.c_str());
 
+    if (!file)
+        return "";
     unsigned int currLine = 0;
     std::string line;
     while (currLine != lineNum && std::getline(file, line))
         currLine++;
     return line;
 }
-
-// void sanitizeURLTests()
-// {
-//     std::string url = "%";
-//     sanitizeURL(url);
-//     assert(url == "%");
-
-//     url = "%20%+";
-//     sanitizeURL(url);
-//     assert(url == " % ");
-
-//     url = "%20%+?kuybdluyb";
-//     sanitizeURL(url);
-//     assert(url == " % ");
-
-//     url = "%20%+?kuybdluyb%";
-//     sanitizeURL(url);
-//     assert(url == " % ");
-
-//     url = "%20%+%%%%?kuybdluyb%";
-//     sanitizeURL(url);
-//     assert(url == " % %%%%");
-
-//     url = "%3d%3d%35%";
-//     sanitizeURL(url);
-//     assert(url == "==5%");
-
-//     url = "?%3d%3d%35%";
-//     sanitizeURL(url);
-//     assert(url == "");
-// }

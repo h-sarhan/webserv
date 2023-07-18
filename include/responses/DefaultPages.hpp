@@ -1,7 +1,7 @@
 /**
  * @file DefaultPages.hpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file functions that generate reusable HTML pages for us to respond with
+ * @brief This file defines functions that generate reusable HTML pages for us to respond with
  * @date 2023-07-15
  *
  * @copyright Copyright (c) 2023

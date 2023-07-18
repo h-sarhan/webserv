@@ -40,13 +40,11 @@ struct ServerBlock
     std::string hostname;                             // Optional
     std::map<unsigned int, std::string> errorPages;   // Optional
     std::map<std::string, Route> routes;              // At least one route
+    static std::vector<ServerBlock> createDefaultConfig();
 };
 
 // Convenient typedef for the server config
 typedef std::vector<ServerBlock> &serverList;
-
-// Creates a default server block
-ServerBlock createDefaultServerBlock();
 
 // Print a ServerBlock
 std::ostream &operator<<(std::ostream &os, const ServerBlock &block);

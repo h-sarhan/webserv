@@ -103,7 +103,7 @@ unsigned int Token::column() const
 
 std::ostream &operator<<(std::ostream &os, const Token &tkn)
 {
-    std::cout << "{type: " << enumToStr(tkn.type()) << ", str: " << tkn.contents()
-              << ", line: " << tkn.line() << ", col: " << tkn.column() << "}";
+    os << "{type: " << enumToStr(tkn.type()) << ", str: " << tkn.contents()
+       << ", line: " << tkn.line() << ", col: " << tkn.column() << "}";
     return os;
 }

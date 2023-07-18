@@ -10,7 +10,6 @@
 
 #include "requests/Resource.hpp"
 
-// ! Give it access to the route the request belongs to
 Resource::Resource(const ResourceType &type, const std::string &resource)
     : type(type), path(resource)
 {

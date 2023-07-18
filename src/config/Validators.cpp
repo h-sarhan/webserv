@@ -1,8 +1,8 @@
 /**
  * @file Validators.cpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file defines various input validators that will be used to check
- * if user input is valid
+ * @brief This file defines various input validators that will be used to check if user input is
+ * valid
  * @date 2023-07-09
  *
  * @copyright Copyright (c) 2023
@@ -167,7 +167,6 @@ bool validateDirectory(const std::string &dirPath)
  */
 bool validateBodySize(const std::string &bodySizeStr)
 {
-    // Check if the string is empty
     std::stringstream bodySizeStream(bodySizeStr);
     size_t bodySize = 0;
 

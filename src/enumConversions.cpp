@@ -1,7 +1,7 @@
 /**
  * @file enumConversions.cpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file implements several enum to string and string to enum conversions
+ * @brief This file implements several enum to string and string to enum conversion functions
  * @date 2023-07-17
  *
  * @copyright Copyright (c) 2023
@@ -14,6 +14,13 @@
 #include "enums/conversions.hpp"
 #include "utils.hpp"
 
+/**
+ * @brief HTTPMethod template specialization for enumToStr
+ *
+ * @see enumToStr
+ * @param enumVal Enum value
+ * @return std::string Enum value as a string
+ */
 template <> std::string enumToStr(const HTTPMethod &enumVal)
 {
     switch (enumVal)
@@ -31,6 +38,13 @@ template <> std::string enumToStr(const HTTPMethod &enumVal)
     }
 }
 
+/**
+ * @brief ResourceType template specialization for enumToStr
+ *
+ * @see enumToStr
+ * @param enumVal Enum value
+ * @return std::string Enum value as a string
+ */
 template <> std::string enumToStr(const ResourceType &enumVal)
 {
     switch (enumVal)
@@ -50,6 +64,13 @@ template <> std::string enumToStr(const ResourceType &enumVal)
     }
 }
 
+/**
+ * @brief TokenType template specialization for enumToStr
+ *
+ * @see enumToStr
+ * @param enumVal Enum value
+ * @return std::string Enum value as a string
+ */
 template <> std::string enumToStr(const TokenType &enumVal)
 {
     switch (enumVal)
@@ -91,6 +112,12 @@ template <> std::string enumToStr(const TokenType &enumVal)
     }
 }
 
+/**
+ * @brief HTTPMethod template specialization for strToEnum
+ *
+ * @param str The string to convert to an enum
+ * @return HTTPMethod The HTTPMethod enum value
+ */
 template <> HTTPMethod strToEnum<HTTPMethod>(const std::string &str)
 {
     static const std::string methods[] = {"GET", "POST", "PUT", "DELETE", "OTHER"};
@@ -101,6 +128,12 @@ template <> HTTPMethod strToEnum<HTTPMethod>(const std::string &str)
     return OTHER;
 }
 
+/**
+ * @brief ResourceType template specialization for strToEnum
+ *
+ * @param str The string to convert to an enum
+ * @return ResourceType The ResourceType enum value
+ */
 template <> ResourceType strToEnum<ResourceType>(const std::string &str)
 {
     static const std::string requestTypes[] = {"EXISTING_FILE", "REDIRECTION", "FORBIDDEN_METHOD",
@@ -112,6 +145,12 @@ template <> ResourceType strToEnum<ResourceType>(const std::string &str)
     return NOT_FOUND;
 }
 
+/**
+ * @brief TokenType template specialization for strToEnum
+ *
+ * @param str The string to convert to an enum
+ * @return TokenType The TokenType enum value
+ */
 template <> TokenType strToEnum<TokenType>(const std::string &str)
 {
     static const std::string tokenTypes[] = {"{",
