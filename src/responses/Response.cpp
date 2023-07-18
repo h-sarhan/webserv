@@ -62,11 +62,6 @@ int Response::statusCode()
     return _statusCode;
 }
 
-void Response::addToByteCount(ssize_t bytesSent)
-{
-    _totalBytesSent += bytesSent;
-}
-
 void Response::setByteCount(ssize_t bytesSent)
 {
     _totalBytesSent = bytesSent;
@@ -81,7 +76,7 @@ void Response::setByteCount(ssize_t bytesSent)
 //         _buffer[i] = newBuf[i];
 // }
 
-void Response::clearResponse()
+void Response::clear()
 {
     if (_buffer != NULL)
         delete[] _buffer;

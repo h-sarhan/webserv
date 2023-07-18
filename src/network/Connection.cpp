@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/18 19:57:21 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/18 21:15:15 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -80,23 +80,6 @@ Connection &Connection::operator=(const Connection &c)
 //     // file.close();
 //     // fileContents = fileBuffer.str();
 //     // return createHTMLResponse(fileContents, headers);
-
-//     std::ifstream file;
-//     std::stringstream responseBuffer;
-//     std::string fileContents;
-
-//     file.open(filename.c_str(), std::ios::binary);
-//     if (!file.good())
-//         return createHTMLResponse(errorPage(404), headers);
-//     file.seekg(0, std::ios::end);
-//     std::ios_base::streampos fileLen = file.tellg();
-//     file.seekg(0, std::ios::beg);
-//     responseBuffer << headers;
-//     responseBuffer << fileLen << "\r\n\r\n";
-//     responseBuffer << file.rdbuf();
-//     file.close();
-//     fileContents = responseBuffer.str();
-//     return fileContents;
 // }
 
 void Connection::processRequest(std::vector<ServerBlock *>& config)
@@ -124,10 +107,21 @@ void Connection::processRequest(std::vector<ServerBlock *>& config)
             response.createHTMLResponse(errorPage(404), HTTP_HEADERS);
             break;
     }
-    // keepAlive = request.keepAlive();
-    // timeOut = request.keepAliveTimer();
+    keepAlive = request.keepAlive();
+    timeOut = request.keepAliveTimer();
     response.setByteCount(0);
     request.clear();
+}
+
+bool Connection::keepConnectionAlive()
+{
+    if (!keepAlive)
+        return false;
+    std::cout << "Connection is keep alive" << std::endl;
+    request.clear();
+    response.clear();
+    time(&startTime); // reset timer
+    return true;
 }
 
 Connection::~Connection()

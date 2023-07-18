@@ -103,6 +103,7 @@ void Server::readBody(size_t clientNo)
 
 void Server::closeConnection(int clientNo)
 {
+    std::cout << "Closing connection " << sockets[clientNo].fd << std::endl;
     close(sockets[clientNo].fd);
     cons.erase(sockets[clientNo].fd);
     sockets.erase(sockets.begin() + clientNo);
@@ -119,7 +120,9 @@ void Server::sendResponse(size_t clientNo)
         return;
     if (sendStatus == SEND_PARTIAL)
         return;
-    std::cout << "Closing connection " << sockets[clientNo].fd << std::endl;
+    if (sendStatus == SEND_SUCCESS)
+        if (c.keepConnectionAlive())
+            return;
     closeConnection(clientNo);
     std::cout << "---------------------------------------------------------\n";
 }

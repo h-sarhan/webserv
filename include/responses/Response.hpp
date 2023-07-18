@@ -64,7 +64,7 @@ class Response
         int sendResponse(int fd);
         void createResponse(std::string filename, std::string headers);
         void createHTMLResponse(std::string page, std::string headers);
-        void clearResponse();
+        void clear();
         ~Response();
 };
 

@@ -23,17 +23,17 @@ class Connection
         int listener; // this is the server socket through which this connection was created - not to be confused with the new client fd
         Request request; // this will be an object of its respective class later and not just str
         Response response; // this will be an object of its respective class later and not just str
-        // size_t totalBytesRec;
-        // size_t totalBytesSent;
-        // bool keepAlive;
-        // time_t timeOut;
-        // time_t startTime;
+
+        bool keepAlive;
+        time_t timeOut;
+        time_t startTime;
 
         Connection();
         Connection(int listener);
         Connection(const Connection &c);
         Connection& operator=(const Connection &c);
         void processRequest(std::vector<ServerBlock *>& config);
+        bool keepConnectionAlive();
         ~Connection();
 
 };
