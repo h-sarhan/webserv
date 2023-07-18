@@ -18,7 +18,6 @@
 
 // ! Catch std::bad_alloc and other exceptions here
 // ! Clean this up
-// ! Check if we can replace usage of std::stringstream with toStr() and fromStr()
 /**
  * @brief Entrypoint to our program
  *

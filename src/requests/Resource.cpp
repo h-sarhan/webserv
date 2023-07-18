@@ -10,6 +10,7 @@
 
 #include "requests/Resource.hpp"
 
+// ! Document this
 Resource::Resource(const ResourceType &type, const std::string &resource)
     : type(type), path(resource)
 {

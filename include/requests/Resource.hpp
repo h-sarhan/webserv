@@ -13,6 +13,7 @@
 
 #include "enums/ResourceTypes.hpp"
 
+// ! Document
 // ! Give this class access to the route the request belongs to
 struct Resource
 {

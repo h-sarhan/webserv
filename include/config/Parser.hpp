@@ -39,7 +39,7 @@
 class Parser
 {
   private:
-    std::string _filename;
+    const std::string &_filename;
     std::vector<ServerBlock> _serverConfig;
     std::vector<Token>::const_iterator _currToken;
     std::vector<Token>::const_iterator _lastToken;

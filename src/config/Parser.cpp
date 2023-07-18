@@ -35,6 +35,11 @@
 // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path ;
 // CGI := "cgi_extensions" ("php" | "python")... ;
 
+/**
+ * @brief Construct a new Parser object with the config file it will parse
+ *
+ * @param configFile
+ */
 Parser::Parser(const std::string &configFile) : _filename(configFile)
 {
     const Tokenizer tokenizer(configFile);
@@ -47,6 +52,10 @@ Parser::Parser(const std::string &configFile) : _filename(configFile)
     parseConfig();
 }
 
+/**
+ * @brief Parse the configuration file
+ *
+ */
 void Parser::parseConfig()
 {
     // * CONFIG_FILE := SERVER [SERVER]...
@@ -60,18 +69,32 @@ void Parser::parseConfig()
     assertThat(atEnd(), EXPECTED_SERVER);
 }
 
-void Parser::matchToken(const TokenType token, const std::string &errMsg) const
+/**
+ * @brief Assert that the current token is of a specific type, otherwise throw an exception
+ *
+ * @param type Token type to check
+ * @param errMsg Error message to throw
+ */
+void Parser::matchToken(const TokenType type, const std::string &errMsg) const
 {
-    if (atEnd() || currentToken() != token)
+    assertThat(!atEnd() && currentToken() == type, errMsg);
+}
+
+/**
+ * @brief Assert that the condition is true, if not throw an exception
+ *
+ * @param condition Condition to check
+ * @param errMsg Error message to throw
+ */
+void Parser::assertThat(bool condition, const std::string &errMsg) const
+{
+    if (!condition)
         throwParseError(errMsg);
 }
 
-void Parser::assertThat(bool condition, const std::string &throwMsg) const
-{
-    if (!condition)
-        throwParseError(throwMsg);
-}
-
+/**
+ * @brief Reset the parsed attributes of a server block
+ */
 void Parser::resetServerBlockAttributes()
 {
     _parsedAttributes.erase(SERVER_NAME);
@@ -79,10 +102,15 @@ void Parser::resetServerBlockAttributes()
     _parsedErrorPages.clear();
 }
 
+/**
+ * @brief Parse a server block from the config file
+ *
+ */
 void Parser::parseServerBlock()
 {
     resetServerBlockAttributes();
 
+    // Push an empty server block and get an iterator to it
     _serverConfig.push_back(ServerBlock());
     _currServerBlock = _serverConfig.end() - 1;
 
@@ -109,6 +137,9 @@ void Parser::parseServerBlock()
     assertThat(_parsedAttributes.count(LOCATION) != 0, SERVER_MISSING("location"));
 }
 
+/**
+ * @brief Parse a server block option: One of `listen`, `server_name`, `error_page`, or `location`
+ */
 void Parser::parseServerOption()
 {
     switch (currentToken())
@@ -130,6 +161,9 @@ void Parser::parseServerOption()
     }
 }
 
+/**
+ * @brief Parse the `listen` rule
+ */
 void Parser::parseListenRule()
 {
     // LISTEN := "listen" valid_port SEMICOLON
@@ -149,6 +183,9 @@ void Parser::parseListenRule()
     _parsedAttributes.insert(LISTEN);
 }
 
+/**
+ * @brief Parse the `server_name` rule
+ */
 void Parser::parseServerName()
 {
     // SERVER_NAME := "server_name" valid_hostname SEMICOLON
@@ -168,6 +205,9 @@ void Parser::parseServerName()
     _parsedAttributes.insert(SERVER_NAME);
 }
 
+/**
+ * @brief Parse the `error_page` rule
+ */
 void Parser::parseErrorPage()
 {
     // ERROR_PAGE := "error_page" valid_error_response valid_HTML_path SEMICOLON
@@ -193,6 +233,9 @@ void Parser::parseErrorPage()
     matchToken(SEMICOLON, EXPECTED_SEMICOLON);
 }
 
+/**
+ * @brief Reset parsed location block attributes
+ */
 void Parser::resetLocationBlockAttributes()
 {
     _parsedAttributes.erase(TRY_FILES);
@@ -204,6 +247,9 @@ void Parser::resetLocationBlockAttributes()
     _parsedAttributes.erase(CGI_EXTENSION);
 }
 
+/**
+ * @brief parse a `location` block
+ */
 void Parser::parseLocationBlock()
 {
     // LOCATION := "location" valid_URL LEFT_BRACE [LOC_OPTION]... (TRY_FILES | \
@@ -249,6 +295,10 @@ void Parser::parseLocationBlock()
     _parsedAttributes.insert(LOCATION);
 }
 
+/**
+ * @brief Parse a `location` option. One of: `try_files` `redirect` `body_size` `methods`
+ *                                           `directory_toggle` `directory_file` `cgi_extension`
+ */
 void Parser::parseLocationOption()
 {
     switch (currentToken())
@@ -280,6 +330,9 @@ void Parser::parseLocationOption()
     }
 }
 
+/**
+ * @brief Parse the `try_files` rule
+ */
 void Parser::parseTryFiles()
 {
     // TRY_FILES := "try_files" valid_dir SEMICOLON
@@ -299,6 +352,9 @@ void Parser::parseTryFiles()
     _parsedAttributes.insert(TRY_FILES);
 }
 
+/**
+ * @brief Parse the `body_size` rule
+ */
 void Parser::parseBodySize()
 {
     // BODY_SIZE := "body_size" positive_number SEMICOLON
@@ -317,6 +373,9 @@ void Parser::parseBodySize()
     _parsedAttributes.insert(BODY_SIZE);
 }
 
+/**
+ * @brief Parse the `methods` rule
+ */
 void Parser::parseHTTPMethods()
 {
     // METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT")... SEMICOLON
@@ -343,6 +402,9 @@ void Parser::parseHTTPMethods()
     _parsedAttributes.insert(METHODS);
 }
 
+/**
+ * @brief Parse the `redirect` rule
+ */
 void Parser::parseRedirect()
 {
     // REDIRECT := "redirect" valid_URL SEMICOLON
@@ -362,6 +424,9 @@ void Parser::parseRedirect()
     _parsedAttributes.insert(REDIRECT);
 }
 
+/**
+ * @brief Parse the `directory_listing` rule
+ */
 void Parser::parseDirectoryToggle()
 {
     // DIR_LISTING := "directory_listing" ("true" | "false") SEMICOLON
@@ -385,6 +450,9 @@ void Parser::parseDirectoryToggle()
     _parsedAttributes.insert(DIRECTORY_TOGGLE);
 }
 
+/**
+ * @brief Parse the `directory_listing_file` rule
+ */
 void Parser::parseDirectoryFile()
 {
     // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path SEMICOLON
@@ -431,30 +499,68 @@ void Parser::parseCGI()
     _parsedAttributes.insert(CGI_EXTENSION);
 }
 
+/**
+ * @brief Will check the current token and determine if it is a `server` option
+ *
+ * @return true if the current token is a `server' option
+ */
 bool Parser::atServerOption() const
 {
     if (atEnd())
         return false;
-    return (currentToken() == SERVER_NAME || currentToken() == ERROR_PAGE ||
-            currentToken() == LISTEN || currentToken() == LOCATION);
+    switch (currentToken())
+    {
+    case SERVER_NAME:
+    case ERROR_PAGE:
+    case LISTEN:
+    case LOCATION:
+        return true;
+    default:
+        return false;
+    }
 }
 
+/**
+ * @brief Will check the current token and determine if it is a `location` option
+ *
+ * @return true if the current token is a `location` option
+ */
 bool Parser::atLocationOption() const
 {
     if (atEnd())
         return false;
-    return (currentToken() == TRY_FILES || currentToken() == BODY_SIZE ||
-            currentToken() == METHODS || currentToken() == DIRECTORY_TOGGLE ||
-            currentToken() == CGI_EXTENSION || currentToken() == REDIRECT ||
-            currentToken() == DIRECTORY_FILE);
+    switch (currentToken())
+    {
+    case TRY_FILES:
+    case BODY_SIZE:
+    case METHODS:
+    case DIRECTORY_TOGGLE:
+    case CGI_EXTENSION:
+    case REDIRECT:
+    case DIRECTORY_FILE:
+        return true;
+    default:
+        return false;
+    }
 }
 
+/**
+ * @brief Throw a parse error using the invalid token. Goes to the previous token if it is the last
+ * one
+ * @param msg
+ */
 void Parser::throwParseError(const std::string &msg) const
 {
-    const Token token = atEnd() ? *(_currToken - 1) : *_currToken;
+    const Token &token = atEnd() ? *(_currToken - 1) : *_currToken;
     throw ParseError(msg, token, _filename);
 }
 
+/**
+ * @brief Get the current token type. Throws an exception if an attempt to access an invalid token
+ * was made
+ *
+ * @return TokenType Current token type
+ */
 TokenType Parser::currentToken() const
 {
     if (atEnd())
@@ -462,20 +568,37 @@ TokenType Parser::currentToken() const
     return _currToken->type();
 }
 
+/**
+ * @brief Go to the next token
+ */
 void Parser::advanceToken()
 {
     _currToken++;
 }
 
+/**
+ * @brief Determine if we have reached the end of the token list
+ *
+ * @return true if we are at the end of the token list
+ */
 bool Parser::atEnd() const
 {
     return _currToken >= _lastToken;
 }
 
+/**
+ * @brief Destroy the Parser object
+ *
+ */
 Parser::~Parser()
 {
 }
 
+/**
+ * @brief Get the list of ServerBlocks that make up our configuration
+ *
+ * @return std::vector<ServerBlock>& The list of ServerBlocks produced from the config file
+ */
 std::vector<ServerBlock> &Parser::getConfig()
 {
     return _serverConfig;

@@ -21,7 +21,7 @@
 #include <sys/stat.h>
 
 // ! Remove magic numbers
-
+// ! Document this
 Request::Request()
     : _httpMethod(), _resourcePath(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
       _capacity(REQ_BUFFER_SIZE), _valid(true)
