@@ -126,7 +126,7 @@ void Server::sendResponse(size_t clientNo)
         return;
     }
     std::cout << "Sending a response... " << std::endl;
-    bytesSent = send(sockets[clientNo].fd, c.response.c_str() + c.totalBytesSent,
+    bytesSent = send(sockets[clientNo].fd, c.response.buffer() + c.totalBytesSent,
                      c.response.length() - c.totalBytesSent, 0);
     if (bytesSent < 0)
         std::cout << "Sending response failed: " << strerror(errno) << std::endl;

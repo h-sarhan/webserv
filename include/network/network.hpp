@@ -36,8 +36,6 @@
 
 #define BACKLOG  10
 #define PORT         "1234"
-#define IMG_HEADERS  "HTTP/1.1 200 OK\r\nContent-Type: image/jpg\r\nContent-Length: "
-#define HTTP_HEADERS "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: "
 #define HW_HTML                                                                                    \
     "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: "                \
     "100\r\n\r\n<!DOCTYPE html><html><head><title>Hello World</title></head><body><h1>Hello "      \

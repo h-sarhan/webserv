@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/17 18:55:52 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/18 18:02:13 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,34 +59,48 @@ Connection &Connection::operator=(const Connection &c)
     return (*this);
 }
 
-static std::string createResponse(std::string filename, std::string headers)
-{
-    std::ifstream file;
-    std::stringstream responseBuffer;
-    std::stringstream fileBuffer;
-    std::string fileContents;
+// static std::string createHTMLResponse(std::string page, std::string headers)
+// {
+//     std::stringstream responseBuffer;
 
-    file.open(filename.c_str());
-    // if (!file.good())
-    // return 404 page as response
-    fileBuffer << file.rdbuf();
-    file.close();
-    fileContents = fileBuffer.str();
-    responseBuffer << headers;
-    responseBuffer << fileContents.length() << "\r\n\r\n";
-    responseBuffer << fileContents;
-    return responseBuffer.str();
-}
+//     responseBuffer << headers;
+//     responseBuffer << page.length() << "\r\n\r\n";
+//     responseBuffer << page;
+//     return responseBuffer.str();
+// }
 
-static std::string createHTMLResponse(std::string page, std::string headers)
-{
-    std::stringstream responseBuffer;
+// static std::string createResponse(std::string filename, std::string headers)
+// {
+//     // std::ifstream file;
+//     // std::stringstream responseBuffer;
+//     // std::stringstream fileBuffer;
+//     // std::string fileContents;
 
-    responseBuffer << headers;
-    responseBuffer << page.length() << "\r\n\r\n";
-    responseBuffer << page;
-    return responseBuffer.str();
-}
+//     // file.open(filename.c_str());
+//     // // if (!file.good())
+//     // // return 404 page as response
+//     // fileBuffer << file.rdbuf();
+//     // file.close();
+//     // fileContents = fileBuffer.str();
+//     // return createHTMLResponse(fileContents, headers);
+
+//     std::ifstream file;
+//     std::stringstream responseBuffer;
+//     std::string fileContents;
+
+//     file.open(filename.c_str(), std::ios::binary);
+//     if (!file.good())
+//         return createHTMLResponse(errorPage(404), headers);
+//     file.seekg(0, std::ios::end);
+//     std::ios_base::streampos fileLen = file.tellg();
+//     file.seekg(0, std::ios::beg);
+//     responseBuffer << headers;
+//     responseBuffer << fileLen << "\r\n\r\n";
+//     responseBuffer << file.rdbuf();
+//     file.close();
+//     fileContents = responseBuffer.str();
+//     return fileContents;
+// }
 
 void Connection::processRequest(std::vector<ServerBlock *>& config)
 {
@@ -98,19 +112,19 @@ void Connection::processRequest(std::vector<ServerBlock *>& config)
     switch (target.type)
     {
         case FOUND:
-            response = createResponse(target.resource, HTTP_HEADERS);
+            response.createResponse(target.resource, HTTP_HEADERS);
             break;
         case REDIRECTION:
-            response = createResponse(target.resource, HTTP_HEADERS);
+            response.createResponse(target.resource, HTTP_HEADERS);
             break;
         case METHOD_NOT_ALLOWED:
-            response = createHTMLResponse(errorPage(405), HTTP_HEADERS);
+            response.createHTMLResponse(errorPage(405), HTTP_HEADERS);
             break;
         case DIRECTORY:
-            response = createHTMLResponse(directoryListing(target.resource), HTTP_HEADERS);
+            response.createHTMLResponse(directoryListing(target.resource), HTTP_HEADERS);
             break;
         case NOT_FOUND:
-            response = createHTMLResponse(errorPage(404), HTTP_HEADERS);
+            response.createHTMLResponse(errorPage(404), HTTP_HEADERS);
             break;
     }
     // keepAlive = request.keepAlive();
