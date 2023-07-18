@@ -130,11 +130,8 @@ static std::string createHTMLResponse(std::string page, std::string headers)
     return responseBuffer.str();
 }
 
-void Server::sendResponse(size_t clientNo)
+void Server::processRequest(Connection &c)
 {
-    ssize_t bytesSent;
-    Connection &c = cons[sockets[clientNo].fd];
-
     // Request &req = cons.at(sockets[clientNo].fd).request;
     // int listener = cons.at()
     // std::string &res = cons.at(sockets[clientNo].fd).response;
@@ -168,9 +165,32 @@ void Server::sendResponse(size_t clientNo)
         c.totalBytesSent = 0;
         c.request.clear();
     }
+}
+
+void Server::closeConnection(int clientNo)
+{
+    close(sockets[clientNo].fd);
+    cons.erase(sockets[clientNo].fd);
+    sockets.erase(sockets.begin() + clientNo);
+}
+
+void Server::sendResponse(size_t clientNo)
+{
+    ssize_t bytesSent;
+    Connection &c = cons[sockets[clientNo].fd];
+    // time_t curTime;
+
+    processRequest(c);
     if (c.response.length() == 0)
     {
-        std::cout << "Nothing to send >:(" << std::endl;
+        std::cout << "Connection is idle: " << sockets[clientNo].fd << std::endl;
+        // time(&curTime);
+        // if (curTime - c.startTime >= c.timeOut)
+        // {
+        //     closeConnection(clientNo);
+        //     std::cout << "Connection timed out! (idle for " << c.timeOut << "s): " <<
+        //     sockets[clientNo].fd << std::endl;
+        // }
         return;
     }
     std::cout << "Sending a response... " << std::endl;
@@ -192,13 +212,20 @@ void Server::sendResponse(size_t clientNo)
             std::cout << "Response sent successfully to fd " << clientNo << ", "
                       << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent
                       << std::endl;
-            // if keep-alive was requested
-            //      clear response string, set totalBytesSent to 0 and return here!!
+            // if (c.keepAlive) // if keep-alive was requested
+            // {
+            //     std::cout << "Connection is keep alive" << std::endl;
+            //     c.request.clear();
+            //     c.response.clear();
+            //     c.totalBytesSent = 0;
+            //     time(&c.startTime); // reset timer
+            //     return ;
+            //     clear response string, set totalBytesSent to 0 and return here!!
+            // }
         }
     }
-    close(sockets[clientNo].fd);
-    cons.erase(sockets[clientNo].fd);
-    sockets.erase(sockets.begin() + clientNo);
+    std::cout << "Closing connection " << sockets[clientNo].fd << std::endl;
+    closeConnection(clientNo);
     std::cout << "---------------------------------------------------------\n";
 }
 
@@ -223,9 +250,7 @@ void Server::recvData(size_t clientNo)
         std::cout << "Connection closed by client" << std::endl;
     if (bytesRec <= 0)
     {
-        close(sockets[clientNo].fd);
-        cons.erase(sockets[clientNo].fd);
-        sockets.erase(sockets.begin() + clientNo);
+        closeConnection(clientNo);
         delete[] buf;
         return;
     }
@@ -267,6 +292,8 @@ void Server::acceptNewConnection(size_t listenerNo)
 
 void Server::startListening()
 {
+    int eventFd;
+
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sigInthandler);
     while (true)
@@ -274,17 +301,20 @@ void Server::startListening()
         SystemCallException::checkErr("poll", poll(&sockets[0], sockets.size(), -1));
         for (size_t i = 0; i < sockets.size(); i++)
         {
-            // server listener got something new to read
+            eventFd = sockets[i].fd;
+            // if one of the fds got something new to read
             if (sockets[i].revents & POLLIN)
             {
-                if (configBlocks.count(sockets[i].fd))
+                if (configBlocks.count(eventFd))   // this fd is one of the server listeners
                     acceptNewConnection(i);
                 else   // its one of the clients
                 {
                     recvData(i);
-                    // check if the headers are ready, parse them if they are
-                    if (cons[sockets[i].fd].request.parseRequest())
-                        readBody(i);   // this will only be run if the headers are parsed
+                    // if this fd is still alive and no errors so far
+                    if (cons.count(eventFd))
+                        // check if the headers are ready, parse them if they are
+                        if (cons[eventFd].request.parseRequest())
+                            readBody(i);   // this will only be run if the headers are parsed
                 }
             }
             else if (sockets[i].revents & POLLOUT)
@@ -298,7 +328,6 @@ void Server::startListening()
 Server::~Server()
 {
     std::cout << "Server destructor called" << std::endl;
-    // freeaddrinfo(servInfo);
     for (size_t i = 0; i < sockets.size(); i++)
         close(sockets[i].fd);
 }

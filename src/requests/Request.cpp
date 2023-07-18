@@ -346,9 +346,10 @@ void Request::appendToBuffer(const char *data, size_t n)
 
 void Request::clear()
 {
-    _length = 0;
     _headers.clear();
     _resourcePath.clear();
+    _length = 0;
+    _httpMethod = OTHER;
 }
 
 Request::~Request()

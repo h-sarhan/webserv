@@ -41,8 +41,10 @@ class Server
     bool portAlreadyInUse(unsigned int port);
     void initListener(unsigned int port, serverList virtualServers);
     void acceptNewConnection(size_t listenerNo);
+    void closeConnection(int clientNo);
     void recvData(size_t clientNo);
     void readBody(size_t clientNo);
+    void processRequest(Connection &c);
     void sendResponse(size_t clientNo);
 
   public:
