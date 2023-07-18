@@ -16,7 +16,12 @@
 #include "requests/Resource.hpp"
 #include <map>
 
-#define REQ_BUFFER_SIZE 2000
+#define REQ_BUFFER_SIZE         2000
+#define DEFAULT_KEEP_ALIVE_TIME 5
+#define MAX_KEEP_ALIVE_TIME     20
+#define DEFAULT_HOSTNAME        "localhost"
+#define MAX_RECONNECTIONS       20
+#define DEFAULT_RECONNECTIONS   20
 
 /**
  * @brief This class is responsible for parsing an HTTP request
@@ -48,15 +53,16 @@ class Request
     const char *buffer() const;
     size_t requestLength() const;
     std::map<std::string, const std::string> &headers();
+    // ! Cache these getters
     const std::string hostname() const;      // might end up being private
-    bool keepAlive() const;                  // might not need these
-    unsigned int keepAliveTimer() const;     // might not need these
-    unsigned int maxReconnections() const;   // might not need these
+    bool keepAlive() const;                  // might not need this
+    unsigned int keepAliveTimer() const;     // might not need this
+    unsigned int maxReconnections() const;   // might not need this
     // ! Implement this method
     // ! size_t bodySize() const;
 
     // Appends request data to the internal buffer
-    void appendToBuffer(const char *data, size_t n);
+    void appendToBuffer(const char *data, const size_t n);
 
     // Returns a resource object associated with the request
     const Resource resource(std::vector<ServerBlock *> &config) const;
@@ -85,8 +91,8 @@ class Request
     void assertThat(bool condition, const std::string &throwMsg) const;
 };
 
+// ! Move these
 // void requestParsingTests();
-
 void requestBufferTests();
 
 #endif

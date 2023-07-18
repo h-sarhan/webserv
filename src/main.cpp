@@ -34,7 +34,6 @@ int main(int argc, char **argv)
 
     // Test that validators work
     // Test that request parsing works
-    // requestParsingTests();
     // generateDirectoryListing(".");
 
     try

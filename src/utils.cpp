@@ -78,3 +78,13 @@ const std::string getLine(const std::string &filename, const unsigned int lineNu
         currLine++;
     return line;
 }
+
+void removeDuplicateChar(std::string &str, const char c)
+{
+    size_t dupPos = str.find(std::string(2, c));
+    while (dupPos != std::string::npos)
+    {
+        str.erase(dupPos, 1);
+        dupPos = str.find(std::string(2, c));
+    }
+}

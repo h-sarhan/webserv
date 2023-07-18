@@ -20,23 +20,34 @@
 #include <sstream>
 #include <sys/stat.h>
 
-// ! Remove magic numbers
-// ! Document this
+/**
+ * @brief Construct a new Request object
+ */
 Request::Request()
     : _httpMethod(), _resourcePath(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
       _capacity(REQ_BUFFER_SIZE), _valid(true)
 {
 }
 
+/**
+ * @brief Request copy constructor
+ *
+ * @param req Request object to copy from
+ */
 Request::Request(const Request &req)
     : _httpMethod(req.method()), _resourcePath(req._resourcePath), _headers(req._headers),
       _buffer(new char[req._capacity]), _length(req._length), _capacity(req._capacity),
       _valid(req._valid)
 {
-    // Deep copy
     std::memcpy(_buffer, req._buffer, _length);
 }
 
+/**
+ * @brief Request copy assignment constructor
+ *
+ * @param req Request pbject to copy from
+ * @return Request& Instance of own request object
+ */
 Request &Request::operator=(const Request &req)
 {
     if (&req == this)
@@ -53,31 +64,61 @@ Request &Request::operator=(const Request &req)
     return *this;
 }
 
+/**
+ * @brief Return the HTTP method of the request
+ *
+ * @return const HTTPMethod& HTTP method of the request
+ */
 const HTTPMethod &Request::method() const
 {
     return _httpMethod;
 }
 
+/**
+ * @brief Return a pointer to the buffer
+ *
+ * @return const char* A readonly pointer to the buffer
+ */
 const char *Request::buffer() const
 {
     return _buffer;
 }
 
+/**
+ * @brief Return the amount of bytes recieved from the request
+ *
+ * @return size_t Amount of bytes in the request
+ */
 size_t Request::requestLength() const
 {
     return _length;
 }
 
+/**
+ * @brief Check that a condition is true, else throw an InvalidRequestError exception
+ *
+ * @param condition Condition to check
+ * @param throwMsg Error message
+ */
 void Request::assertThat(bool condition, const std::string &throwMsg) const
 {
     if (!condition)
         throw InvalidRequestError(throwMsg);
 }
 
+/**
+ * @brief Parse the request
+ *
+ * @return true if the request has been processed completely
+ * @return false if more bytes are required to process the request
+ */
 bool Request::parseRequest()
 {
+    // Check if the buffer is empty
     if (_length == 0)
         return false;
+
+    // Check if the request has already been processed
     if (!_headers.empty())
         return true;
 
@@ -85,6 +126,8 @@ bool Request::parseRequest()
     const char doubleCRLF[] = "\r\n\r\n";
     char *bodyStart = std::search(_buffer, _buffer + _length, doubleCRLF,
                                   doubleCRLF + sizeOfArray(doubleCRLF) - 1);
+
+    // Check if the headers have been fully recieved
     if (bodyStart == _buffer + _length)
         return false;
 
@@ -92,15 +135,15 @@ bool Request::parseRequest()
     // the last header
     const std::string requestHead(_buffer, bodyStart + 2);
 
+    // Create a stream containing the start line and headers
+    std::stringstream requestStream(requestHead);
+
     try
     {
-        // Create stringstream containing the start line and headers
-        std::stringstream reqStream(requestHead);
-        parseStartLine(reqStream);
-
+        parseStartLine(requestStream);
         // Parse headers
-        while (reqStream.peek() != '\r' && !reqStream.eof())
-            parseHeader(reqStream);
+        while (requestStream.peek() != '\r' && !requestStream.eof())
+            parseHeader(requestStream);
     }
     catch (const InvalidRequestError &e)
     {
@@ -111,48 +154,67 @@ bool Request::parseRequest()
     return true;
 }
 
+/**
+ * @brief Parses the start line of HTTP request.
+ * The start line usually looks like:
+ * METHOD RESOURCE HTTP/VERSION\r\n
+ * Example:
+ * GET /background.png HTTP/1.0
+ *
+ * @param reqStream The stream containing the request start line
+ */
 void Request::parseStartLine(std::stringstream &reqStream)
 {
-    // * Examples of valid start lines
-    // GET /background.png HTTP/1.0
-    // POST / HTTP/1.1
-    // DELETE /src/main.cpp HTTP/1.1
-
     // Parse HTTP method as a string
     const std::string &httpMethod = getNext<std::string>(reqStream);
-    assertThat(!httpMethod.empty(), "Invalid start line");
+    assertThat(!httpMethod.empty(), "Invalid HTTP method in start line");
 
     // Convert HTTP method to an enum
     _httpMethod = strToEnum<HTTPMethod>(httpMethod);
-    assertThat(_httpMethod != OTHER, "Invalid start line");
+    assertThat(_httpMethod != OTHER, "Invalid HTTP method in start line");
 
     // Parse the requested resource path
     _resourcePath = getNext<std::string>(reqStream);
-    assertThat(!_resourcePath.empty(), "Invalid start line");
+    assertThat(!_resourcePath.empty(), "Invalid resource in start line");
 
-    // Clean the URL
+    // Clean the resource URL
     sanitizeURL(_resourcePath);
 
     // Check HTTP version
     const std::string &httpVersion = getNext<std::string>(reqStream);
-    assertThat(httpVersion == "HTTP/1.0" || httpVersion == "HTTP/1.1", "Invalid start line");
+    assertThat(httpVersion == "HTTP/1.0" || httpVersion == "HTTP/1.1",
+               "Invalid/unsupported HTTP verion in start line");
 
+    // Check that the start line ends with CRLF
     checkLineEnding(reqStream);
 }
 
+/**
+ * @brief Checks that the next two characters are CRLF
+ *
+ * @param reqStream The stream containing the request
+ */
 void Request::checkLineEnding(std::stringstream &reqStream)
 {
-    std::string lineEnding(2, '\0');
-
-    // Check that the line ends with CRLF
-    assertThat(!reqStream.eof(), "Invalid header");
-    reqStream >> std::noskipws >> lineEnding[0] >> lineEnding[1] >> std::skipws;
-    assertThat(lineEnding == "\r\n", "Invalid start line");
+    reqStream >> std::noskipws;
+    const char cr = getNext<char>(reqStream);
+    const char lf = getNext<char>(reqStream);
+    reqStream >> std::skipws;
+    assertThat(cr == '\r' && lf == '\n', "Line does not end in CRLF");
 }
 
+/**
+ * @brief Parse a header field from the HTTP request
+ * A header field in an HTTP request looks like this:
+ * key: value\r\n
+ * Example:
+ * Host: webserv.com:80
+ *
+ * @param reqStream The stream containing the Header field
+ */
 void Request::parseHeader(std::stringstream &reqStream)
 {
-    // Get the key part of the header
+    // Get the key from the header field
     std::string key = getNext<std::string>(reqStream);
     assertThat(key.length() >= 2, "Invalid header");
 
@@ -167,23 +229,31 @@ void Request::parseHeader(std::stringstream &reqStream)
     std::string value;
     reqStream >> std::noskipws;
     while (reqStream.peek() != '\r' && !reqStream.eof())
-        value += getNext<char>(reqStream);
+        value.push_back(getNext<char>(reqStream));
     assertThat(!value.empty() && !reqStream.eof(), "Invalid header");
 
-    // Trim value of whitespace and transform to lowercase
+    // Trim value of whitespace
     trimStr(value, WHITESPACE);
+
+    // Transform value to lowercase
     std::transform(key.begin(), key.end(), key.begin(), ::tolower);
 
+    // Check that the line ends in CRLF
     checkLineEnding(reqStream);
 
-    // Insert header into map
+    // Insert header field into map
     _headers.insert(std::make_pair(key, value));
 }
 
+/**
+ * @brief Get the specified hostname from the Request
+ *
+ * @return const std::string Requested hostname
+ */
 const std::string Request::hostname() const
 {
     if (_headers.count("host") == 0)
-        return "localhost";
+        return DEFAULT_HOSTNAME;
 
     std::string hostValue = _headers.at("host");
     hostValue = hostValue.substr(0, hostValue.find(":"));
@@ -191,80 +261,83 @@ const std::string Request::hostname() const
     // Check if the host value is a port rather than a hostname
     const size_t numDigits = std::count_if(hostValue.begin(), hostValue.end(), ::isdigit);
     if (numDigits == hostValue.length())
-        return "localhost";
+        return DEFAULT_HOSTNAME;
 
     if (validateHostName(hostValue))
     {
         // ! Log here that an invalid hostname is in the header
         return hostValue;
     }
-    return "localhost";
+    return DEFAULT_HOSTNAME;
 }
 
+/**
+ * @brief Get a reference to the parsed headers
+ *
+ * @return std::map<std::string, const std::string>& Reference to parsed headers
+ */
 std::map<std::string, const std::string> &Request::headers()
 {
     return _headers;
 }
 
+/**
+ * @brief Get the keep alive value
+ *
+ * @return bool Whether to keep the connection alive
+ */
 bool Request::keepAlive() const
 {
     return _headers.count("connection") == 0 || _headers.at("connection") != "closed";
 }
 
+/**
+ * @brief Amount int seconds to keep the connection alive for
+ *
+ * @return unsigned int How long to keep the connection alive for
+ */
 unsigned int Request::keepAliveTimer() const
 {
     if (!keepAlive())
         return 0;
 
     if (_headers.count("keep-alive") == 0)
-        return 5;
+        return DEFAULT_KEEP_ALIVE_TIME;
 
     const std::string &keepAliveValue = _headers.at("keep-alive");
     if (keepAliveValue.find("timeout=") == std::string::npos)
-        return 5;
+        return DEFAULT_KEEP_ALIVE_TIME;
 
     std::stringstream timeOutStream(keepAliveValue.substr(keepAliveValue.find("timeout=")));
     getNext<std::string>(timeOutStream);
     unsigned int timeout = getNext<unsigned int>(timeOutStream);
-    if (timeOutStream.good() && timeout < 20)
+    if (timeOutStream.good() && timeout <= MAX_KEEP_ALIVE_TIME)
         return timeout;
-    return 5;
+    return DEFAULT_KEEP_ALIVE_TIME;
 }
 
-// We might not use this function
+/**
+ * @brief Max reconnections requested by client
+ *
+ * @return unsigned int How many requests to recieve from client before dropping connection
+ */
 unsigned int Request::maxReconnections() const
 {
     if (!keepAlive())
         return 1;
 
     if (_headers.count("keep-alive") == 0)
-        return 20;
+        return DEFAULT_RECONNECTIONS;
     const std::string &keepAliveValue = _headers.at("keep-alive");
 
     std::stringstream maxConnStream(keepAliveValue.substr(keepAliveValue.find("max=")));
     getNext<std::string>(maxConnStream);
     const unsigned int maxConnections = getNext<unsigned int>(maxConnStream);
-    if (maxConnStream.good() && maxConnections < 20)
+    if (maxConnStream.good() && maxConnections <= MAX_RECONNECTIONS)
         return maxConnections;
-    return 20;
+    return DEFAULT_RECONNECTIONS;
 }
 
-static bool matchResourceToRoute(std::string resource, std::string route)
-{
-    return resource.find(route) != std::string::npos;
-}
-
-static void removeDoubleSlash(std::string &str)
-{
-    size_t slashPos = str.find("//");
-    while (slashPos != std::string::npos)
-    {
-        str.erase(slashPos, 1);
-        slashPos = str.find("//");
-    }
-}
-
-// ! Refactor this
 const Resource Request::getResourceFromServerConfig(std::string &match,
                                                     const ServerBlock &serverConfig) const
 {
@@ -277,7 +350,7 @@ const Resource Request::getResourceFromServerConfig(std::string &match,
             match = routeStr;
             continue;
         }
-        if (matchResourceToRoute(_resourcePath, routeStr) && routeStr.length() > match.length())
+        if (_resourcePath.find(routeStr) != std::string::npos && routeStr.length() > match.length())
             match = routeStr;
     }
     if (match.length() == 0)
@@ -292,7 +365,7 @@ const Resource Request::getResourceFromServerConfig(std::string &match,
         std::string resourcePath = matchedRoute.serveDir + "/" +
                                    _resourcePath.substr(_resourcePath.find(match) + match.length());
 
-        removeDoubleSlash(resourcePath);
+        removeDuplicateChar(resourcePath, '/');
         // Check if the resource exists
         struct stat info;
         if (stat(resourcePath.c_str(), &info) == 0)
@@ -336,7 +409,7 @@ void Request::resizeBuffer(size_t newCapacity)
     _capacity = newCapacity;
 }
 
-void Request::appendToBuffer(const char *data, size_t n)
+void Request::appendToBuffer(const char *data, const size_t n)
 {
     if (_length + n >= _capacity)
         resizeBuffer(std::max(_capacity * 2, (_length + n) * 2));
@@ -350,6 +423,7 @@ void Request::clear()
     _resourcePath.clear();
     _length = 0;
     _httpMethod = OTHER;
+    _valid = true;
 }
 
 Request::~Request()

@@ -130,4 +130,15 @@ void sanitizeURL(std::string &url);
  */
 const std::string getLine(const std::string &filename, const unsigned int lineNum);
 
+/**
+ * @brief Removes multiple ocurrences of a given character in a row
+ * For example:
+ * ppppppw -> pw
+ * ./assets///web -> ./assets/web
+ *
+ * @param str String to modify
+ * @param c Duplicate character
+ */
+void removeDuplicateChar(std::string &str, const char c);
+
 #endif
