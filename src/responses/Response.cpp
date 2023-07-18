@@ -104,23 +104,15 @@ void Response::createResponse(std::string filename, std::string headers)
     if (!file.good())
         return createHTMLResponse(errorPage(404), headers);
 
-    // size_t fileLen = getStreamLen(file);
-    file.seekg(0, std::ios::end);
-    size_t fileLen = file.tellg();
-    file.seekg(0, std::ios::beg);
+    size_t fileLen = getStreamLen(file);
 
-    std::cout << "file size = " << fileLen << std::endl;
     responseBuffer << headers;
     responseBuffer << fileLen << "\r\n\r\n";
     responseBuffer << file.rdbuf();
     file.close();
     
-    // _length = getStreamLen(responseBuffer);
-    responseBuffer.seekg(0, std::ios::end);
-    _length = responseBuffer.tellg();
-    responseBuffer.seekg(0, std::ios::beg);
+    _length = getStreamLen(responseBuffer);
     
-    std::cout << "buffer len = " << _length << std::endl;
     if (_buffer != NULL)
         delete[] _buffer;
     _buffer = new char[_length];
