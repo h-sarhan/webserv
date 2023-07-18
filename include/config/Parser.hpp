@@ -46,24 +46,27 @@ class Parser
     std::vector<ServerBlock>::iterator _currServerBlock;
     std::map<std::string, Route>::iterator _currRoute;
     std::set<int> _parsedAttributes;   // Parsed attributes so far
-    std::set<int> _parsedErrorPages;   // Parsed attributes error pages so far
+    std::set<int> _parsedErrorPages;   // Parsed error pages so far
 
   public:
+    // Constructs a Parser object with the filename
     Parser(const std::string &fileName);
     ~Parser();
 
+    // Gets the parsed configuration as a vector of server blocks
     std::vector<ServerBlock> &getConfig();
 
   private:
+    // Copy constructors have been made private because this class will never be copied
     Parser(const Parser &config);
     Parser &operator=(const Parser &config);
 
-    // Functions to check and increment current token
+    // Methods to check and increment current token
     TokenType currentToken() const;
-    void advanceToken();
     bool atEnd() const;
     bool atServerOption() const;
     bool atLocationOption() const;
+    void advanceToken();
 
     // Rule parsing functions
     void parseConfig();
@@ -82,11 +85,11 @@ class Parser
     void parseDirectoryFile();
     void parseCGI();
 
-    // Functions to reset parsed attributes
+    // Methods to reset parsed attributes
     void resetServerBlockAttributes();
     void resetLocationBlockAttributes();
 
-    // Functions to throw errors and assert conditions
+    // Methods to throw errors and assert conditions
     void assertThat(bool condition, const std::string &throwMsg) const;
     void matchToken(const TokenType token, const std::string &throwMsg) const;
     void throwParseError(const std::string &str) const;

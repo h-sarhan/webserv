@@ -180,11 +180,6 @@ void Request::parseHeader(std::stringstream &reqStream)
     _headers.insert(std::make_pair(key, value));
 }
 
-const std::string Request::userAgent() const
-{
-    return _headers.count("user-agent") == 0 ? "unknown" : _headers.at("user-agent");
-}
-
 const std::string Request::hostname() const
 {
     if (_headers.count("host") == 0)
@@ -353,7 +348,7 @@ void Request::clear()
 {
     _length = 0;
     _headers.clear();
-    _resourcePath = "";
+    _resourcePath.clear();
 }
 
 Request::~Request()

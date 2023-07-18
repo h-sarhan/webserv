@@ -26,25 +26,31 @@ class Tokenizer
 {
   private:
     std::vector<Token> _tokens;
-    unsigned int _line;
 
   public:
+    // Creates a Tokenizer object with the config file that it is tokenizing
     Tokenizer(const std::string &filename);
-
     ~Tokenizer();
 
+    // Return the produced tokens
     const std::vector<Token> &tokens() const;
 
   private:
+    // Copy constructors have been made private since this class will never be copied
     Tokenizer(const Tokenizer &old);
     Tokenizer &operator=(const Tokenizer &old);
 
+    // Tokenization functions
     void tokenizeFile(std::ifstream &configStream);
     void tokenizeLine(std::string &lineStr, const unsigned int lineNum);
     void tokenizeWord(const std::string &wordStr, const unsigned int wordPos,
                       const unsigned int lineNum);
+
+    // Check if the provided character is one of the single character tokens
     bool isSingleCharToken(const char c) const;
-    void addWord(unsigned int &wordIdx, const std::string &wordStr, const unsigned int lineNum,
-                 const unsigned int column);
+
+    // Add a token to the list of tokens
+    void addWordToken(unsigned int &wordIdx, const std::string &wordStr, const unsigned int lineNum,
+                      const unsigned int column);
 };
 #endif

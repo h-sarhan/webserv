@@ -11,11 +11,24 @@
 #ifndef ENUM_CONVERSIONS_HPP
 #define ENUM_CONVERSIONS_HPP
 
-#define sizeOfArray(array) (sizeof(array) / sizeof(array[0]))
-
 #include <string>
 
+/**
+ * @brief Convert an enum to a string
+ *
+ * @tparam E Enum type
+ * @param enumVal The enum to convert
+ * @return std::string The converted enum as a string
+ */
 template <typename E> std::string enumToStr(const E &enumVal);
+
+/**
+ * @brief Converts an string to an enum
+ *
+ * @tparam E Enum type
+ * @param str String to convert
+ * @return E The enum
+ */
 template <typename E> E strToEnum(const std::string &str);
 
 #endif

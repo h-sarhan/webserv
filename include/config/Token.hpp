@@ -15,10 +15,8 @@
 #include <string>
 
 /**
- * @brief This class represents a single token. A token refers to a single
- * component or piece of a larger group of text.
- * A Token object stores the type of the token as well as its contents.
- * The location of where the token is found in the text is also stored.
+ * @brief This class represents a single token in our config file
+ * The location of where the token is found in the file is also stored.
  */
 class Token
 {
@@ -29,67 +27,20 @@ class Token
     unsigned int _column;
 
   public:
-    /**
-     * @brief Construct a new Token object
-     *
-     * @param type Type of the token
-     * @param contents The string that makes up the token
-     * @param lineNum The line the token was found on
-     * @param column The column number the token was found on
-     */
     Token(const TokenType &type, const std::string &contents, unsigned int lineNum,
           unsigned int column);
-
-    /**
-     * @brief Token copy assignment operator
-     *
-     * @param old Old token
-     * @return Token& Token reference
-     */
-    Token &operator=(const Token &old);
-
-    /**
-     * @brief Token copy constructor
-     *
-     * @param old The token we are copyng from
-     */
     Token(const Token &old);
-
-    /**
-     * @brief Destroy the Token object
-     *
-     */
+    Token &operator=(const Token &old);
     ~Token();
 
-    /**
-     * @brief Get the contents of the token
-     *
-     * @return std::string Token contents
-     */
+    // Getters for token attributes
     std::string contents() const;
-
-    /**
-     * @brief Get the token type
-     *
-     * @return TokenType token type
-     */
     TokenType type() const;
-
-    /**
-     * @brief The line the token was found on
-     *
-     * @return unsigned int
-     */
     unsigned int line() const;
-
-    /**
-     * @brief The column number of the token
-     *
-     * @return unsigned int Column number
-     */
     unsigned int column() const;
 };
 
+// Print a token object
 std::ostream &operator<<(std::ostream &os, const Token &tkn);
 
 #endif

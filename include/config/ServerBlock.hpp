@@ -1,7 +1,7 @@
 /**
  * @file ServerBlock.hpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file defines the attributes of a server block
+ * @brief This file defines the attributes of a server block in the config file
  * @date 2023-07-11
  *
  * @copyright Copyright (c) 2023
@@ -16,6 +16,7 @@
 #include <set>
 #include <string>
 #include <vector>
+
 /**
  * @brief This struct holds the configuration of a single route
  */
@@ -41,11 +42,13 @@ struct ServerBlock
     std::map<std::string, Route> routes;              // At least one route
 };
 
+// Convenient typedef for the server config
 typedef std::vector<ServerBlock> &serverList;
 
+// Creates a default server block
 ServerBlock createDefaultServerBlock();
 
-// Print ServerBlock
+// Print a ServerBlock
 std::ostream &operator<<(std::ostream &os, const ServerBlock &block);
 
 // Print entire configuration

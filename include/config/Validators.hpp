@@ -1,8 +1,7 @@
 /**
  * @file Validators.hpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file declares various input validators used throughout config
- * file parsing
+ * @brief This file declares various input validators used throughout parsing
  * @date 2023-07-09
  *
  * @copyright Copyright (c) 2023

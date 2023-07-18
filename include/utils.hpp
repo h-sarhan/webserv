@@ -14,6 +14,17 @@
 #include <sstream>
 #include <string>
 
+// Colors
+#define RED        "\x1b[31m"
+#define RESET      "\x1b[0m"
+#define YELLOW     "\x1b[33m"
+#define GREEN      "\x1B[32m"
+#define BOLD       "\x1b[1m"
+#define WHITESPACE " \t\n\r\f\v"
+
+// Get the size of an array if it is known at compile time
+#define sizeOfArray(array) (sizeof(array) / sizeof(array[0]))
+
 /**
  * @brief Templated function to read values from a string
  *

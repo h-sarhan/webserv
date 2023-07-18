@@ -12,7 +12,7 @@
 #define TOKEN_TYPES_HPP
 
 /**
- * @brief The tokens that will be produced after tokenizing the config file
+ * @brief The types of tokens that will be produced after tokenizing the config file
  */
 typedef enum
 {

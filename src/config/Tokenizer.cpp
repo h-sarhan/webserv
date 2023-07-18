@@ -21,7 +21,7 @@
  * @throws std::runtime_error Throws an exception when the configuration
  * file can't be opened
  */
-Tokenizer::Tokenizer(const std::string &filename) : _line(0)
+Tokenizer::Tokenizer(const std::string &filename)
 {
     std::ifstream configStream(filename.c_str());
 
@@ -114,8 +114,8 @@ bool Tokenizer::isSingleCharToken(const char c) const
  * @param lineNum The line number we are currently in
  * @param column The column we are currently in
  */
-void Tokenizer::addWord(unsigned int &wordIdx, const std::string &wordStr,
-                        const unsigned int lineNum, const unsigned int column)
+void Tokenizer::addWordToken(unsigned int &wordIdx, const std::string &wordStr,
+                             const unsigned int lineNum, const unsigned int column)
 {
     const unsigned int wordStart = wordIdx;
 
@@ -159,7 +159,7 @@ void Tokenizer::tokenizeWord(const std::string &wordStr, const unsigned int word
             _tokens.push_back(token);
         }
         else
-            addWord(wordIdx, wordStr, lineNum, column);
+            addWordToken(wordIdx, wordStr, lineNum, column);
         wordIdx++;
     }
 }

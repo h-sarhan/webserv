@@ -12,6 +12,7 @@
 #include "enums/ResourceTypes.hpp"
 #include "enums/TokenTypes.hpp"
 #include "enums/conversions.hpp"
+#include "utils.hpp"
 
 template <> std::string enumToStr(const HTTPMethod &enumVal)
 {
