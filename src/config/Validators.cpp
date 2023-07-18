@@ -201,7 +201,7 @@ bool validatePort(const std::string &portStr)
     return port >= 1 && port <= 65535;
 }
 
-// TODO: ADD MORE CHECKS TO URL VALIDATION
+// ! ADD MORE CHECKS TO URL VALIDATION
 /**
  * @brief Check if a URL is valid
  * @todo Add more checks to the URL

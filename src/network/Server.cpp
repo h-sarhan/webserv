@@ -162,6 +162,8 @@ void Server::sendResponse(size_t clientNo)
         case NOT_FOUND:
             c.response = createHTMLResponse(errorPage(404), HTTP_HEADERS);
             break;
+        case INVALID_REQUEST:
+            throw std::runtime_error("Invlalid requests not handled yet");
         }
         c.totalBytesSent = 0;
         c.request.clear();

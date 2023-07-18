@@ -22,7 +22,8 @@ typedef enum
     REDIRECTION,
     FORBIDDEN_METHOD,
     DIRECTORY,
-    NOT_FOUND
+    NOT_FOUND,
+    INVALID_REQUEST
 } ResourceType;
 
 #endif

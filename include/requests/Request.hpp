@@ -36,8 +36,7 @@ class Request
     char *_buffer;
     size_t _length;
     size_t _capacity;
-    // ! Add flag to see whether the request was parsed correctly
-    // bool _valid;
+    bool _valid;
 
   public:
     Request();

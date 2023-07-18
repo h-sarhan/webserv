@@ -24,13 +24,14 @@
 
 Request::Request()
     : _httpMethod(), _resourcePath(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
-      _capacity(REQ_BUFFER_SIZE)
+      _capacity(REQ_BUFFER_SIZE), _valid(true)
 {
 }
 
 Request::Request(const Request &req)
     : _httpMethod(req.method()), _resourcePath(req._resourcePath), _headers(req._headers),
-      _buffer(new char[req._capacity]), _length(req._length), _capacity(req._capacity)
+      _buffer(new char[req._capacity]), _length(req._length), _capacity(req._capacity),
+      _valid(req._valid)
 {
     // Deep copy
     std::memcpy(_buffer, req._buffer, _length);
@@ -45,6 +46,7 @@ Request &Request::operator=(const Request &req)
     _headers = req._headers;
     _length = req._length;
     _capacity = req._capacity;
+    _valid = req._valid;
     delete[] _buffer;
     _buffer = new char[_capacity];
     std::memcpy(_buffer, req._buffer, _length);
@@ -90,14 +92,22 @@ bool Request::parseRequest()
     // the last header
     const std::string requestHead(_buffer, bodyStart + 2);
 
-    // ! Try catch here and set an invalid request flag or something like that then return true
-    // Create stringstream containing the start line and headers
-    std::stringstream reqStream(requestHead);
-    parseStartLine(reqStream);
+    try
+    {
+        // Create stringstream containing the start line and headers
+        std::stringstream reqStream(requestHead);
+        parseStartLine(reqStream);
 
-    // Parse headers
-    while (reqStream.peek() != '\r' && !reqStream.eof())
-        parseHeader(reqStream);
+        // Parse headers
+        while (reqStream.peek() != '\r' && !reqStream.eof())
+            parseHeader(reqStream);
+    }
+    catch (const InvalidRequestError &e)
+    {
+        // ! Log here using the logger class that we have recieved an invalid request
+        std::cerr << e.what() << std::endl;
+        _valid = false;
+    }
     return true;
 }
 
@@ -190,7 +200,7 @@ const std::string Request::hostname() const
 
     if (validateHostName(hostValue))
     {
-        // ? Maybe log here that an invalid hostname is in the header
+        // ! Log here that an invalid hostname is in the header
         return hostValue;
     }
     return "localhost";
@@ -259,6 +269,7 @@ static void removeDoubleSlash(std::string &str)
     }
 }
 
+// ! Refactor this
 const Resource Request::getResourceFromServerConfig(std::string &match,
                                                     const ServerBlock &serverConfig) const
 {
@@ -309,6 +320,8 @@ const Resource Request::getResourceFromServerConfig(std::string &match,
 
 const Resource Request::resource(std::vector<ServerBlock *> &serverBlocks) const
 {
+    if (!_valid)
+        return Resource(INVALID_REQUEST);
     std::string biggestMatch;
     for (std::vector<ServerBlock *>::iterator blockIt = serverBlocks.begin();
          blockIt != serverBlocks.end(); blockIt++)
