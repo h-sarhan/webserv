@@ -58,7 +58,7 @@ class Request
 
     std::map<std::string, const std::string> &headers();
     const std::string userAgent() const;
-    const std::string host() const;
+    const std::string hostname() const;
     bool keepAlive() const;
     unsigned int keepAliveTimer() const;
     unsigned int maxReconnections() const;

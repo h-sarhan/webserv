@@ -11,7 +11,7 @@
 #ifndef ENUM_CONVERSIONS_HPP
 #define ENUM_CONVERSIONS_HPP
 
-#define sizeOfArray(array) sizeof(array) / sizeof(array[0])
+#define sizeOfArray(array) (sizeof(array) / sizeof(array[0]))
 
 #include <string>
 

@@ -9,6 +9,7 @@
  */
 
 #include "requests/Request.hpp"
+#include "config/Validators.hpp"
 #include "enums/conversions.hpp"
 #include "requests/InvalidRequestError.hpp"
 #include "utils.hpp"
@@ -44,7 +45,6 @@ Request &Request::operator=(const Request &req)
     _headers = req._headers;
     _length = req._length;
     _capacity = req._capacity;
-    // Deep copy
     delete[] _buffer;
     _buffer = new char[_capacity];
     std::memcpy(_buffer, req._buffer, _length);
@@ -79,19 +79,20 @@ bool Request::parseRequest()
     if (!_headers.empty())
         return true;
 
-    // ! Form this string after finding the message body start
-    const std::string req(_buffer, _buffer + _length);
-
-    // ! Use std::find() instead because I dont need to form the string at this point
-    const size_t bodyStart = req.find("\r\n\r\n");
-    if (bodyStart == std::string::npos)
+    // Search for double CRLF in the request buffer
+    const char doubleCRLF[] = "\r\n\r\n";
+    char *bodyStart = std::search(_buffer, _buffer + _length, doubleCRLF,
+                                  doubleCRLF + sizeOfArray(doubleCRLF) - 1);
+    if (bodyStart == _buffer + _length)
         return false;
 
+    // If double CRLF is found then we form a string starting from the beginning of the request till
+    // the last header
+    const std::string requestHead(_buffer, bodyStart + 2);
+
     // ! Try catch here and set an invalid request flag or something like that then return true
-
     // Create stringstream containing the start line and headers
-    std::stringstream reqStream(req.substr(0, bodyStart + 2));
-
+    std::stringstream reqStream(requestHead);
     parseStartLine(reqStream);
 
     // Parse headers
@@ -174,14 +175,25 @@ const std::string Request::userAgent() const
     return _headers.count("user-agent") == 0 ? "unknown" : _headers.at("user-agent");
 }
 
-// ! This could be wrong if the HOST header only contains a port number
-// ! Needs testing
-const std::string Request::host() const
+const std::string Request::hostname() const
 {
     if (_headers.count("host") == 0)
         return "localhost";
-    const std::string &hostValue = _headers.at("host");
-    return hostValue.substr(0, hostValue.find(":"));
+
+    std::string hostValue = _headers.at("host");
+    hostValue = hostValue.substr(0, hostValue.find(":"));
+
+    // Check if the host value is a port rather than a hostname
+    const size_t numDigits = std::count_if(hostValue.begin(), hostValue.end(), ::isdigit);
+    if (numDigits == hostValue.length())
+        return "localhost";
+
+    if (validateHostName(hostValue))
+    {
+        // ? Maybe log here that an invalid hostname is in the header
+        return hostValue;
+    }
+    return "localhost";
 }
 
 std::map<std::string, const std::string> &Request::headers()
@@ -301,7 +313,7 @@ const Resource Request::resource(std::vector<ServerBlock *> &serverBlocks) const
     for (std::vector<ServerBlock *>::iterator blockIt = serverBlocks.begin();
          blockIt != serverBlocks.end(); blockIt++)
     {
-        if ((*blockIt)->hostname == host())
+        if ((*blockIt)->hostname == hostname())
             return getResourceFromServerConfig(biggestMatch, **blockIt);
     }
     return Resource(NOT_FOUND, "");
