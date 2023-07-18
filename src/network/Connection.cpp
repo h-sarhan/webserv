@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/18 18:02:13 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/18 19:57:21 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 #include "responses/DefaultPages.hpp"
 
 Connection::Connection()
-    : listener(-1), request(), response(), totalBytesRec(0), totalBytesSent(0)
+    : listener(-1), request(), response()
 {
 }
 // Connection::Connection()
@@ -25,7 +25,7 @@ Connection::Connection()
 // }
 
 Connection::Connection(int listener)
-    : listener(listener), request(), response(), totalBytesRec(0), totalBytesSent(0)
+    : listener(listener), request(), response()
 {
 }
 // Connection::Connection(int listener)
@@ -35,8 +35,7 @@ Connection::Connection(int listener)
 // }
 
 Connection::Connection(const Connection &c)
-    : listener(c.listener), request(c.request), response(c.response),
-      totalBytesRec(c.totalBytesRec), totalBytesSent(c.totalBytesSent)
+    : listener(c.listener), request(c.request), response(c.response)
 {
 }
 // Connection::Connection(const Connection &c)
@@ -53,8 +52,6 @@ Connection &Connection::operator=(const Connection &c)
         this->listener = c.listener;
         this->request = c.request;
         this->response = c.response;
-        this->totalBytesRec = c.totalBytesRec;
-        this->totalBytesSent = c.totalBytesSent;
     }
     return (*this);
 }
@@ -129,7 +126,7 @@ void Connection::processRequest(std::vector<ServerBlock *>& config)
     }
     // keepAlive = request.keepAlive();
     // timeOut = request.keepAliveTimer();
-    totalBytesSent = 0;
+    response.setByteCount(0);
     request.clear();
 }
 

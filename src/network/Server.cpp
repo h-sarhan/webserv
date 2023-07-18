@@ -12,6 +12,7 @@
 #include "enums/RequestTypes.hpp"
 #include "network/SystemCallException.hpp"
 #include "network/network.hpp"
+#include "responses/Response.hpp"
 
 bool quit = false;
 
@@ -109,52 +110,15 @@ void Server::closeConnection(int clientNo)
 
 void Server::sendResponse(size_t clientNo)
 {
-    ssize_t bytesSent;
-    Connection &c = cons[sockets[clientNo].fd];
-    // time_t curTime;
+    Connection &c = cons.at(sockets[clientNo].fd);
+    int sendStatus;
 
     c.processRequest(configBlocks[c.listener]);
-    if (c.response.length() == 0)
-    {
-        std::cout << "Connection is idle: " << sockets[clientNo].fd << std::endl;
-        // time(&curTime);
-        // if (curTime - c.startTime >= c.timeOut)
-        // {
-        //     closeConnection(clientNo);
-        //     std::cout << "Connection timed out! (idle for " << c.timeOut << "s): " << sockets[clientNo].fd << std::endl;
-        // }
+    sendStatus = c.response.sendResponse(sockets[clientNo].fd);
+    if (sendStatus == IDLE_CONNECTION)
         return;
-    }
-    std::cout << "Sending a response... " << std::endl;
-    bytesSent = send(sockets[clientNo].fd, c.response.buffer() + c.totalBytesSent,
-                     c.response.length() - c.totalBytesSent, 0);
-    if (bytesSent < 0)
-        std::cout << "Sending response failed: " << strerror(errno) << std::endl;
-    else
-    {
-        c.totalBytesSent += bytesSent;
-        if (c.totalBytesSent < c.response.length())   // partial send
-        {
-            std::cout << "Response only sent partially: " << bytesSent
-                      << ". Total: " << c.totalBytesSent << std::endl;
-            return;
-        }
-        else   // everything got sent
-        {
-            std::cout << "Response sent successfully to fd " << clientNo << ", "
-                      << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent << std::endl;
-            // if (c.keepAlive) // if keep-alive was requested
-            // {
-            //     std::cout << "Connection is keep alive" << std::endl;
-            //     c.request.clear();
-            //     c.response.clear();
-            //     c.totalBytesSent = 0;
-            //     time(&c.startTime); // reset timer
-            //     return ;
-            //     clear response string, set totalBytesSent to 0 and return here!!
-            // }
-        }
-    }
+    if (sendStatus == SEND_PARTIAL)
+        return;
     std::cout << "Closing connection " << sockets[clientNo].fd << std::endl;
     closeConnection(clientNo);
     std::cout << "---------------------------------------------------------\n";
@@ -236,7 +200,7 @@ void Server::startListening()
             // if one of the fds got something new to read
             if (sockets[i].revents & POLLIN)
             {
-                if (configBlocks.count(eventFd)) // this fd is one of the server listeners
+                if (configBlocks.count(eventFd))   // this fd is one of the server listeners
                     acceptNewConnection(i);
                 else   // its one of the clients
                 {

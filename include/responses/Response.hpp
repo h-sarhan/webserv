@@ -15,6 +15,12 @@
 # include <iostream>
 # include <sstream>
 # include <fstream>
+# include "network/network.hpp"
+
+# define IDLE_CONNECTION 0
+# define SEND_FAIL 1
+# define SEND_PARTIAL 2
+# define SEND_SUCCESS 3
 
 // headers
 # define STATUS_LINE "HTTP/1.1 "
@@ -52,7 +58,10 @@ class Response
         size_t length();
         size_t totalBytesSent();
         int statusCode();
-        void setResponse(char *newBuf, size_t bufLen);
+        void addToByteCount(ssize_t bytesSent);
+        void setByteCount(ssize_t bytesSent);
+        // void setResponse(char *newBuf, size_t bufLen);
+        int sendResponse(int fd);
         void createResponse(std::string filename, std::string headers);
         void createHTMLResponse(std::string page, std::string headers);
         void clearResponse();

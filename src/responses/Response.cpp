@@ -3,21 +3,21 @@
  * @author Mehrin Firdousi (mehrinfirdousi@gmail.com)
  * @brief Implementation of Response class
  * @date 2023-07-17
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 
 #include "responses/Response.hpp"
 #include "responses/DefaultPages.hpp"
-#include <ios>
 
 Response::Response() : _buffer(NULL), _length(0), _totalBytesSent(0), _statusCode(0)
 {
-
 }
 
-Response::Response(const Response& r) : _buffer(NULL), _length(r._length), _totalBytesSent(r._totalBytesSent), _statusCode(r._statusCode)
+Response::Response(const Response &r)
+    : _buffer(NULL), _length(r._length), _totalBytesSent(r._totalBytesSent),
+      _statusCode(r._statusCode)
 {
     if (this->_buffer != NULL)
         delete[] _buffer;
@@ -26,7 +26,7 @@ Response::Response(const Response& r) : _buffer(NULL), _length(r._length), _tota
         this->_buffer[i] = r._buffer[i];
 }
 
-Response& Response::operator=(const Response& r)
+Response &Response::operator=(const Response &r)
 {
     if (this != &r)
     {
@@ -42,7 +42,7 @@ Response& Response::operator=(const Response& r)
     return (*this);
 }
 
-char* Response::buffer()
+char *Response::buffer()
 {
     return _buffer;
 }
@@ -62,15 +62,24 @@ int Response::statusCode()
     return _statusCode;
 }
 
-
-void Response::setResponse(char *newBuf, size_t bufLen)
+void Response::addToByteCount(ssize_t bytesSent)
 {
-    if (_buffer != NULL)
-        delete[] _buffer;
-    _buffer = new char[bufLen];
-    for (size_t i = 0; i < _length; i++)
-        _buffer[i] = newBuf[i];
+    _totalBytesSent += bytesSent;
 }
+
+void Response::setByteCount(ssize_t bytesSent)
+{
+    _totalBytesSent = bytesSent;
+}
+
+// void Response::setResponse(char *newBuf, size_t bufLen)
+// {
+//     if (_buffer != NULL)
+//         delete[] _buffer;
+//     _buffer = new char[bufLen];
+//     for (size_t i = 0; i < _length; i++)
+//         _buffer[i] = newBuf[i];
+// }
 
 void Response::clearResponse()
 {
@@ -82,8 +91,38 @@ void Response::clearResponse()
     _statusCode = 0;
 }
 
-template <typename streamType>
-static size_t getStreamLen(streamType &s)
+int Response::sendResponse(int fd)
+{
+    ssize_t bytesSent;
+
+    if (_length == 0)
+    {
+        std::cout << "Connection is idle: " << fd << std::endl;
+        return IDLE_CONNECTION;
+    }
+    std::cout << "Sending a response... " << std::endl;
+    bytesSent = send(fd, _buffer + _totalBytesSent, _length - _totalBytesSent, 0);
+    if (bytesSent < 0)
+    {
+        std::cout << "Sending response failed: " << strerror(errno) << std::endl;
+        return SEND_FAIL;
+    }
+    else
+    {
+        _totalBytesSent += bytesSent;
+        if (_totalBytesSent < _length)   // partial send
+        {
+            std::cout << "Response only sent partially: " << bytesSent
+                      << ". Total: " << _totalBytesSent << std::endl;
+            return SEND_PARTIAL;
+        }
+    }
+    std::cout << "Response sent successfully to fd " << fd
+              << ", total bytes sent = " << _totalBytesSent << std::endl;
+    return SEND_SUCCESS;
+}
+
+template <typename streamType> static size_t getStreamLen(streamType &s)
 {
     size_t len;
 
@@ -110,9 +149,9 @@ void Response::createResponse(std::string filename, std::string headers)
     responseBuffer << fileLen << "\r\n\r\n";
     responseBuffer << file.rdbuf();
     file.close();
-    
+
     _length = getStreamLen(responseBuffer);
-    
+
     if (_buffer != NULL)
         delete[] _buffer;
     _buffer = new char[_length];
