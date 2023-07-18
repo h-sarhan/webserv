@@ -8,7 +8,6 @@
  *
  */
 
-// ! USE ITERATORS INSTEAD OF ARRAY INDICES
 #include "config/Tokenizer.hpp"
 #include "enums/conversions.hpp"
 #include <fstream>
@@ -24,10 +23,7 @@
  */
 Tokenizer::Tokenizer(const std::string &filename) : _line(0)
 {
-    std::ifstream configStream;
-
-    // Load file
-    configStream.open(filename.c_str());
+    std::ifstream configStream(filename.c_str());
 
     // Check if the file opened correctly
     if (!configStream)
@@ -76,7 +72,7 @@ void Tokenizer::tokenizeLine(std::string &lineStr, const unsigned int lineNum)
 
     for (tokenIterator it = wordsStart; it != tokenIterator(); it++)
     {
-        std::string wordStr = *it;
+        const std::string wordStr = *it;
         unsigned int wordPos;
         if (lineStream.tellg() == -1)
             wordPos = lineStr.length() - wordStr.length();
@@ -133,7 +129,7 @@ void Tokenizer::addWord(unsigned int &wordIdx, const std::string &wordStr,
     const std::string tokenStr = wordStr.substr(wordStart, wordEnd);
 
     // Check if the token is a reserved keyword
-    TokenType type = strToEnum<TokenType>(tokenStr);
+    const TokenType type = strToEnum<TokenType>(tokenStr);
 
     _tokens.push_back(Token(type, tokenStr, lineNum, column));
 }

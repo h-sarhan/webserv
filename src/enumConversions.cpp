@@ -9,7 +9,7 @@
  */
 
 #include "enums/HTTPMethods.hpp"
-#include "enums/RequestTypes.hpp"
+#include "enums/ResourceTypes.hpp"
 #include "enums/TokenTypes.hpp"
 #include "enums/conversions.hpp"
 
@@ -30,18 +30,18 @@ template <> std::string enumToStr(const HTTPMethod &enumVal)
     }
 }
 
-template <> std::string enumToStr(const RequestType &enumVal)
+template <> std::string enumToStr(const ResourceType &enumVal)
 {
     switch (enumVal)
     {
-    case FOUND:
-        return "FOUND";
+    case EXISTING_FILE:
+        return "EXISTING_FILE";
     case REDIRECTION:
         return "REDIRECTION";
     case NOT_FOUND:
         return "NOT_FOUND";
-    case METHOD_NOT_ALLOWED:
-        return "METHOD_NOT_ALLOWED";
+    case FORBIDDEN_METHOD:
+        return "FORBIDDEN_METHOD";
     case DIRECTORY:
         return "DIRECTORY";
     }
@@ -98,14 +98,14 @@ template <> HTTPMethod strToEnum<HTTPMethod>(const std::string &str)
     return OTHER;
 }
 
-template <> RequestType strToEnum<RequestType>(const std::string &str)
+template <> ResourceType strToEnum<ResourceType>(const std::string &str)
 {
-    static const std::string requestTypes[] = {"FOUND", "REDIRECTION", "METHOD_NOT_ALLOWED",
+    static const std::string requestTypes[] = {"EXISTING_FILE", "REDIRECTION", "FORBIDDEN_METHOD",
                                                "DIRECTORY", "NOT_FOUND"};
 
     for (size_t i = 0; i < sizeOfArray(requestTypes); i++)
         if (requestTypes[i] == str)
-            return static_cast<RequestType>(i);
+            return static_cast<ResourceType>(i);
     return NOT_FOUND;
 }
 

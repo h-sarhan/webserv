@@ -9,7 +9,7 @@
  */
 
 #include "network/Server.hpp"
-#include "enums/RequestTypes.hpp"
+#include "enums/ResourceTypes.hpp"
 #include "enums/conversions.hpp"
 #include "network/SystemCallException.hpp"
 #include "network/network.hpp"
@@ -142,22 +142,22 @@ void Server::sendResponse(size_t clientNo)
 
     if (c.request.requestLength() > 0)
     {
-        RequestTarget target = c.request.target(configBlocks[c.listener]);
-        std::cout << "resource found at: " << target.resource << std::endl;
-        std::cout << "request type: " << enumToStr(target.type) << std::endl;
-        switch (target.type)
+        Resource resource = c.request.resource(configBlocks[c.listener]);
+        std::cout << "resource found at: " << resource.path << std::endl;
+        std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+        switch (resource.type)
         {
-        case FOUND:
-            c.response = createResponse(target.resource, HTTP_HEADERS);
+        case EXISTING_FILE:
+            c.response = createResponse(resource.path, HTTP_HEADERS);
             break;
         case REDIRECTION:
-            c.response = createResponse(target.resource, HTTP_HEADERS);
+            c.response = createResponse(resource.path, HTTP_HEADERS);
             break;
-        case METHOD_NOT_ALLOWED:
+        case FORBIDDEN_METHOD:
             c.response = createHTMLResponse(errorPage(405), HTTP_HEADERS);
             break;
         case DIRECTORY:
-            c.response = createHTMLResponse(directoryListing(target.resource), HTTP_HEADERS);
+            c.response = createHTMLResponse(directoryListing(resource.path), HTTP_HEADERS);
             break;
         case NOT_FOUND:
             c.response = createHTMLResponse(errorPage(404), HTTP_HEADERS);

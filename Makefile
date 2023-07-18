@@ -10,7 +10,7 @@ RESPONSE_DIR = $(SRC_DIR)/responses
 
 CONFIG_SRC = Tokenizer.cpp Token.cpp Parser.cpp ParseError.cpp Validators.cpp ServerBlock.cpp
 NETWORK_SRC = Server.cpp ServerInfo.cpp Connection.cpp
-REQUEST_SRC = Request.cpp InvalidRequestError.cpp RequestTarget.cpp
+REQUEST_SRC = Request.cpp InvalidRequestError.cpp Resource.cpp
 RESPONSE_SRC = DefaultPages.cpp
 
 CONFIG_SRC := $(addprefix $(CONFIG_DIR)/, $(CONFIG_SRC))

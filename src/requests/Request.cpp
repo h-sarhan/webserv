@@ -22,13 +22,13 @@
 // ! Remove magic numbers
 
 Request::Request()
-    : _httpMethod(), _target(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
+    : _httpMethod(), _resourcePath(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
       _capacity(REQ_BUFFER_SIZE)
 {
 }
 
 Request::Request(const Request &req)
-    : _httpMethod(req.method()), _target(req._target), _headers(req._headers),
+    : _httpMethod(req.method()), _resourcePath(req._resourcePath), _headers(req._headers),
       _buffer(new char[req._capacity]), _length(req._length), _capacity(req._capacity)
 {
     // Deep copy
@@ -40,7 +40,7 @@ Request &Request::operator=(const Request &req)
     if (&req == this)
         return *this;
     _httpMethod = req._httpMethod;
-    _target = req._target;
+    _resourcePath = req._resourcePath;
     _headers = req._headers;
     _length = req._length;
     _capacity = req._capacity;
@@ -56,7 +56,7 @@ const HTTPMethod &Request::method() const
     return _httpMethod;
 }
 
-char *Request::buffer() const
+const char *Request::buffer() const
 {
     return _buffer;
 }
@@ -115,12 +115,12 @@ void Request::parseStartLine(std::stringstream &reqStream)
     _httpMethod = strToEnum<HTTPMethod>(httpMethod);
     assertThat(_httpMethod != OTHER, "Invalid start line");
 
-    // Parse the requested resource
-    _target = getNext<std::string>(reqStream);
-    assertThat(!_target.empty(), "Invalid start line");
+    // Parse the requested resource path
+    _resourcePath = getNext<std::string>(reqStream);
+    assertThat(!_resourcePath.empty(), "Invalid start line");
 
     // Clean the URL
-    sanitizeURL(_target);
+    sanitizeURL(_resourcePath);
 
     // Check HTTP version
     const std::string &httpVersion = getNext<std::string>(reqStream);
@@ -169,39 +169,41 @@ void Request::parseHeader(std::stringstream &reqStream)
     _headers.insert(std::make_pair(key, value));
 }
 
-std::string Request::userAgent()
+const std::string Request::userAgent() const
 {
-    return _headers["user-agent"].empty() ? "unknown" : _headers["user-agent"];
+    return _headers.count("user-agent") == 0 ? "unknown" : _headers.at("user-agent");
 }
 
 // ! This could be wrong if the HOST header only contains a port number
-std::string Request::host()
+// ! Needs testing
+const std::string Request::host() const
 {
-    const std::string &hostValue = _headers["host"];
-    if (hostValue.empty())
+    if (_headers.count("host") == 0)
         return "localhost";
+    const std::string &hostValue = _headers.at("host");
     return hostValue.substr(0, hostValue.find(":"));
 }
 
-std::map<std::string, std::string> &Request::headers()
+std::map<std::string, const std::string> &Request::headers()
 {
     return _headers;
 }
 
-bool Request::keepAlive()
+bool Request::keepAlive() const
 {
-    if (_headers["connection"].empty() || _headers["connection"] != "closed")
-        return true;
-    return false;
+    return _headers.count("connection") == 0 || _headers.at("connection") != "closed";
 }
 
-unsigned int Request::keepAliveTimer()
+unsigned int Request::keepAliveTimer() const
 {
     if (!keepAlive())
         return 0;
 
-    const std::string &keepAliveValue = _headers["keep-alive"];
-    if (keepAliveValue.empty() || keepAliveValue.find("timeout=") == std::string::npos)
+    if (_headers.count("keep-alive") == 0)
+        return 5;
+
+    const std::string &keepAliveValue = _headers.at("keep-alive");
+    if (keepAliveValue.find("timeout=") == std::string::npos)
         return 5;
 
     std::stringstream timeOutStream(keepAliveValue.substr(keepAliveValue.find("timeout=")));
@@ -213,14 +215,14 @@ unsigned int Request::keepAliveTimer()
 }
 
 // We might not use this function
-unsigned int Request::maxReconnections()
+unsigned int Request::maxReconnections() const
 {
     if (!keepAlive())
         return 1;
 
-    const std::string &keepAliveValue = _headers["keep-alive"];
-    if (keepAliveValue.empty())
+    if (_headers.count("keep-alive") == 0)
         return 20;
+    const std::string &keepAliveValue = _headers.at("keep-alive");
 
     std::stringstream maxConnStream(keepAliveValue.substr(keepAliveValue.find("max=")));
     getNext<std::string>(maxConnStream);
@@ -230,9 +232,9 @@ unsigned int Request::maxReconnections()
     return 20;
 }
 
-static bool matchTargetToRoute(std::string target, std::string route)
+static bool matchResourceToRoute(std::string resource, std::string route)
 {
-    return target.find(route) != std::string::npos;
+    return resource.find(route) != std::string::npos;
 }
 
 static void removeDoubleSlash(std::string &str)
@@ -245,8 +247,8 @@ static void removeDoubleSlash(std::string &str)
     }
 }
 
-const RequestTarget Request::getTargetFromServerConfig(std::string &match,
-                                                       const ServerBlock &serverConfig)
+const Resource Request::getResourceFromServerConfig(std::string &match,
+                                                    const ServerBlock &serverConfig) const
 {
     for (std::map<std::string, Route>::const_iterator routeIt = serverConfig.routes.begin();
          routeIt != serverConfig.routes.end(); routeIt++)
@@ -257,53 +259,52 @@ const RequestTarget Request::getTargetFromServerConfig(std::string &match,
             match = routeStr;
             continue;
         }
-        if (matchTargetToRoute(_target, routeStr) && routeStr.length() > match.length())
+        if (matchResourceToRoute(_resourcePath, routeStr) && routeStr.length() > match.length())
             match = routeStr;
     }
     if (match.length() == 0)
-        return RequestTarget(NOT_FOUND, "");
+        return Resource(NOT_FOUND, "");
     const Route &matchedRoute = serverConfig.routes.at(match);
     if (matchedRoute.methodsAllowed.count(_httpMethod) == 0)
-        return RequestTarget(METHOD_NOT_ALLOWED, "");
+        return Resource(FORBIDDEN_METHOD, "");
     if (matchedRoute.redirectTo.length() > 0)
-        return RequestTarget(REDIRECTION, matchedRoute.redirectTo);
+        return Resource(REDIRECTION, matchedRoute.redirectTo);
     if (matchedRoute.serveDir.length() > 0)
     {
-        std::string requestTarget = matchedRoute.serveDir + "/";
+        std::string resourcePath = matchedRoute.serveDir + "/" +
+                                   _resourcePath.substr(_resourcePath.find(match) + match.length());
 
-        std::string resource = _target.substr(_target.find(match) + match.length());
-        requestTarget += resource;
-        removeDoubleSlash(requestTarget);
-        // Check if the target exists
+        removeDoubleSlash(resourcePath);
+        // Check if the resource exists
         struct stat info;
-        if (stat(requestTarget.c_str(), &info) == 0)
+        if (stat(resourcePath.c_str(), &info) == 0)
         {
-            // Check if the target is a file or a directory
+            // Check if the resource is a file or a directory
             if (info.st_mode & S_IFREG)
-                return RequestTarget(FOUND, requestTarget, match);
+                return Resource(EXISTING_FILE, resourcePath);
             if (info.st_mode & S_IFDIR)
             {
                 if (matchedRoute.listDirectories == true)
-                    return RequestTarget(DIRECTORY, requestTarget, match);
+                    return Resource(DIRECTORY, resourcePath);
                 if (matchedRoute.listDirectoriesFile.empty())
-                    return RequestTarget(NOT_FOUND, "");
-                return RequestTarget(FOUND, matchedRoute.listDirectoriesFile, match);
+                    return Resource(NOT_FOUND, "");
+                return Resource(EXISTING_FILE, matchedRoute.listDirectoriesFile);
             }
         }
     }
-    return RequestTarget(NOT_FOUND, "");
+    return Resource(NOT_FOUND, "");
 }
 
-const RequestTarget Request::target(std::vector<ServerBlock *> serverBlocks)
+const Resource Request::resource(std::vector<ServerBlock *> &serverBlocks) const
 {
     std::string biggestMatch;
     for (std::vector<ServerBlock *>::iterator blockIt = serverBlocks.begin();
          blockIt != serverBlocks.end(); blockIt++)
     {
         if ((*blockIt)->hostname == host())
-            return getTargetFromServerConfig(biggestMatch, **blockIt);
+            return getResourceFromServerConfig(biggestMatch, **blockIt);
     }
-    return RequestTarget(NOT_FOUND, "");
+    return Resource(NOT_FOUND, "");
 }
 
 void Request::resizeBuffer(size_t newCapacity)
@@ -323,243 +324,14 @@ void Request::appendToBuffer(const char *data, size_t n)
     _length += n;
 }
 
-// very temporary clear method!!! MUST clear other stuff too here or else it will break!!!
 void Request::clear()
 {
     _length = 0;
     _headers.clear();
-    _target = "";
+    _resourcePath = "";
 }
 
 Request::~Request()
 {
     delete[] _buffer;
 }
-
-void requestBufferTests()
-{
-    Request req;
-    std::string reqStr = "PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
-                         "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
-                         "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost: webserv.com\r\n\r\n";
-
-    req.appendToBuffer(reqStr.c_str(), reqStr.length());
-
-    req.parseRequest();
-
-    assert(req.requestLength() == reqStr.length());
-    assert(req.method() == PUT);
-    assert(req.host() == "webserv.com");
-}
-
-// static void testSingleURLDecoding(const std::string &str1, const std::string &str2)
-// {
-//     (void) str2;
-//     std::string encodedURL = str1;
-//     decodeRequestURL(encodedURL);
-//     assert(encodedURL == str2);
-// }
-
-// static void testURLDecoding()
-// {
-//     testSingleURLDecoding("BIB+PAP", "BIB PAP");
-//     testSingleURLDecoding("BIB+PAP%20kdhbnlihbnd", "BIB PAP kdhbnlihbnd");
-//     testSingleURLDecoding("BIB+PAP%20kdhbnlihbnd%20%20%20%20", "BIB PAP kdhbnlihbnd    ");
-//     testSingleURLDecoding("%20 %20", "   ");
-//     testSingleURLDecoding("%20|%20", " | ");
-//     testSingleURLDecoding("cat%20Makefile|%20wc+-l", "cat Makefile| wc -l");
-//     testSingleURLDecoding("%yt%r%20++a", "%yt%r   a");
-// }
-
-// static bool testRequest(const std::string &rawRequest)
-// {
-//     try
-//     {
-//         Request request;
-//         request.parseRequest(rawRequest);
-//         return true;
-//     }
-//     catch (const std::exception &e)
-//     {
-//         return false;
-//     }
-// }
-
-// void requestParsingTests()
-// {
-//     (void) testRequest;
-
-//     // Start line fail tests
-//     assert(testRequest("") == false);
-//     assert(testRequest("GET\r\n\r\n") == false);
-//     assert(testRequest("GET \r\n\r\n") == false);
-//     assert(testRequest("GET fsfd\r\n\r\n") == false);
-//     assert(testRequest("GET fsfd HTTP/2.0\r\n\r\n") == false);
-//     assert(testRequest("GET  HTTP/1.0\r\n\r\n") == false);
-//     assert(testRequest("POSTT / HTTP/1.1\r\n\r\n") == false);
-
-//     // Start line pass tests
-//     assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
-//     assert(testRequest("GET fsfd HTTP/1.1\r\n\r\n") == true);
-//     assert(testRequest("GET fsfd HTTP/1.0\r\n\r\n") == true);
-//     assert(testRequest("POST / HTTP/1.1\r\n\r\n") == true);
-//     assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
-//     assert(testRequest("DELETE /fds HTTP/1.0\r\n\r\n") == true);
-
-//     // Empty body tests with no headers
-//     assert(testRequest("PUT /fds HTTP/1.0\r\n\r\n") == true);
-
-//     // Normal body test with no headers
-//     assert(testRequest("PUT /fds HTTP/1.0\r\n\r\nThis is a body") == true);
-
-//     // HTTP Method tests
-//     Request delReq;
-
-//     delReq.parseRequest("DELETE /fds HTTP/1.0\r\n\r\n");
-//     assert(delReq.method() == DELETE);
-
-//     Request getReq;
-
-//     getReq.parseRequest("GET /fds HTTP/1.0\r\n\r\n");
-//     assert(getReq.method() == GET);
-
-//     Request postReq;
-
-//     postReq.parseRequest("POST /fds HTTP/1.0\r\n\r\n");
-//     assert(postReq.method() == POST);
-
-//     Request putReq;
-
-//     putReq.parseRequest("PUT /fds HTTP/1.0\r\n\r\n");
-//     assert(putReq.method() == PUT);
-
-//     // Header tests
-//     assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
-//                        "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
-//                        "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost: webserv.com\r\n\r\n") ==
-//            true);
-//     assert(testRequest("PUT gerp HTTP/1.0\r\nContent-Length: 1000\r\nTransfer-encoding: "
-//                        "chunked\r\nUser-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; "
-//                        "rv:50.0) Gecko/20100101 Firefox/50.0\r\nHost webserv.com\r\n\r\n") ==
-//            false);
-
-//     // Test big GET with a bunch of headers and body should pass
-//     assert(
-//         testRequest("GET /favicon.ico HTTP/1.1\r\n"
-//                     "Host: localhost:1234\r\nConnection: keep-alive\r\n"
-//                     "sec-ch-ua-mobile: ?0\r\n"
-//                     "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)\r\n"
-//                     "Accept:
-//                     image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8\r\n"
-//                     "Referer: http://localhost:1234/\r\n"
-//                     "Accept-Encoding: gzip, deflate, br\r\n"
-//                     "Accept-Language: en-US,en;q=0.9,ar-XB;q=0.8,ar;q=0.7\r\n\r\nergrere") ==
-//                     true);
-
-//     const char *getReqStr = "GET meme.jpeg HTTP/1.1\r\n"
-//                             "Host: webserv.com:1234\r\n"
-//                             "Connection: Keep-Alive\r\n"
-//                             "Content-Encoding: gzip\r\n"
-//                             "Content-Type: text/html; charset=utf-8\r\n"
-//                             "Date: Thu, 11 Aug 2016 15:23:13 GMT\r\n"
-//                             "Keep-Alive: timeout=5, max=1000\r\n"
-//                             "Last-Modified: Mon, 25 Jul 2016 04:32:39 GMT\r\n"
-//                             "Server: Apache\r\n\r\nmeh";
-
-//     Request getReqTest;
-
-//     getReqTest.parseRequest(getReqStr);
-
-//     assert(getReqTest.keepAlive() == true);
-//     assert(getReqTest.keepAliveTimer() == 5);
-//     // assert(getReqTest.body() == "meh");
-//     assert(getReqTest.host() == "webserv.com");
-//     assert(getReqTest.maxReconnections() == 100);
-//     assert(getReqTest.method() == GET);
-//     assert(getReqTest.userAgent() == "unknown");
-
-//     // Test big GET with a bunch of headers and body should fail
-//     assert(
-//         testRequest(
-//             "GET /favicon.ico HTTP/1.1\r\nHost: localhost:1234\r\n: "
-//             "keep-alive\r\nsec-ch-ua: "
-//             "\"Not_A Brand\";v=\"99\", \"Google Chrome\";v=\"109\", "
-//             "\"Chromium\";v=\"109\"\r\nsec-ch-ua-mobile: ?0\r\nUser-Agent: Mozilla/5.0
-//             (Macintosh; " "Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)
-//             Chrome/109.0.0.0 " "Safari/537.36\r\nsec-ch-ua-platform: \"macOS\"\r\nAccept: "
-//             "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8\r\nSec-Fetch-Site:
-//             " "same-origin\r\nSec-Fetch-Mode: no-cors\r\nSec-Fetch-Dest: image\r\nReferer: "
-//             "http://localhost:1234/\r\nAccept-Encoding: gzip, deflate, br\r\nAccept-Language: "
-//             "en-US,en;q=0.9,ar-XB;q=0.8,ar;q=0.7\r\n\r\n") == false);
-
-//     const std::string &getCashew1 = "GET /cashew/ HTTP/1.1\r\nHost: webserv\r\n\r\n";
-
-//     Request req;
-//     req.parseRequest(getCashew1);
-//     Parser parser("target_tests.conf");
-//     RequestTarget target = req.target(parser.getConfig());
-//     assert(target.type == REDIRECTION);
-//     assert(target.resource.find("1") != std::string::npos);
-
-//     const std::string &getCashew2 = "GET /cashews/milk.html HTTP/1.1\r\nHost: webserv\r\n\r\n";
-//     req.parseRequest(getCashew2);
-//     target = req.target(parser.getConfig());
-//     assert(target.type == REDIRECTION);
-//     assert(target.resource.find("2") != std::string::npos);
-
-//     const std::string &getCashew3 =
-//         "GET /cashews/honey/cake/bottom.html HTTP/1.1\r\nHost: webserv\r\n\r\n";
-//     req.parseRequest(getCashew3);
-//     target = req.target(parser.getConfig());
-//     assert(target.type == REDIRECTION);
-//     assert(target.resource.find("3") != std::string::npos);
-
-//     const std::string &getCashew4 = "GET /cashews/juice HTTP/1.1\r\nHost: webserv\r\n\r\n";
-//     req.parseRequest(getCashew4);
-//     target = req.target(parser.getConfig());
-//     assert(target.type == REDIRECTION);
-//     assert(target.resource.find("4") != std::string::npos);
-
-//     const std::string &getCashew4Again = "GET /cashews/juice/ HTTP/1.1\r\nHost: webserv\r\n\r\n";
-//     req.parseRequest(getCashew4Again);
-//     target = req.target(parser.getConfig());
-//     assert(target.type == REDIRECTION);
-//     assert(target.resource.find("4") != std::string::npos);
-
-//     const std::string &getCashew2Again =
-//         "GET /cashews/juicekiuhb HTTP/1.1\r\nHost: webserv\r\n\r\n";
-//     req.parseRequest(getCashew2Again);
-//     target = req.target(parser.getConfig());
-//     assert(target.type == REDIRECTION);
-//     assert(target.resource.find("2") != std::string::npos);
-
-//     const std::string &getCashew6 = "GET /cashews/honey/cak HTTP/1.1\r\nHost: webserv\r\n\r\n";
-//     req.parseRequest(getCashew6);
-//     target = req.target(parser.getConfig());
-//     assert(target.type == REDIRECTION);
-//     assert(target.resource.find("6") != std::string::npos);
-
-//     const std::string &getAssets = "GET /Bobby.html HTTP/1.1\r\nHost: rew\r\n\r\n";
-//     Request reqAssets;
-//     reqAssets.parseRequest(getAssets);
-//     target = reqAssets.target(parser.getConfig());
-//     assert(target.type == NOT_FOUND);
-
-//     const std::string &getDir = "GET /artgallerycontent HTTP/1.1\r\nHost: rew\r\n\r\n";
-//     reqAssets.parseRequest(getDir);
-//     target = reqAssets.target(parser.getConfig());
-//     assert(target.type == DIRECTORY);
-//     assert(target.resource == "./assets/artgallerycontent");
-
-//     const std::string &deleteAssets = "DELETE /Bobby.html HTTP/1.1\r\nHost: rew\r\n\r\n";
-//     reqAssets.parseRequest(deleteAssets);
-//     target = reqAssets.target(parser.getConfig());
-//     assert(target.type == METHOD_NOT_ALLOWED);
-
-//     const std::string &getImg = "GET /artgallerycontent/2020_3.JPG HTTP/1.1\r\nHost:
-//     rew\r\n\r\n"; reqAssets.parseRequest(getImg); target = reqAssets.target(parser.getConfig());
-//     assert(target.type == FOUND);
-//     assert(target.resource == "./assets/artgallerycontent/2020_3.JPG");
-
-//     testURLDecoding();
-// }

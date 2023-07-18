@@ -13,7 +13,7 @@
 
 #include "config/ServerBlock.hpp"
 #include "enums/HTTPMethods.hpp"
-#include "requests/RequestTarget.hpp"
+#include "requests/Resource.hpp"
 #include <map>
 
 #define REQ_BUFFER_SIZE 2000
@@ -31,8 +31,8 @@ class Request
 {
   private:
     HTTPMethod _httpMethod;
-    std::string _target;
-    std::map<std::string, std::string> _headers;
+    std::string _resourcePath;
+    std::map<std::string, const std::string> _headers;
     char *_buffer;
     size_t _length;
     size_t _capacity;
@@ -42,39 +42,36 @@ class Request
   public:
     Request();
 
-    // Returns false if the request does not contain the full headers
-    // Throws InvalidRequestError if the request is detected to be invalid
-    bool parseRequest();
-
     Request(const Request &req);
     Request &operator=(const Request &req);
     ~Request();
 
+    // Returns false if the request does not contain the full headers
+    // Throws InvalidRequestError if the request is detected to be invalid
+    bool parseRequest();
     const HTTPMethod &method() const;
 
-    char *buffer() const;
+    const char *buffer() const;
     size_t requestLength() const;
-
-    const RequestTarget target(std::vector<ServerBlock *> config);
 
     void appendToBuffer(const char *data, size_t n);
 
-    // ! Make these const when im not tired
-    // ! CACHE THESE
-    std::string userAgent();
-    std::string host();
-    std::map<std::string, std::string> &headers();
-    bool keepAlive();
-    unsigned int keepAliveTimer();
-    unsigned int maxReconnections();
+    std::map<std::string, const std::string> &headers();
+    const std::string userAgent() const;
+    const std::string host() const;
+    bool keepAlive() const;
+    unsigned int keepAliveTimer() const;
+    unsigned int maxReconnections() const;
+    const Resource resource(std::vector<ServerBlock *> &config) const;
+
     void clear();
 
   private:
     void parseStartLine(std::stringstream &reqStream);
     void parseHeader(std::stringstream &reqStream);
     void checkLineEnding(std::stringstream &reqStream);
-    const RequestTarget getTargetFromServerConfig(std::string &biggestMatch,
-                                                  const ServerBlock &serverConfig);
+    const Resource getResourceFromServerConfig(std::string &biggestMatch,
+                                               const ServerBlock &serverConfig) const;
     void checkStream(const std::stringstream &reqStream, const std::string &token,
                      const std::string &errMsg);
     void checkEOF(const std::stringstream &reqStream);
