@@ -112,3 +112,17 @@ std::ostream &operator<<(std::ostream &os, const std::vector<ServerBlock> &confi
         os << *it;
     return os;
 }
+
+MatchHostName::MatchHostName(const std::string &hostname) : _hostname(hostname)
+{
+}
+
+bool MatchHostName::operator()(const ServerBlock *serverBlock)
+{
+    return serverBlock && _hostname == serverBlock->hostname;
+}
+
+bool MatchHostName::operator()(const ServerBlock &serverBlock)
+{
+    return _hostname == serverBlock.hostname;
+}

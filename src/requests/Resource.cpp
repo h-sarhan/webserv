@@ -10,8 +10,12 @@
 
 #include "requests/Resource.hpp"
 
-// ! Document this
-Resource::Resource(const ResourceType &type, const std::string &resource)
-    : type(type), path(resource)
+/**
+ * @brief Construct a new Resource object
+ *
+ * @param type Type of the resource
+ * @param path Path to the resource
+ */
+Resource::Resource(const ResourceType &type, const std::string &path) : type(type), path(path)
 {
 }

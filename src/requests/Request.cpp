@@ -24,7 +24,7 @@
  * @brief Construct a new Request object
  */
 Request::Request()
-    : _httpMethod(), _resourcePath(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
+    : _httpMethod(), _requestedURL(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
       _capacity(REQ_BUFFER_SIZE), _valid(true)
 {
 }
@@ -35,7 +35,7 @@ Request::Request()
  * @param req Request object to copy from
  */
 Request::Request(const Request &req)
-    : _httpMethod(req.method()), _resourcePath(req._resourcePath), _headers(req._headers),
+    : _httpMethod(req.method()), _requestedURL(req._requestedURL), _headers(req._headers),
       _buffer(new char[req._capacity]), _length(req._length), _capacity(req._capacity),
       _valid(req._valid)
 {
@@ -53,7 +53,7 @@ Request &Request::operator=(const Request &req)
     if (&req == this)
         return *this;
     _httpMethod = req._httpMethod;
-    _resourcePath = req._resourcePath;
+    _requestedURL = req._requestedURL;
     _headers = req._headers;
     _length = req._length;
     _capacity = req._capacity;
@@ -114,28 +114,22 @@ void Request::assertThat(bool condition, const std::string &throwMsg) const
  */
 bool Request::parseRequest()
 {
-    // Check if the buffer is empty
+    // Check if the buffer is empty or if the request has already been processed
     if (_length == 0)
         return false;
-
-    // Check if the request has already been processed
     if (!_headers.empty())
         return true;
 
-    // Search for double CRLF in the request buffer
+    // Search for double CRLF in the request buffer, return false if not recieved
     const char doubleCRLF[] = "\r\n\r\n";
     char *bodyStart = std::search(_buffer, _buffer + _length, doubleCRLF,
                                   doubleCRLF + sizeOfArray(doubleCRLF) - 1);
-
-    // Check if the headers have been fully recieved
     if (bodyStart == _buffer + _length)
         return false;
 
-    // If double CRLF is found then we form a string starting from the beginning of the request till
-    // the last header
+    // If double CRLF is found then we form a stringstream starting from the beginning of the
+    // request till the last header
     const std::string requestHead(_buffer, bodyStart + 2);
-
-    // Create a stream containing the start line and headers
     std::stringstream requestStream(requestHead);
 
     try
@@ -174,11 +168,11 @@ void Request::parseStartLine(std::stringstream &reqStream)
     assertThat(_httpMethod != OTHER, "Invalid HTTP method in start line");
 
     // Parse the requested resource path
-    _resourcePath = getNext<std::string>(reqStream);
-    assertThat(!_resourcePath.empty(), "Invalid resource in start line");
+    _requestedURL = getNext<std::string>(reqStream);
+    assertThat(!_requestedURL.empty(), "Invalid resource in start line");
 
     // Clean the resource URL
-    sanitizeURL(_resourcePath);
+    sanitizeURL(_requestedURL);
 
     // Check HTTP version
     const std::string &httpVersion = getNext<std::string>(reqStream);
@@ -338,32 +332,47 @@ unsigned int Request::maxReconnections() const
     return DEFAULT_RECONNECTIONS;
 }
 
-const Resource Request::getResourceFromServerConfig(std::string &match,
-                                                    const ServerBlock &serverConfig) const
+std::string Request::getMatchingRoute(const std::map<std::string, Route> &routes) const
 {
-    for (std::map<std::string, Route>::const_iterator routeIt = serverConfig.routes.begin();
-         routeIt != serverConfig.routes.end(); routeIt++)
+    std::string matchedLocation;
+    // for (std::map<std::string, Route>::const_iterator routeIt = routes.begin();
+    //      routeIt != routes.end(); routeIt++)
+    // {
+    //     std::string routeStr = routeIt->first;
+    //     if (routeStr == "/")
+    //     {
+    //         matchedLocation = routeStr;
+    //         continue;
+    //     }
+    //     if (_resourcePath.find(routeStr) != std::string::npos &&
+    //         routeStr.length() > matchedLocation.length())
+    //         matchedLocation = routeStr;
+    // }
+    for (std::map<std::string, Route>::const_iterator it = routes.begin(); it != routes.end(); it++)
     {
-        std::string routeStr = routeIt->first;
-        if (routeStr == "/")
-        {
-            match = routeStr;
-            continue;
-        }
-        if (_resourcePath.find(routeStr) != std::string::npos && routeStr.length() > match.length())
-            match = routeStr;
+        // Two conditions need to be true in order for matchedLocation to equal it->first
+        // 1. _requestedURL has to start with it->first
+        // 2. it->first has to be greater than matchedLocation.length()
     }
-    if (match.length() == 0)
+    return matchedLocation;
+}
+
+const Resource Request::matchResource(const std::map<std::string, Route> &routes) const
+{
+    const std::string &location = getMatchingRoute(routes);
+    if (location.length() == 0)
         return Resource(NOT_FOUND, "");
-    const Route &matchedRoute = serverConfig.routes.at(match);
-    if (matchedRoute.methodsAllowed.count(_httpMethod) == 0)
+
+    const Route &route = routes.at(location);
+    if (route.methodsAllowed.count(_httpMethod) == 0)
         return Resource(FORBIDDEN_METHOD, "");
-    if (matchedRoute.redirectTo.length() > 0)
-        return Resource(REDIRECTION, matchedRoute.redirectTo);
-    if (matchedRoute.serveDir.length() > 0)
+    if (route.redirectTo.length() > 0)
+        return Resource(REDIRECTION, route.redirectTo);
+    if (route.serveDir.length() > 0)
     {
-        std::string resourcePath = matchedRoute.serveDir + "/" +
-                                   _resourcePath.substr(_resourcePath.find(match) + match.length());
+        std::string resourcePath =
+            route.serveDir + "/" +
+            _requestedURL.substr(_requestedURL.find(location) + location.length());
 
         removeDuplicateChar(resourcePath, '/');
         // Check if the resource exists
@@ -375,31 +384,43 @@ const Resource Request::getResourceFromServerConfig(std::string &match,
                 return Resource(EXISTING_FILE, resourcePath);
             if (info.st_mode & S_IFDIR)
             {
-                if (matchedRoute.listDirectories == true)
+                if (route.listDirectories == true)
                     return Resource(DIRECTORY, resourcePath);
-                if (matchedRoute.listDirectoriesFile.empty())
+                if (route.listDirectoriesFile.empty())
                     return Resource(NOT_FOUND, "");
-                return Resource(EXISTING_FILE, matchedRoute.listDirectoriesFile);
+                return Resource(EXISTING_FILE, route.listDirectoriesFile);
             }
         }
     }
     return Resource(NOT_FOUND, "");
 }
 
-const Resource Request::resource(std::vector<ServerBlock *> &serverBlocks) const
+/**
+ * @brief Get the resource that was requested by the client
+ *
+ * @param config Configuration to scan through
+ * @return const Resource The resource requested
+ */
+const Resource Request::resource(const std::vector<ServerBlock *> &config) const
 {
     if (!_valid)
         return Resource(INVALID_REQUEST);
-    std::string biggestMatch;
-    for (std::vector<ServerBlock *>::iterator blockIt = serverBlocks.begin();
-         blockIt != serverBlocks.end(); blockIt++)
-    {
-        if ((*blockIt)->hostname == hostname())
-            return getResourceFromServerConfig(biggestMatch, **blockIt);
-    }
-    return Resource(NOT_FOUND, "");
+
+    // Find server block with the correct hostname
+    std::vector<ServerBlock *>::const_iterator matchedServerBlock =
+        std::find_if(config.begin(), config.end(), MatchHostName(hostname()));
+
+    // If no server block matches the hostname then return a NOT_FOUND resource
+    if (matchedServerBlock == config.end())
+        return Resource(NOT_FOUND, "");
+    return matchResource((*matchedServerBlock)->routes);
 }
 
+/**
+ * @brief Resize buffer to new capacity
+ *
+ * @param newCapacity The new buffer capacity
+ */
 void Request::resizeBuffer(size_t newCapacity)
 {
     char *newBuffer = new char[newCapacity];
@@ -409,6 +430,12 @@ void Request::resizeBuffer(size_t newCapacity)
     _capacity = newCapacity;
 }
 
+/**
+ * @brief Append new request data to buffer, resizing if necessary
+ *
+ * @param data New request data
+ * @param n Amount of bytes to add
+ */
 void Request::appendToBuffer(const char *data, const size_t n)
 {
     if (_length + n >= _capacity)
@@ -417,15 +444,21 @@ void Request::appendToBuffer(const char *data, const size_t n)
     _length += n;
 }
 
+/**
+ * @brief Clear properties of the request
+ */
 void Request::clear()
 {
     _headers.clear();
-    _resourcePath.clear();
+    _requestedURL.clear();
     _length = 0;
     _httpMethod = OTHER;
     _valid = true;
 }
 
+/**
+ * @brief Destroy the Request object
+ */
 Request::~Request()
 {
     delete[] _buffer;

@@ -141,4 +141,9 @@ const std::string getLine(const std::string &filename, const unsigned int lineNu
  */
 void removeDuplicateChar(std::string &str, const char c);
 
+/**
+ * @brief Returns true when str1 starts with str2
+ */
+bool startsWith(const std::string &str1, const std::string &str2);
+
 #endif

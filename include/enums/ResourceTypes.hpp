@@ -11,8 +11,6 @@
 #ifndef RESOURCE_TYPES_HPP
 #define RESOURCE_TYPES_HPP
 
-#include <string>
-
 /**
  * @brief The types of resources that we can respond with
  */

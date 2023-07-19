@@ -16,10 +16,10 @@
 #include "requests/Resource.hpp"
 #include <map>
 
+#define DEFAULT_HOSTNAME        "localhost"
 #define REQ_BUFFER_SIZE         2000
 #define DEFAULT_KEEP_ALIVE_TIME 5
 #define MAX_KEEP_ALIVE_TIME     20
-#define DEFAULT_HOSTNAME        "localhost"
 #define MAX_RECONNECTIONS       20
 #define DEFAULT_RECONNECTIONS   20
 
@@ -30,7 +30,7 @@ class Request
 {
   private:
     HTTPMethod _httpMethod;
-    std::string _resourcePath;
+    std::string _requestedURL;
     std::map<std::string, const std::string> _headers;
     char *_buffer;
     size_t _length;
@@ -52,20 +52,22 @@ class Request
     const HTTPMethod &method() const;
     const char *buffer() const;
     size_t requestLength() const;
+    // ! Make this const
     std::map<std::string, const std::string> &headers();
-    // ! Cache these getters
+    // !! Cache these getters
     const std::string hostname() const;      // might end up being private
     bool keepAlive() const;                  // might not need this
     unsigned int keepAliveTimer() const;     // might not need this
     unsigned int maxReconnections() const;   // might not need this
-    // ! Implement this method
-    // ! size_t bodySize() const;
+    // !! Implement this method
+    // !! size_t bodySize() const;
 
     // Appends request data to the internal buffer
     void appendToBuffer(const char *data, const size_t n);
 
+    // !! Cache this
     // Returns a resource object associated with the request
-    const Resource resource(std::vector<ServerBlock *> &config) const;
+    const Resource resource(const std::vector<ServerBlock *> &config) const;
 
     // Clears the attributes of this request
     void clear();
@@ -80,9 +82,12 @@ class Request
     // Checks if a line ends with \r\n. Throws an exception otherwise
     void checkLineEnding(std::stringstream &reqStream);
 
-    // ! To be refactored
-    const Resource getResourceFromServerConfig(std::string &biggestMatch,
-                                               const ServerBlock &serverConfig) const;
+    void extracted(const std::map<std::string, Route> &routes, std::string &match) const;
+
+    // ! Make this const
+    std::string getMatchingRoute(const std::map<std::string, Route> &routes) const;
+
+    const Resource matchResource(const std::map<std::string, Route> &routes) const;
 
     // Resizes the internal buffer
     void resizeBuffer(size_t newCapacity);
@@ -91,7 +96,7 @@ class Request
     void assertThat(bool condition, const std::string &throwMsg) const;
 };
 
-// ! Move these
+// !! Move these
 // void requestParsingTests();
 void requestBufferTests();
 

@@ -11,8 +11,6 @@
 #ifndef HTTP_METHODS_HPP
 #define HTTP_METHODS_HPP
 
-#include <string>
-
 /**
  * @brief The HTTP methods that our server handles
  */

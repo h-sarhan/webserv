@@ -12,13 +12,21 @@
 #define RESOURCE_HPP
 
 #include "enums/ResourceTypes.hpp"
+#include <string>
 
-// ! Document
 // ! Give this class access to the route the request belongs to
+/**
+ * @brief This struct represents a resource requested by a client
+ */
 struct Resource
 {
+    // Create a resource object with a given type and path
     Resource(const ResourceType &type, const std::string &path = "");
+
+    // Type of the resource
     ResourceType type;
+
+    // Path to resource
     std::string path;
 };
 #endif

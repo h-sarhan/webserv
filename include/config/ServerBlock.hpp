@@ -25,8 +25,8 @@ struct Route
     std::string serveDir;                  // Required
     size_t bodySize;                       // Optional
     bool listDirectories;                  // Optional, false by default
-    std::string listDirectoriesFile;       // Optional
     std::set<std::string> cgiExtensions;   // Optional
+    std::string listDirectoriesFile;       // Optional
     std::string redirectTo;                // Required if serveDir is not provided
     std::set<HTTPMethod> methodsAllowed;   // Methods allowed on this route
 };
@@ -51,5 +51,19 @@ std::ostream &operator<<(std::ostream &os, const ServerBlock &block);
 
 // Print entire configuration
 std::ostream &operator<<(std::ostream &os, const std::vector<ServerBlock> &config);
+
+/**
+ * @brief Function object to match a ServerBlock * against a HostName.
+ * For use with C++ standard library algorithms
+ */
+struct MatchHostName
+{
+    MatchHostName(const std::string &hostname);
+    bool operator()(const ServerBlock *serverBlock);
+    bool operator()(const ServerBlock &serverBlock);
+
+  private:
+    const std::string &_hostname;
+};
 
 #endif
