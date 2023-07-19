@@ -55,7 +55,7 @@ int ServerInfo::bindSocketToPort()
 
     for (p = info; p != NULL; p = p->ai_next)
     {
-        listenerFd = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
+        listenerFd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
         if (listenerFd == -1)
             std::cout << "socket: " << strerror(errno) << std::endl;
         else
@@ -65,7 +65,7 @@ int ServerInfo::bindSocketToPort()
             SystemCallException::checkErr(
                 "setsockopt",
                 setsockopt(listenerFd, SOL_SOCKET, SO_REUSEADDR, &reusePort, sizeof(reusePort)));
-            if (bind(listenerFd, info->ai_addr, info->ai_addrlen) != -1)
+            if (bind(listenerFd, p->ai_addr, p->ai_addrlen) != -1)
                 break;
             std::cout << "bind: " << strerror(errno) << std::endl;
             close(listenerFd);

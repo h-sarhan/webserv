@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/19 18:34:20 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/19 22:21:43 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,6 +84,7 @@ void Connection::processRequest(std::vector<ServerBlock *> &config)
     if (request.requestLength() == 0)
         return;
     RequestTarget target = request.target(config);
+    std::cout << "method type: " << request.method() << std::endl;
     std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
     std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
     keepAlive = request.keepAlive();
@@ -95,7 +96,7 @@ void Connection::processRequest(std::vector<ServerBlock *> &config)
         response.createResponse(target.resource, headers);
         break;
     case REDIRECTION:
-        response.createResponse(target.resource, headers);
+        response.createRedirectResponse(target.resource, keepAlive);
         break;
     case METHOD_NOT_ALLOWED:
         response.createHTMLResponse(errorPage(405), headers);

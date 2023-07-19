@@ -26,6 +26,7 @@
 # define STATUS_LINE "HTTP/1.1 "
 # define CONTENT_TYPE "Content-Type: "
 # define CONTENT_LEN "Content-Length: "
+# define LOCATION "Location: "
 # define KEEP_ALIVE "Connection: keep-alive\r\n"
 
 // content types
@@ -37,11 +38,10 @@
 // status codes
 # define OK_200 "200 OK\r\n"
 # define NOTFOUND_404 "404 Not found\r\n"
+# define FOUND_302 "302 Found\r\n"
 
 #define IMG_HEADERS  "HTTP/1.1 200 OK\r\nContent-Type: image/jpg\r\nContent-Length: "
 #define HTTP_HEADERS "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n"
-
-// typedef std::ios_base::streampos f_size;
 
 class Response
 {
@@ -61,6 +61,7 @@ class Response
         int statusCode();
         // void setResponse(char *newBuf, size_t bufLen);
         int sendResponse(int fd);
+        void createRedirectResponse(std::string& redirUrl, bool keepAlive);
         void createResponse(std::string filename, std::string& headers);
         void createHTMLResponse(std::string page, std::string& headers);
         void clear();

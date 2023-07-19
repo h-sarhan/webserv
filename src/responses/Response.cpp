@@ -123,9 +123,24 @@ template <typename streamType> static size_t getStreamLen(streamType &s)
     return len;
 }
 
+void Response::createRedirectResponse(std::string& redirUrl, bool keepAlive)
+{
+    std::stringstream responseBuffer;
+
+    responseBuffer << STATUS_LINE << FOUND_302;
+    responseBuffer << LOCATION << redirUrl << "\r\n";
+    if (keepAlive)
+        responseBuffer << KEEP_ALIVE;
+    responseBuffer << CONTENT_LEN << "0" << "\r\n\r\n";
+    _length = getStreamLen(responseBuffer);
+    if (_buffer != NULL)
+        delete[] _buffer;
+    _buffer = new char[_length];
+    responseBuffer.read(_buffer, _length);
+}
+
 void Response::createResponse(std::string filename, std::string& headers)
 {
-    std::string headers;
     std::ifstream file;
     std::stringstream responseBuffer;
     std::string fileContents;
