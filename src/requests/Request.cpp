@@ -60,14 +60,14 @@ static void trimWhitespace(std::string &str)
 }
 
 Request::Request()
-    : _httpMethod(), _target(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
+    : _httpMethod(), _target(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _bodyStart(0), _length(0),
       _capacity(REQ_BUFFER_SIZE)
 {
 }
 
 Request::Request(const Request &req)
     : _httpMethod(req.method()), _target(req._target), _headers(req._headers),
-      _length(req._length), _capacity(req._capacity)
+      _bodyStart(req._bodyStart), _length(req._length), _capacity(req._capacity)
 {
     _buffer = new char[REQ_BUFFER_SIZE];
     for (size_t i = 0; i < _length; i++)
@@ -81,7 +81,7 @@ Request &Request::operator=(const Request &req)
     _httpMethod = req._httpMethod;
     _target = req._target;
     _headers = req._headers;
-    // _buffer = req._buffer;   // * Shallow copy
+    _bodyStart = req._bodyStart;
     _length = req._length;
     _capacity = req._capacity;
     delete[] _buffer;
@@ -99,6 +99,11 @@ const HTTPMethod &Request::method() const
 char *Request::buffer() const
 {
     return _buffer;
+}
+
+size_t Request::bodyStart() const
+{
+    return _bodyStart;
 }
 
 size_t Request::requestLength() const
@@ -119,6 +124,7 @@ bool Request::parseRequest()
         return false;
     else
         reqStream.str(req.substr(0, bodyStart + 2));
+    _bodyStart = bodyStart + 4;
     parseStartLine(reqStream);
     while (reqStream.peek() != '\r' && !reqStream.eof())
         parseHeader(reqStream);

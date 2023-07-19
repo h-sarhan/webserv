@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/19 14:59:12 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/19 18:34:20 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,28 +14,16 @@
 #include "requests/Request.hpp"
 #include "responses/DefaultPages.hpp"
 
-// Connection::Connection()
-//     : listener(-1), request(), response()
-// {
-// }
 Connection::Connection()
     : listener(-1), request(), response(), keepAlive(false), timeOut(0), startTime(0)
 {
 }
 
-// Connection::Connection(int listener)
-//     : listener(listener), request(), response()
-// {
-// }
 Connection::Connection(int listener)
     : listener(listener), request(), response(), keepAlive(false), timeOut(0), startTime(0)
 {
 }
 
-// Connection::Connection(const Connection &c)
-//     : listener(c.listener), request(c.request), response(c.response)
-// {
-// }
 Connection::Connection(const Connection &c)
     : listener(c.listener), request(c.request), response(c.response), keepAlive(c.keepAlive),
       timeOut(c.timeOut), startTime(c.startTime)
@@ -127,7 +115,6 @@ bool Connection::keepConnectionAlive()
     if (!keepAlive)
         return false;
     std::cout << "Connection is keep alive" << std::endl;
-    // request.clear();
     response.clear();
     time(&startTime);   // reset timer
     return true;

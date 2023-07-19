@@ -28,7 +28,6 @@ Server::Server(serverList virtualServers)
         if (portAlreadyInUse(it->port))
             continue;
         std::cout << "Setting up listener on port " << it->port << std::endl;
-        // initListener(getServerBlocks(it->port, virtualServers));
         initListener(it->port, virtualServers);
     }
 }
@@ -68,37 +67,6 @@ void Server::initListener(unsigned int port, serverList virtualServers)
     listenerFd = servInfo.bindSocketToPort();
     sockets.push_back(createPollFd(listenerFd, POLLIN));
     configBlocks.insert(std::make_pair(listenerFd, config));
-}
-
-// change this to use fd directly and close stuff in caller func
-void Server::readBody(size_t clientNo)
-{
-    Request &req = cons.at(sockets[clientNo].fd).request;
-
-    if (req.headers().count("content-length"))
-    {
-        std::istringstream iss(req.headers()["content-length"]);
-        size_t contentLen;
-        iss >> contentLen;
-        if (req.requestLength() != contentLen)
-            return;
-        // return here so that we dont set the events to start responding
-    }
-    else if (req.headers().count("transfer-encoding"))
-    {
-        // handle chunked transfer encoding
-        // here req.buffer() may contain a couple of chunks already or at least one
-        // my job here would be to extract the chunked data
-        // this means to skip over the chunk sizes at the start of a chunk and CRLF at the end
-
-        // if chunk size is not 0, return
-        // return here so that we dont set the events to start responding
-    }
-    std::cout << "Full request size: " << req.requestLength() << std::endl;
-    sockets[clientNo].events = POLLIN | POLLOUT;
-    std::cout << "---------------------------------------------------------\n";
-    std::cout << std::string(req.buffer(), req.buffer() + req.requestLength());
-    std::cout << "---------------------------------------------------------\n";
 }
 
 void Server::closeConnection(int clientNo)
@@ -142,16 +110,69 @@ static void sigInthandler(int sigNo)
     quit = true;
 }
 
+// change this to use fd directly and close stuff in caller func
+void Server::readBody(size_t clientNo)
+{
+    Request &req = cons.at(sockets[clientNo].fd).request;
+
+    if (req.headers().count("content-length"))
+    {
+        std::istringstream iss(req.headers()["content-length"]);
+        size_t contentLen;
+        iss >> contentLen;
+        // return here so that we dont set the events to start responding
+        if (req.requestLength() - req.bodyStart() != contentLen)
+        {
+            std::cout << "Only " << req.requestLength() << "/" << contentLen << " bytes received" << std::endl;
+            return;
+        }
+    }
+    else if (req.headers().count("transfer-encoding"))
+    {
+        std::string buf = std::string(req.buffer(), req.buffer() + req.requestLength());
+        if (buf.rfind("0\r\n\r\n") == std::string::npos)
+        {
+            std::cout << "Chunked transfer encoding in prog. " << req.requestLength() << " bytes received." << std::endl;
+            return;
+        }
+        // chunked transfer encoding completed
+        // handle chunked transfer encoding
+        // here req.buffer() may contain a couple of chunks already or at least one
+        // my job here would be to extract the chunked data
+        // this means to skip over the chunk sizes at the start of a chunk and CRLF at the end
+
+        // if chunk size is not 0, return
+        // return here so that we dont set the events to start responding
+    }
+    std::cout << "Full request size: " << req.requestLength() << std::endl;
+    sockets[clientNo].events = POLLIN | POLLOUT;
+
+    std::cout << "---------------------------------------------------------\n";
+    std::cout << std::string(req.buffer(), req.buffer() + req.bodyStart() - 1);
+    std::cout << "---------------------------------------------------------\n";
+
+    // if this a post req, the only target type we care about is METHOD_NOT_ALLOWED
+}
+
 void Server::recvData(size_t clientNo)
 {
-    char *buf = new char[REQ_BUFFER_SIZE];
     Request &req = cons.at(sockets[clientNo].fd).request;
-    int bytesRec;
+    char *buf;
+    ssize_t bytesRec;
+    size_t bufSize = 1000000;
 
-    // sockets[clientNo].events = POLLIN;
+    if (!req.headers().empty() && req.headers().count("content-length"))
+    {
+        std::istringstream iss(req.headers()["content-length"]);
+        size_t contentLen;
+        iss >> contentLen;
+        bufSize = contentLen;
+    }
+    buf = new char[bufSize];
+
     // receiving request
     std::cout << "Receiving request data: " << std::endl;
-    bytesRec = recv(sockets[clientNo].fd, buf, REQ_BUFFER_SIZE, 0);
+    bytesRec = recv(sockets[clientNo].fd, buf, bufSize, 0);
     if (bytesRec < 0)
         std::cout << "Failed to receive request: " << strerror(errno) << std::endl;
     else if (bytesRec == 0)

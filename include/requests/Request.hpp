@@ -43,6 +43,7 @@ class Request
     std::string _target;
     std::map<std::string, std::string> _headers;
     char *_buffer;
+    size_t _bodyStart;
     size_t _length;
     size_t _capacity;
 
@@ -61,6 +62,7 @@ class Request
 
     char *buffer() const;
     size_t requestLength() const;
+    size_t bodyStart() const;
 
     const RequestTarget target(std::vector<ServerBlock *> config);
 

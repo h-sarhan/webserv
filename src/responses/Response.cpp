@@ -125,6 +125,7 @@ template <typename streamType> static size_t getStreamLen(streamType &s)
 
 void Response::createResponse(std::string filename, std::string& headers)
 {
+    std::string headers;
     std::ifstream file;
     std::stringstream responseBuffer;
     std::string fileContents;
