@@ -272,7 +272,7 @@ bool Request::keepAlive()
 {
     if (_headers.count("connection") != 0)
     {
-        if (_headers["connection"] == "closed")
+        if (_headers["connection"] == "close")
             return false;
         return true;
     }

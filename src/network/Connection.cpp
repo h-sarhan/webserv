@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/18 21:15:15 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/19 14:59:12 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -119,7 +119,6 @@ void Connection::processRequest(std::vector<ServerBlock *> &config)
         response.createHTMLResponse(errorPage(404), headers);
         break;
     }
-    // response.setByteCount(0);
     request.clear();
 }
 

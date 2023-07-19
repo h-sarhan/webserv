@@ -62,11 +62,6 @@ int Response::statusCode()
     return _statusCode;
 }
 
-void Response::setByteCount(ssize_t bytesSent)
-{
-    _totalBytesSent = bytesSent;
-}
-
 // void Response::setResponse(char *newBuf, size_t bufLen)
 // {
 //     if (_buffer != NULL)

@@ -59,8 +59,6 @@ class Response
         size_t length();
         size_t totalBytesSent();
         int statusCode();
-        void addToByteCount(ssize_t bytesSent);
-        void setByteCount(ssize_t bytesSent);
         // void setResponse(char *newBuf, size_t bufLen);
         int sendResponse(int fd);
         void createResponse(std::string filename, std::string& headers);
