@@ -109,15 +109,24 @@ void Server::closeConnection(int clientNo)
     sockets.erase(sockets.begin() + clientNo);
 }
 
-void Server::sendResponse(size_t clientNo)
+void Server::respondToRequest(size_t clientNo)
 {
     Connection &c = cons.at(sockets[clientNo].fd);
     int sendStatus;
 
-    c.processRequest(configBlocks[c.listener]);
+    c.processRequest(configBlocks.at(c.listener));
     sendStatus = c.response.sendResponse(sockets[clientNo].fd);
     if (sendStatus == IDLE_CONNECTION)
+    {
+        time_t curTime;
+        time(&curTime);
+        if (curTime - c.startTime >= c.timeOut)
+        {
+            std::cout << "Connection timed out! (idle for " << c.timeOut << "s): " << sockets[clientNo].fd << std::endl;
+            closeConnection(clientNo);
+        }
         return;
+    }
     if (sendStatus == SEND_PARTIAL)
         return;
     if (sendStatus == SEND_SUCCESS)
@@ -139,6 +148,7 @@ void Server::recvData(size_t clientNo)
     Request &req = cons.at(sockets[clientNo].fd).request;
     int bytesRec;
 
+    // sockets[clientNo].events = POLLIN;
     // receiving request
     std::cout << "Receiving request data: " << std::endl;
     bytesRec = recv(sockets[clientNo].fd, buf, REQ_BUFFER_SIZE, 0);
@@ -216,7 +226,7 @@ void Server::startListening()
                 }
             }
             else if (sockets[i].revents & POLLOUT)
-                sendResponse(i);
+                respondToRequest(i);
         }
         if (quit)
             break;

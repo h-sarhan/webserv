@@ -92,7 +92,7 @@ int Response::sendResponse(int fd)
 
     if (_length == 0)
     {
-        std::cout << "Connection is idle: " << fd << std::endl;
+        // std::cout << "Connection is idle: " << fd << std::endl;
         return IDLE_CONNECTION;
     }
     std::cout << "Sending a response... " << std::endl;
@@ -128,7 +128,7 @@ template <typename streamType> static size_t getStreamLen(streamType &s)
     return len;
 }
 
-void Response::createResponse(std::string filename, std::string headers)
+void Response::createResponse(std::string filename, std::string& headers)
 {
     std::ifstream file;
     std::stringstream responseBuffer;
@@ -141,7 +141,7 @@ void Response::createResponse(std::string filename, std::string headers)
     size_t fileLen = getStreamLen(file);
 
     responseBuffer << headers;
-    responseBuffer << fileLen << "\r\n\r\n";
+    responseBuffer << CONTENT_LEN << fileLen << "\r\n\r\n";
     responseBuffer << file.rdbuf();
     file.close();
 
@@ -153,12 +153,12 @@ void Response::createResponse(std::string filename, std::string headers)
     responseBuffer.read(_buffer, _length);
 }
 
-void Response::createHTMLResponse(std::string page, std::string headers)
+void Response::createHTMLResponse(std::string page, std::string& headers)
 {
     std::stringstream responseBuffer;
 
     responseBuffer << headers;
-    responseBuffer << page.length() << "\r\n\r\n";
+    responseBuffer << CONTENT_LEN << page.length() << "\r\n\r\n";
     responseBuffer << page;
     _length = getStreamLen(responseBuffer);
     if (_buffer != NULL)

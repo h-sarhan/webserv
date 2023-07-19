@@ -74,6 +74,7 @@ class Request
     bool keepAlive();
     unsigned int keepAliveTimer();
     unsigned int maxReconnections();
+    std::string rawTarget();
     void clear();
   
   private:

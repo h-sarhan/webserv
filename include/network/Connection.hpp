@@ -34,6 +34,7 @@ class Connection
         Connection& operator=(const Connection &c);
         void processRequest(std::vector<ServerBlock *>& config);
         bool keepConnectionAlive();
+        std::string createResponseHeaders();
         ~Connection();
 
 };

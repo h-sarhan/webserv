@@ -110,7 +110,7 @@ bool Request::parseRequest()
 {
     if (_length == 0)
         return false;
-    if (!_headers.empty())
+    if (!_headers.empty()) // headers have already been parsed
         return true;
     const std::string req(_buffer, _buffer + _length);
     const size_t bodyStart = req.find("\r\n\r\n");
@@ -236,6 +236,11 @@ void Request::parseHeader(std::stringstream &reqStream)
     trimWhitespace(value);
     std::transform(key.begin(), key.end(), key.begin(), ::tolower);
     _headers.insert(std::make_pair(key.substr(0, key.length() - 1), value));
+}
+
+std::string Request::rawTarget()
+{
+    return _target;
 }
 
 std::string Request::userAgent()

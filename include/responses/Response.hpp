@@ -26,6 +26,7 @@
 # define STATUS_LINE "HTTP/1.1 "
 # define CONTENT_TYPE "Content-Type: "
 # define CONTENT_LEN "Content-Length: "
+# define KEEP_ALIVE "Connection: keep-alive\r\n"
 
 // content types
 # define HTML "text/html; charset=UTF-8\r\n"
@@ -38,7 +39,7 @@
 # define NOTFOUND_404 "404 Not found\r\n"
 
 #define IMG_HEADERS  "HTTP/1.1 200 OK\r\nContent-Type: image/jpg\r\nContent-Length: "
-#define HTTP_HEADERS "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: "
+#define HTTP_HEADERS "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n"
 
 // typedef std::ios_base::streampos f_size;
 
@@ -62,8 +63,8 @@ class Response
         void setByteCount(ssize_t bytesSent);
         // void setResponse(char *newBuf, size_t bufLen);
         int sendResponse(int fd);
-        void createResponse(std::string filename, std::string headers);
-        void createHTMLResponse(std::string page, std::string headers);
+        void createResponse(std::string filename, std::string& headers);
+        void createHTMLResponse(std::string page, std::string& headers);
         void clear();
         ~Response();
 };
