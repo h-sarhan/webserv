@@ -16,6 +16,7 @@
 # include <sstream>
 # include <fstream>
 # include "network/network.hpp"
+#include "HeaderData.hpp"
 
 # define IDLE_CONNECTION 0
 # define SEND_FAIL 1
@@ -24,6 +25,7 @@
 
 // headers
 # define STATUS_LINE "HTTP/1.1 "
+# define CRLF "\r\n"
 # define CONTENT_TYPE "Content-Type: "
 # define CONTENT_LEN "Content-Length: "
 # define LOCATION "Location: "
@@ -34,11 +36,6 @@
 # define JPG "image/jpg\r\n"
 # define SVG "image/svg+xml\r\n"
 # define XML "text/xml\r\n"
-
-// status codes
-# define OK_200 "200 OK\r\n"
-# define NOTFOUND_404 "404 Not found\r\n"
-# define FOUND_302 "302 Found\r\n"
 
 #define IMG_HEADERS  "HTTP/1.1 200 OK\r\nContent-Type: image/jpg\r\nContent-Length: "
 #define HTTP_HEADERS "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n"
@@ -63,7 +60,7 @@ class Response
         int sendResponse(int fd);
         void createRedirectResponse(std::string& redirUrl, bool keepAlive);
         void createResponse(std::string filename, std::string& headers);
-        void createHTMLResponse(std::string page, std::string& headers);
+        void createHTMLResponse(int statusCode, std::string page, bool keepAlive);
         void clear();
         ~Response();
 };

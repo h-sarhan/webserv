@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "network/Connection.hpp"
+#include "enums/HTTPMethods.hpp"
 #include "requests/Request.hpp"
 #include "responses/DefaultPages.hpp"
 
@@ -78,11 +79,10 @@ std::string Connection::createResponseHeaders()
     return headers;
 }
 
-void Connection::processRequest(std::vector<ServerBlock *> &config)
+void Connection::processGet(std::vector<ServerBlock *> &config)
 {
     std::string headers;
-    if (request.requestLength() == 0)
-        return;
+
     RequestTarget target = request.target(config);
     std::cout << "method type: " << request.method() << std::endl;
     std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
@@ -99,13 +99,59 @@ void Connection::processRequest(std::vector<ServerBlock *> &config)
         response.createRedirectResponse(target.resource, keepAlive);
         break;
     case METHOD_NOT_ALLOWED:
-        response.createHTMLResponse(errorPage(405), headers);
+        response.createHTMLResponse(errorPage(405));
         break;
     case DIRECTORY:
-        response.createHTMLResponse(directoryListing(target.resource), headers);
+        response.createHTMLResponse(directoryListing(target.resource));
         break;
     case NOT_FOUND:
-        response.createHTMLResponse(errorPage(404), headers);
+        response.createHTMLResponse(errorPage(404));
+        break;
+    }
+
+}
+
+void Connection::processRequest(std::vector<ServerBlock *> &config)
+{
+    std::string headers;
+    if (request.requestLength() == 0)
+        return;
+    switch (request.method())
+    {
+        case GET:
+            break;
+        case POST:
+            break;
+        case PUT:
+            break;
+        case DELETE:
+            break;
+        case OTHER:
+            break;
+    }
+    RequestTarget target = request.target(config);
+    std::cout << "method type: " << request.method() << std::endl;
+    std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
+    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+    keepAlive = request.keepAlive();
+    timeOut = request.keepAliveTimer();
+    headers = createResponseHeaders();
+    switch (target.type)
+    {
+    case FOUND:
+        response.createResponse(target.resource, headers);
+        break;
+    case REDIRECTION:
+        response.createRedirectResponse(target.resource, keepAlive);
+        break;
+    case METHOD_NOT_ALLOWED:
+        response.createHTMLResponse(405, errorPage(405));
+        break;
+    case DIRECTORY:
+        response.createHTMLResponse(200, directoryListing(target.resource));
+        break;
+    case NOT_FOUND:
+        response.createHTMLResponse(404, errorPage(404));
         break;
     }
     request.clear();

@@ -147,7 +147,7 @@ void Response::createResponse(std::string filename, std::string& headers)
 
     file.open(filename.c_str(), std::ios::binary);
     if (!file.good())
-        return createHTMLResponse(errorPage(404), headers);
+        return createHTMLResponse(404, errorPage(404), false);
 
     size_t fileLen = getStreamLen(file);
 
@@ -164,12 +164,16 @@ void Response::createResponse(std::string filename, std::string& headers)
     responseBuffer.read(_buffer, _length);
 }
 
-void Response::createHTMLResponse(std::string page, std::string& headers)
+void Response::createHTMLResponse(int statusCode, std::string page, bool keepAlive)
 {
     std::stringstream responseBuffer;
 
-    responseBuffer << headers;
-    responseBuffer << CONTENT_LEN << page.length() << "\r\n\r\n";
+    responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
+    if (keepAlive)
+        responseBuffer << KEEP_ALIVE;
+    // responseBuffer << CONTENT_TYPE << getContentType(extension) << CRLF;
+    responseBuffer << CONTENT_TYPE << HTML << CRLF;
+    responseBuffer << CONTENT_LEN << page.length() << CRLF << CRLF;
     responseBuffer << page;
     _length = getStreamLen(responseBuffer);
     if (_buffer != NULL)
