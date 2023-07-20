@@ -93,20 +93,6 @@ void leftTrimStr(std::string &str, const std::string &anyOf);
 void trimStr(std::string &str, const std::string &anyOf);
 
 /**
- * @brief Replace a character to `to` if it is `from`
- *
- * @tparam from Character to replace
- * @tparam to Which character to replace with
- * @param c The character to check
- */
-template <char from, char to> char replaceChar(char &c)
-{
-    if (c == from)
-        return to;
-    return c;
-}
-
-/**
  * @brief Convert a hexadecimal string to an ASCII character
  *
  * @param str Hexadecimal string
@@ -140,10 +126,5 @@ const std::string getLine(const std::string &filename, const unsigned int lineNu
  * @param c Duplicate character
  */
 void removeDuplicateChar(std::string &str, const char c);
-
-/**
- * @brief Returns true when str1 starts with str2
- */
-bool startsWith(const std::string &str1, const std::string &str2);
 
 #endif

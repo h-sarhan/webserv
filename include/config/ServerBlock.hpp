@@ -53,12 +53,12 @@ std::ostream &operator<<(std::ostream &os, const ServerBlock &block);
 std::ostream &operator<<(std::ostream &os, const std::vector<ServerBlock> &config);
 
 /**
- * @brief Function object to match a ServerBlock * against a HostName.
+ * @brief Function object to match a ServerBlock against a HostName.
  * For use with C++ standard library algorithms
  */
-struct MatchHostName
+struct HostNameMatcher
 {
-    MatchHostName(const std::string &hostname);
+    HostNameMatcher(const std::string &hostname);
     bool operator()(const ServerBlock *serverBlock);
     bool operator()(const ServerBlock &serverBlock);
 

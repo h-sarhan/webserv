@@ -87,7 +87,7 @@ class Request
     // ! Make this const
     std::string getMatchingRoute(const std::map<std::string, Route> &routes) const;
 
-    const Resource matchResource(const std::map<std::string, Route> &routes) const;
+    const Resource getResource(const std::map<std::string, Route> &routes) const;
 
     // Resizes the internal buffer
     void resizeBuffer(size_t newCapacity);

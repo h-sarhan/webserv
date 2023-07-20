@@ -39,7 +39,7 @@ Request::Request(const Request &req)
       _buffer(new char[req._capacity]), _length(req._length), _capacity(req._capacity),
       _valid(req._valid)
 {
-    std::memcpy(_buffer, req._buffer, _length);
+    std::copy(req._buffer, req._buffer + _length, _buffer);
 }
 
 /**
@@ -60,7 +60,7 @@ Request &Request::operator=(const Request &req)
     _valid = req._valid;
     delete[] _buffer;
     _buffer = new char[_capacity];
-    std::memcpy(_buffer, req._buffer, _length);
+    std::copy(req._buffer, req._buffer + _length, _buffer);
     return *this;
 }
 
@@ -335,64 +335,53 @@ unsigned int Request::maxReconnections() const
 std::string Request::getMatchingRoute(const std::map<std::string, Route> &routes) const
 {
     std::string matchedLocation;
-    // for (std::map<std::string, Route>::const_iterator routeIt = routes.begin();
-    //      routeIt != routes.end(); routeIt++)
-    // {
-    //     std::string routeStr = routeIt->first;
-    //     if (routeStr == "/")
-    //     {
-    //         matchedLocation = routeStr;
-    //         continue;
-    //     }
-    //     if (_resourcePath.find(routeStr) != std::string::npos &&
-    //         routeStr.length() > matchedLocation.length())
-    //         matchedLocation = routeStr;
-    // }
     for (std::map<std::string, Route>::const_iterator it = routes.begin(); it != routes.end(); it++)
     {
         // Two conditions need to be true in order for matchedLocation to equal it->first
         // 1. _requestedURL has to start with it->first
         // 2. it->first has to be greater than matchedLocation.length()
+        if (std::equal(it->first.begin(), it->first.end(), _requestedURL.begin()) &&
+            it->first.length() > matchedLocation.length())
+            matchedLocation = it->first;
     }
     return matchedLocation;
 }
 
-const Resource Request::matchResource(const std::map<std::string, Route> &routes) const
+const Resource Request::getResource(const std::map<std::string, Route> &routes) const
 {
-    const std::string &location = getMatchingRoute(routes);
-    if (location.length() == 0)
-        return Resource(NOT_FOUND, "");
+    const std::string &matchedRoute = getMatchingRoute(routes);
+    if (matchedRoute.length() == 0)
+        return Resource(NOT_FOUND, _requestedURL);
 
-    const Route &route = routes.at(location);
+    const Route &route = routes.at(matchedRoute);
     if (route.methodsAllowed.count(_httpMethod) == 0)
-        return Resource(FORBIDDEN_METHOD, "");
+        return Resource(FORBIDDEN_METHOD, _requestedURL);
     if (route.redirectTo.length() > 0)
         return Resource(REDIRECTION, route.redirectTo);
-    if (route.serveDir.length() > 0)
-    {
-        std::string resourcePath =
-            route.serveDir + "/" +
-            _requestedURL.substr(_requestedURL.find(location) + location.length());
+    if (route.serveDir.length() == 0)
+        return Resource(NOT_FOUND, _requestedURL);
+    std::string resourcePath =
+        route.serveDir + "/" +
+        _requestedURL.substr(_requestedURL.find(matchedRoute) + matchedRoute.length());
+    removeDuplicateChar(resourcePath, '/');
 
-        removeDuplicateChar(resourcePath, '/');
-        // Check if the resource exists
-        struct stat info;
-        if (stat(resourcePath.c_str(), &info) == 0)
-        {
-            // Check if the resource is a file or a directory
-            if (info.st_mode & S_IFREG)
-                return Resource(EXISTING_FILE, resourcePath);
-            if (info.st_mode & S_IFDIR)
-            {
-                if (route.listDirectories == true)
-                    return Resource(DIRECTORY, resourcePath);
-                if (route.listDirectoriesFile.empty())
-                    return Resource(NOT_FOUND, "");
-                return Resource(EXISTING_FILE, route.listDirectoriesFile);
-            }
-        }
+    // Check if the resource exists
+    struct stat info;
+    if (stat(resourcePath.c_str(), &info) != 0)
+        return Resource(NOT_FOUND, resourcePath);
+
+    // Check if the resource is a file or a directory
+    if (info.st_mode & S_IFREG)
+        return Resource(EXISTING_FILE, resourcePath);
+    if (info.st_mode & S_IFDIR)
+    {
+        if (route.listDirectories == true)
+            return Resource(DIRECTORY, resourcePath);
+        if (route.listDirectoriesFile.empty())
+            return Resource(NOT_FOUND, resourcePath);
+        return Resource(EXISTING_FILE, route.listDirectoriesFile);
     }
-    return Resource(NOT_FOUND, "");
+    return Resource(NOT_FOUND, resourcePath);
 }
 
 /**
@@ -408,12 +397,12 @@ const Resource Request::resource(const std::vector<ServerBlock *> &config) const
 
     // Find server block with the correct hostname
     std::vector<ServerBlock *>::const_iterator matchedServerBlock =
-        std::find_if(config.begin(), config.end(), MatchHostName(hostname()));
+        std::find_if(config.begin(), config.end(), HostNameMatcher(hostname()));
 
     // If no server block matches the hostname then return a NOT_FOUND resource
     if (matchedServerBlock == config.end())
         return Resource(NOT_FOUND, "");
-    return matchResource((*matchedServerBlock)->routes);
+    return getResource((*matchedServerBlock)->routes);
 }
 
 /**
@@ -424,7 +413,7 @@ const Resource Request::resource(const std::vector<ServerBlock *> &config) const
 void Request::resizeBuffer(size_t newCapacity)
 {
     char *newBuffer = new char[newCapacity];
-    std::memcpy(newBuffer, _buffer, _length);
+    std::copy(_buffer, _buffer + _length, newBuffer);
     delete[] _buffer;
     _buffer = newBuffer;
     _capacity = newCapacity;
@@ -440,7 +429,7 @@ void Request::appendToBuffer(const char *data, const size_t n)
 {
     if (_length + n >= _capacity)
         resizeBuffer(std::max(_capacity * 2, (_length + n) * 2));
-    std::memcpy(_buffer + _length, data, n);
+    std::copy(data, data + n, _buffer + _length);
     _length += n;
 }
 

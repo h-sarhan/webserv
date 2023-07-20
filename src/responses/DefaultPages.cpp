@@ -28,7 +28,8 @@ const std::string directoryListing(const std::string &dirPath)
                        "\t\t<ul>\n";
     DIR *dirPtr = opendir(dirPath.c_str());
     if (dirPtr == NULL)
-        return html + "\t\t<li>COULD NOT OPEN DIR</li>\n\t\t</ul>\n\t\t<hr>\n\t</body>\n</html>\n";
+        return html +
+               "\t\t<li>COULD NOT OPEN DIRECTORY</li>\n\t\t</ul>\n\t\t<hr>\n\t</body>\n</html>\n";
     struct dirent *dir = readdir(dirPtr);
     while (dir)
     {

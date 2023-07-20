@@ -45,24 +45,23 @@ void sanitizeURL(std::string &url)
         url.erase(queryPos);
 
     // Replace '+' with ' '
-    std::transform(url.begin(), url.end(), url.begin(), replaceChar<'+', ' '>);
+    std::replace(url.begin(), url.end(), '+', ' ');
 
     // Decode % hexadecimal characters
-    for (std::string::iterator it = url.begin(); it != url.end(); it++)
+    for (std::string::iterator it = url.begin(); it < url.end() - 2; it++)
     {
-        if (*it == '%' && (url.end() - it) > 2)
-        {
-            // Get the url encoded character and check if it is valid
-            const std::string hexStr(it + 1, it + 3);
-            if (!std::isxdigit(hexStr[0]) || !std::isxdigit(hexStr[1]))
-                continue;
+        if (*it != '%')
+            continue;
+        // Get the url encoded character and check if it is valid
+        const std::string hexStr(it + 1, it + 3);
+        if (!std::isxdigit(hexStr[0]) || !std::isxdigit(hexStr[1]))
+            continue;
 
-            // Replace the `%` with the decoded hex character
-            *it = getHex(hexStr);
+        // Replace the `%` with the decoded hex character
+        *it = getHex(hexStr);
 
-            // Erase the next two characters and get a valid iterator
-            it = url.erase(it + 1, it + 3);
-        }
+        // Erase the next two characters and get a valid iterator
+        it = url.erase(it + 1, it + 3) - 1;
     }
 }
 
@@ -87,9 +86,4 @@ void removeDuplicateChar(std::string &str, const char c)
         str.erase(dupPos, 1);
         dupPos = str.find(std::string(2, c));
     }
-}
-
-bool startsWith(const std::string &str1, const std::string &str2)
-{
-    return str1.compare(0, str2.length(), str2) == 0;
 }
