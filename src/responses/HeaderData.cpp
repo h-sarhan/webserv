@@ -20,10 +20,14 @@ std::string getStatus(int statusCode)
 			return "201 Created";
 		case 302:
 			return "302 Found";
+		case 307:
+			return "307 Temporary redirect";
 		case 404:
 			return "404 Not found";
 		case 405:
 			return "405 Method not allowed";
+		case 409:
+			return "409 Conflict";
 		case 503:
 			return "503 Service Unavailable";
 	}

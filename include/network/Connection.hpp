@@ -33,7 +33,10 @@ class Connection
         Connection(const Connection &c);
         Connection& operator=(const Connection &c);
         void processRequest(std::vector<ServerBlock *>& config);
-        void processGet(std::vector<ServerBlock *> &config);
+        void processGET(std::vector<ServerBlock *> &config);
+        void processPOST(std::vector<ServerBlock *> &config);
+        void processPUT(std::vector<ServerBlock *> &config);
+
         bool keepConnectionAlive();
         std::string createResponseHeaders();
         ~Connection();

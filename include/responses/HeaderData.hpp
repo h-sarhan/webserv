@@ -8,7 +8,7 @@
  * 
  */
 
-#include <string>
+#include <iostream>
 
 std::string getStatus(int statusCode);
 std::string getContentType(std::string extension);

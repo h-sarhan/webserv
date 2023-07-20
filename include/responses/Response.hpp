@@ -17,6 +17,7 @@
 # include <fstream>
 # include "network/network.hpp"
 #include "HeaderData.hpp"
+#include "requests/Request.hpp"
 
 # define IDLE_CONNECTION 0
 # define SEND_FAIL 1
@@ -29,13 +30,10 @@
 # define CONTENT_TYPE "Content-Type: "
 # define CONTENT_LEN "Content-Length: "
 # define LOCATION "Location: "
-# define KEEP_ALIVE "Connection: keep-alive\r\n"
+# define KEEP_ALIVE "Connection: keep-alive"
 
 // content types
-# define HTML "text/html; charset=UTF-8\r\n"
-# define JPG "image/jpg\r\n"
-# define SVG "image/svg+xml\r\n"
-# define XML "text/xml\r\n"
+# define HTML "text/html; charset=UTF-8"
 
 #define IMG_HEADERS  "HTTP/1.1 200 OK\r\nContent-Type: image/jpg\r\nContent-Length: "
 #define HTTP_HEADERS "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n"
@@ -58,8 +56,10 @@ class Response
         int statusCode();
         // void setResponse(char *newBuf, size_t bufLen);
         int sendResponse(int fd);
-        void createRedirectResponse(std::string& redirUrl, bool keepAlive);
-        void createResponse(std::string filename, std::string& headers);
+        void createRedirectResponse(std::string& redirUrl, int statusCode, bool keepAlive);
+        void createGETResponse(std::string filename, bool keepAlive);
+        void createPOSTResponse(std::string filename, Request &request);
+        void createPUTResponse(std::string filename, Request &request);
         void createHTMLResponse(int statusCode, std::string page, bool keepAlive);
         void clear();
         ~Response();

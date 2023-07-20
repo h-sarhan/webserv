@@ -6,14 +6,16 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/19 22:21:43 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/20 19:36:07 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "network/Connection.hpp"
 #include "enums/HTTPMethods.hpp"
+#include "enums/RequestTypes.hpp"
 #include "requests/Request.hpp"
 #include "responses/DefaultPages.hpp"
+#include "responses/Response.hpp"
 
 Connection::Connection()
     : listener(-1), request(), response(), keepAlive(false), timeOut(0), startTime(0)
@@ -45,41 +47,15 @@ Connection &Connection::operator=(const Connection &c)
     return (*this);
 }
 
-// static std::string createHTMLResponse(std::string page, std::string headers)
-// {
-//     std::stringstream responseBuffer;
-
-//     responseBuffer << headers;
-//     responseBuffer << page.length() << "\r\n\r\n";
-//     responseBuffer << page;
-//     return responseBuffer.str();
-// }
-
-// static std::string createResponse(std::string filename, std::string headers)
-// {
-//     // std::ifstream file;
-//     // std::stringstream responseBuffer;
-//     // std::stringstream fileBuffer;
-//     // std::string fileContents;
-
-//     // file.open(filename.c_str());
-//     // // if (!file.good())
-//     // // return 404 page as response
-//     // fileBuffer << file.rdbuf();
-//     // file.close();
-//     // fileContents = fileBuffer.str();
-//     // return createHTMLResponse(fileContents, headers);
-// }
-
 std::string Connection::createResponseHeaders()
 {
     std::string headers = HTTP_HEADERS;
     if (keepAlive)
-        headers += KEEP_ALIVE;
+        headers = headers + KEEP_ALIVE + CRLF;
     return headers;
 }
 
-void Connection::processGet(std::vector<ServerBlock *> &config)
+void Connection::processGET(std::vector<ServerBlock *> &config)
 {
     std::string headers;
 
@@ -87,72 +63,94 @@ void Connection::processGet(std::vector<ServerBlock *> &config)
     std::cout << "method type: " << request.method() << std::endl;
     std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
     std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
-    keepAlive = request.keepAlive();
-    timeOut = request.keepAliveTimer();
-    headers = createResponseHeaders();
     switch (target.type)
     {
     case FOUND:
-        response.createResponse(target.resource, headers);
+        response.createGETResponse(target.resource, keepAlive);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(target.resource, keepAlive);
+        response.createRedirectResponse(target.resource, 302, keepAlive);
         break;
     case METHOD_NOT_ALLOWED:
-        response.createHTMLResponse(errorPage(405));
+        response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case DIRECTORY:
-        response.createHTMLResponse(directoryListing(target.resource));
+        response.createHTMLResponse(200, directoryListing(target.resource), keepAlive);
         break;
     case NOT_FOUND:
-        response.createHTMLResponse(errorPage(404));
+        response.createHTMLResponse(404, errorPage(404), keepAlive);
         break;
     }
+}
 
+void Connection::processPOST(std::vector<ServerBlock *> &config)
+{
+    RequestTarget target = request.target(config);
+    std::cout << "method type: " << httpMethodtoStr(request.method()) << std::endl;
+    std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
+    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+    switch (target.type)
+    {
+    case FOUND:
+        response.createHTMLResponse(409, errorPage(409), keepAlive);
+        break;
+    case REDIRECTION:
+        response.createRedirectResponse(target.resource, 307, keepAlive);
+        break;
+    case METHOD_NOT_ALLOWED:
+        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        break;
+    case DIRECTORY:
+        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        break;
+    case NOT_FOUND:
+        response.createPOSTResponse(request.rawTarget(), request);
+    }
+}
+
+void Connection::processPUT(std::vector<ServerBlock *> &config)
+{
+    std::string headers;
+
+    RequestTarget target = request.target(config);
+    std::cout << "method type: " << request.method() << std::endl;
+    std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
+    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+    switch (target.type)
+    {
+    case FOUND:
+        response.createHTMLResponse(409, errorPage(409), keepAlive);
+        break;
+    case METHOD_NOT_ALLOWED:
+        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        break;
+    default:
+        // response.createPOSTResponse(target.resource, request);
+        response.createPOSTResponse(request.rawTarget(), request);
+    }
 }
 
 void Connection::processRequest(std::vector<ServerBlock *> &config)
 {
-    std::string headers;
     if (request.requestLength() == 0)
         return;
+    keepAlive = request.keepAlive();
+    timeOut = request.keepAliveTimer();
     switch (request.method())
     {
         case GET:
+            processGET(config);
             break;
         case POST:
+            processPOST(config);
             break;
         case PUT:
+            processPUT(config);
             break;
         case DELETE:
             break;
         case OTHER:
             break;
-    }
-    RequestTarget target = request.target(config);
-    std::cout << "method type: " << request.method() << std::endl;
-    std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
-    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
-    keepAlive = request.keepAlive();
-    timeOut = request.keepAliveTimer();
-    headers = createResponseHeaders();
-    switch (target.type)
-    {
-    case FOUND:
-        response.createResponse(target.resource, headers);
-        break;
-    case REDIRECTION:
-        response.createRedirectResponse(target.resource, keepAlive);
-        break;
-    case METHOD_NOT_ALLOWED:
-        response.createHTMLResponse(405, errorPage(405));
-        break;
-    case DIRECTORY:
-        response.createHTMLResponse(200, directoryListing(target.resource));
-        break;
-    case NOT_FOUND:
-        response.createHTMLResponse(404, errorPage(404));
-        break;
     }
     request.clear();
 }
