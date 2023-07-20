@@ -52,15 +52,16 @@ class Request
     const HTTPMethod &method() const;
     const char *buffer() const;
     size_t requestLength() const;
+
     // ! Make this const
     std::map<std::string, const std::string> &headers();
+
     // !! Cache these getters
     const std::string hostname() const;      // might end up being private
     bool keepAlive() const;                  // might not need this
     unsigned int keepAliveTimer() const;     // might not need this
     unsigned int maxReconnections() const;   // might not need this
-    // !! Implement this method
-    // !! size_t bodySize() const;
+    size_t bodySize() const;
 
     // Appends request data to the internal buffer
     void appendToBuffer(const char *data, const size_t n);
@@ -80,14 +81,14 @@ class Request
     void parseHeader(std::stringstream &reqStream);
 
     // Checks if a line ends with \r\n. Throws an exception otherwise
-    void checkLineEnding(std::stringstream &reqStream);
+    void checkLineEnding(std::stringstream &reqStream) const;
 
-    void extracted(const std::map<std::string, Route> &routes, std::string &match) const;
+    std::string formPathToResource(const std::pair<std::string, Route> &route) const;
 
-    // ! Make this const
-    std::string getMatchingRoute(const std::map<std::string, Route> &routes) const;
+    const std::map<std::string, Route>::const_iterator getMatchingRoute(
+        const std::map<std::string, Route> &routes) const;
 
-    const Resource getResource(const std::map<std::string, Route> &routes) const;
+    const Resource getResourceFromConfig(const std::map<std::string, Route> &routes) const;
 
     // Resizes the internal buffer
     void resizeBuffer(size_t newCapacity);
@@ -95,9 +96,5 @@ class Request
     // Assert that a condition is true, throw an exception otherwise
     void assertThat(bool condition, const std::string &throwMsg) const;
 };
-
-// !! Move these
-// void requestParsingTests();
-void requestBufferTests();
 
 #endif

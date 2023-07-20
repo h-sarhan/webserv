@@ -78,6 +78,7 @@ const std::string getLine(const std::string &filename, const unsigned int lineNu
     return line;
 }
 
+// ! Use std::adjacent_find here
 void removeDuplicateChar(std::string &str, const char c)
 {
     size_t dupPos = str.find(std::string(2, c));

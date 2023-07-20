@@ -23,8 +23,4 @@ bool validateURL(const std::string &urlStr);
 bool validateBodySize(const std::string &bodySizeStr);
 bool validateHTMLMethod(const std::string &bodySizeStr);
 
-// !! Move this
-// A function that tests out all the input validators
-void inputValidatorTests();
-
 #endif

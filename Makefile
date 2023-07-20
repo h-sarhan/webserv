@@ -18,7 +18,7 @@ NETWORK_SRC := $(addprefix $(NETWORK_DIR)/, $(NETWORK_SRC))
 REQUEST_SRC := $(addprefix $(REQUEST_DIR)/, $(REQUEST_SRC))
 RESPONSE_SRC := $(addprefix $(RESPONSE_DIR)/, $(RESPONSE_SRC))
 
-SRC := $(SRC_DIR)/main.cpp  $(SRC_DIR)/utils.cpp $(SRC_DIR)/enumConversions.cpp $(CONFIG_SRC) $(NETWORK_SRC) $(REQUEST_SRC) $(RESPONSE_SRC)
+SRC := $(SRC_DIR)/main.cpp  $(SRC_DIR)/utils.cpp $(SRC_DIR)/tests.cpp $(SRC_DIR)/enumConversions.cpp $(CONFIG_SRC) $(NETWORK_SRC) $(REQUEST_SRC) $(RESPONSE_SRC)
 
 # Release and debug object files
 OBJ_DIR = .build

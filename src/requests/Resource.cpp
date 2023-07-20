@@ -16,6 +16,7 @@
  * @param type Type of the resource
  * @param path Path to the resource
  */
-Resource::Resource(const ResourceType &type, const std::string &path) : type(type), path(path)
+Resource::Resource(const ResourceType &type, const std::string &path, const Route &route)
+    : type(type), path(path), route(route)
 {
 }

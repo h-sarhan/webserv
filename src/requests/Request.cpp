@@ -188,7 +188,7 @@ void Request::parseStartLine(std::stringstream &reqStream)
  *
  * @param reqStream The stream containing the request
  */
-void Request::checkLineEnding(std::stringstream &reqStream)
+void Request::checkLineEnding(std::stringstream &reqStream) const
 {
     reqStream >> std::noskipws;
     const char cr = getNext<char>(reqStream);
@@ -332,56 +332,74 @@ unsigned int Request::maxReconnections() const
     return DEFAULT_RECONNECTIONS;
 }
 
-std::string Request::getMatchingRoute(const std::map<std::string, Route> &routes) const
+/**
+ * @brief Returns the size of the body based on the Content-Length header
+ *
+ * @return size_t Size of body in bytes
+ */
+size_t Request::bodySize() const
 {
-    std::string matchedLocation;
+    if (_headers.count("content-length") == 0)
+        return -1;
+    return fromStr<size_t>(_headers.at("content-length"));
+}
+
+// ! This can be refactored into a function object that is passed to std::find()
+const std::map<std::string, Route>::const_iterator Request::getMatchingRoute(
+    const std::map<std::string, Route> &routes) const
+{
+    std::map<std::string, Route>::const_iterator routeIt = routes.end();
     for (std::map<std::string, Route>::const_iterator it = routes.begin(); it != routes.end(); it++)
     {
         // Two conditions need to be true in order for matchedLocation to equal it->first
         // 1. _requestedURL has to start with it->first
         // 2. it->first has to be greater than matchedLocation.length()
         if (std::equal(it->first.begin(), it->first.end(), _requestedURL.begin()) &&
-            it->first.length() > matchedLocation.length())
-            matchedLocation = it->first;
+            (routeIt == routes.end() || it->first.length() > routeIt->first.length()))
+            routeIt = it;
     }
-    return matchedLocation;
+    return routeIt;
 }
 
-const Resource Request::getResource(const std::map<std::string, Route> &routes) const
+std::string Request::formPathToResource(const std::pair<std::string, Route> &route) const
 {
-    const std::string &matchedRoute = getMatchingRoute(routes);
-    if (matchedRoute.length() == 0)
-        return Resource(NOT_FOUND, _requestedURL);
-
-    const Route &route = routes.at(matchedRoute);
-    if (route.methodsAllowed.count(_httpMethod) == 0)
-        return Resource(FORBIDDEN_METHOD, _requestedURL);
-    if (route.redirectTo.length() > 0)
-        return Resource(REDIRECTION, route.redirectTo);
-    if (route.serveDir.length() == 0)
-        return Resource(NOT_FOUND, _requestedURL);
     std::string resourcePath =
-        route.serveDir + "/" +
-        _requestedURL.substr(_requestedURL.find(matchedRoute) + matchedRoute.length());
+        route.second.serveDir + "/" +
+        _requestedURL.substr(_requestedURL.find(route.first) + route.first.length());
     removeDuplicateChar(resourcePath, '/');
+    return resourcePath;
+}
 
+const Resource Request::getResourceFromConfig(const std::map<std::string, Route> &routes) const
+{
+    const std::map<std::string, Route>::const_iterator &routeIt = getMatchingRoute(routes);
+    if (routeIt == routes.end())
+        return Resource(NOT_FOUND, _requestedURL);
+
+    const Route &routeOptions = routeIt->second;
+    if (routeOptions.methodsAllowed.count(_httpMethod) == 0)
+        return Resource(FORBIDDEN_METHOD, _requestedURL, routeOptions);
+    if (routeOptions.redirectTo.length() > 0)
+        return Resource(REDIRECTION, routeOptions.redirectTo, routeOptions);
+    if (routeOptions.serveDir.length() == 0)
+        return Resource(NOT_FOUND, _requestedURL, routeOptions);
+
+    const std::string &resourcePath = formPathToResource(*routeIt);
     // Check if the resource exists
     struct stat info;
     if (stat(resourcePath.c_str(), &info) != 0)
-        return Resource(NOT_FOUND, resourcePath);
+        return Resource(NOT_FOUND, resourcePath, routeOptions);
 
     // Check if the resource is a file or a directory
-    if (info.st_mode & S_IFREG)
-        return Resource(EXISTING_FILE, resourcePath);
-    if (info.st_mode & S_IFDIR)
-    {
-        if (route.listDirectories == true)
-            return Resource(DIRECTORY, resourcePath);
-        if (route.listDirectoriesFile.empty())
-            return Resource(NOT_FOUND, resourcePath);
-        return Resource(EXISTING_FILE, route.listDirectoriesFile);
-    }
-    return Resource(NOT_FOUND, resourcePath);
+    const bool isFile = info.st_mode & S_IFREG;
+    const bool isDir = info.st_mode & S_IFDIR;
+    if (isFile)
+        return Resource(EXISTING_FILE, resourcePath, routeOptions);
+    if (isDir && routeOptions.listDirectories == true)
+        return Resource(DIRECTORY, resourcePath, routeOptions);
+    if (isDir && !routeOptions.listDirectoriesFile.empty())
+        return Resource(EXISTING_FILE, routeOptions.listDirectoriesFile, routeOptions);
+    return Resource(NOT_FOUND, resourcePath, routeOptions);
 }
 
 /**
@@ -401,8 +419,8 @@ const Resource Request::resource(const std::vector<ServerBlock *> &config) const
 
     // If no server block matches the hostname then return a NOT_FOUND resource
     if (matchedServerBlock == config.end())
-        return Resource(NOT_FOUND, "");
-    return getResource((*matchedServerBlock)->routes);
+        return Resource(NOT_FOUND, _requestedURL);
+    return getResourceFromConfig((*matchedServerBlock)->routes);
 }
 
 /**
