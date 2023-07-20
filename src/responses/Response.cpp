@@ -123,7 +123,7 @@ template <typename streamType> static size_t getStreamLen(streamType &s)
     return len;
 }
 
-void Response::createRedirectResponse(std::string& redirUrl, int statusCode, bool keepAlive)
+void Response::createRedirectResponse(std::string &redirUrl, int statusCode, bool keepAlive)
 {
     std::stringstream responseBuffer;
 
@@ -140,6 +140,38 @@ void Response::createRedirectResponse(std::string& redirUrl, int statusCode, boo
     responseBuffer.read(_buffer, _length);
 }
 
+void Response::setResponseHeaders(std::stringstream &ss, Headers h)
+{
+    ss << STATUS_LINE << getStatus(h.statusCode) << CRLF;
+    ss << CONTENT_TYPE << h.contentType << CRLF;
+    ss << CONTENT_LEN << h.contentLen << CRLF;
+    if (h.keepAlive)
+        ss << KEEP_ALIVE << CRLF;
+    ss << CRLF;
+}
+
+static Headers createHeaders(int statusCode, std::string contentType, size_t contentLen,
+                             bool keepAlive)
+{
+    Headers h;
+
+    h.statusCode = statusCode;
+    h.contentType = contentType;
+    h.contentLen = contentLen;
+    h.keepAlive = keepAlive;
+
+    return h;
+}
+
+void Response::setResponse(std::stringstream& ss)
+{
+    _length = getStreamLen(ss);
+    if (_buffer != NULL)
+        delete[] _buffer;
+    _buffer = new char[_length];
+    ss.read(_buffer, _length);
+}
+
 void Response::createGETResponse(std::string filename, bool keepAlive)
 {
     std::ifstream file;
@@ -152,92 +184,144 @@ void Response::createGETResponse(std::string filename, bool keepAlive)
     // mimeType = getMimeType(filename);
     mimeType = "text/html; charset=UTF-8";
 
-    size_t fileLen = getStreamLen(file);
-
-    responseBuffer << STATUS_LINE << getStatus(200) << CRLF;
-    responseBuffer << CONTENT_TYPE << mimeType << CRLF;
-    responseBuffer << CONTENT_LEN << fileLen << CRLF;
-    if (keepAlive)
-        responseBuffer << KEEP_ALIVE << CRLF;
-    responseBuffer << CRLF;
+    // size_t fileLen = getStreamLen(file);
+    setResponseHeaders(responseBuffer,
+                          createHeaders(200, mimeType, getStreamLen(file), keepAlive));
+    // responseBuffer << STATUS_LINE << getStatus(200) << CRLF;
+    // responseBuffer << CONTENT_TYPE << mimeType << CRLF;
+    // responseBuffer << CONTENT_LEN << fileLen << CRLF;
+    // if (keepAlive)
+    //     responseBuffer << KEEP_ALIVE << CRLF;
+    // responseBuffer << CRLF;
     responseBuffer << file.rdbuf();
     file.close();
 
-    _length = getStreamLen(responseBuffer);
-    if (_buffer != NULL)
-        delete[] _buffer;
-    _buffer = new char[_length];
-    responseBuffer.read(_buffer, _length);
+    setResponse(responseBuffer);
+    // _length = getStreamLen(responseBuffer);
+    // if (_buffer != NULL)
+    //     delete[] _buffer;
+    // _buffer = new char[_length];
+    // responseBuffer.read(_buffer, _length);
 }
 
-void Response::createPOSTResponse(std::string filename, Request& request)
+void Response::createFileResponse(std::string filename, Request &request, int statusCode)
 {
     std::stringstream responseBuffer;
     std::ofstream file;
-    std::string path("./posts" + filename);
-    std::cout << "path is " << path << std::endl;
-    file.open(path);
+    std::string path("." + filename);
+    file.open(path.c_str());
     if (!file.good())
     {
-        std::cout << "Cannot open file to write" << std::endl;
+        std::cout << "Cannot open file to write: " << path << std::endl;
         return createHTMLResponse(500, errorPage(500), false);
     }
-    file.write(request.buffer() + request.bodyStart(), request.requestLength() - request.bodyStart());
+    file.write(request.buffer() + request.bodyStart(),
+               request.requestLength() - request.bodyStart());
     file.close();
-    responseBuffer << STATUS_LINE << getStatus(201) << CRLF;
+    responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
     if (request.keepAlive())
         responseBuffer << KEEP_ALIVE << CRLF;
     responseBuffer << LOCATION << path << CRLF;
     responseBuffer << CRLF;
-    _length = getStreamLen(responseBuffer);
-    if (_buffer != NULL)
-        delete[] _buffer;
-    _buffer = new char[_length];
-    responseBuffer.read(_buffer, _length);
+    setResponse(responseBuffer);
+    
+    // _length = getStreamLen(responseBuffer);
+    // if (_buffer != NULL)
+    //     delete[] _buffer;
+    // _buffer = new char[_length];
+    // responseBuffer.read(_buffer, _length);
 }
 
-void Response::createPUTResponse(std::string filename, Request& request)
+void Response::createDELETEResponse(std::string filename, Request &request)
 {
     std::stringstream responseBuffer;
-    std::ofstream file;
-    std::string path("./posts" + filename);
-    std::cout << "path is " << path << std::endl;
-    file.open(path);
-    if (!file.good())
+    int status;
+
+    status = std::remove(filename.c_str());
+    if (status != 0)
     {
-        std::cout << "Cannot open file to write" << std::endl;
+        std::cout << "Cannot delete file " << filename << std::endl;
         return createHTMLResponse(500, errorPage(500), false);
     }
-    file.write(request.buffer() + request.bodyStart(), request.requestLength() - request.bodyStart());
-    file.close();
-    responseBuffer << STATUS_LINE << getStatus(201) << CRLF;
+    responseBuffer << STATUS_LINE << getStatus(204) << CRLF;
     if (request.keepAlive())
         responseBuffer << KEEP_ALIVE << CRLF;
-    responseBuffer << LOCATION << path << CRLF;
     responseBuffer << CRLF;
-    _length = getStreamLen(responseBuffer);
-    if (_buffer != NULL)
-        delete[] _buffer;
-    _buffer = new char[_length];
-    responseBuffer.read(_buffer, _length);
+    setResponse(responseBuffer);
+    
+    // _length = getStreamLen(responseBuffer);
+    // if (_buffer != NULL)
+    //     delete[] _buffer;
+    // _buffer = new char[_length];
+    // responseBuffer.read(_buffer, _length);
 }
 
 void Response::createHTMLResponse(int statusCode, std::string page, bool keepAlive)
 {
     std::stringstream responseBuffer;
 
-    responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
-    if (keepAlive)
-        responseBuffer << KEEP_ALIVE << CRLF;
-    // responseBuffer << CONTENT_TYPE << getContentType(extension) << CRLF;
-    responseBuffer << CONTENT_TYPE << HTML << CRLF;
-    responseBuffer << CONTENT_LEN << page.length() << CRLF << CRLF;
+    setResponseHeaders(responseBuffer,
+                          createHeaders(statusCode, HTML, page.length(), keepAlive));
+    // responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
+    // // responseBuffer << CONTENT_TYPE << getContentType(extension) << CRLF;
+    // responseBuffer << CONTENT_TYPE << HTML << CRLF;
+    // responseBuffer << CONTENT_LEN << page.length() << CRLF;
+    // if (keepAlive)
+    //     responseBuffer << KEEP_ALIVE << CRLF;
+    // responseBuffer << CRLF;
     responseBuffer << page;
-    _length = getStreamLen(responseBuffer);
-    if (_buffer != NULL)
-        delete[] _buffer;
-    _buffer = new char[_length];
-    responseBuffer.read(_buffer, _length);
+    setResponse(responseBuffer);
+    // _length = getStreamLen(responseBuffer);
+    // if (_buffer != NULL)
+    //     delete[] _buffer;
+    // _buffer = new char[_length];
+    // responseBuffer.read(_buffer, _length);
+}
+
+void Response::createHEADResponse(std::string filename, Request &request)
+{
+    std::ifstream file;
+    std::stringstream responseBuffer;
+    std::string mimeType;
+
+    file.open(filename.c_str(), std::ios::binary);
+    if (!file.good())
+        return createHTMLResponse(404, errorPage(404), false);
+    // mimeType = getMimeType(filename);
+    mimeType = "text/html; charset=UTF-8";
+
+    // size_t fileLen = getStreamLen(file);
+    file.close();
+
+    setResponseHeaders(responseBuffer,
+                          createHeaders(200, mimeType, getStreamLen(file), request.keepAlive()));
+    // responseBuffer << STATUS_LINE << getStatus(200) << CRLF;
+    // responseBuffer << CONTENT_TYPE << mimeType << CRLF;
+    // responseBuffer << CONTENT_LEN << fileLen << CRLF;
+    // if (request.keepAlive())
+    //     responseBuffer << KEEP_ALIVE << CRLF;
+    // responseBuffer << CRLF;
+    setResponse(responseBuffer);
+
+    // _length = getStreamLen(responseBuffer);
+    // if (_buffer != NULL)
+    //     delete[] _buffer;
+    // _buffer = new char[_length];
+    // responseBuffer.read(_buffer, _length);
+}
+
+void Response::createDirHEADResponse(size_t contentLen, bool keepAlive)
+{
+    std::stringstream responseBuffer;
+    
+    setResponseHeaders(responseBuffer, createHeaders(200, HTML, contentLen, keepAlive));
+    setResponse(responseBuffer);
+    
+    // _length = getStreamLen(responseBuffer);
+    // if (_buffer != NULL)
+    //     delete[] _buffer;
+    // _buffer = new char[_length];
+    // responseBuffer.read(_buffer, _length);
 }
 
 Response::~Response()

@@ -55,10 +55,8 @@ std::string Connection::createResponseHeaders()
     return headers;
 }
 
-void Connection::processGET(std::vector<ServerBlock *> &config)
+void Connection::processGET(configList config)
 {
-    std::string headers;
-
     RequestTarget target = request.target(config);
     std::cout << "method type: " << httpMethodtoStr(request.method()) << std::endl;
     std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
@@ -83,7 +81,7 @@ void Connection::processGET(std::vector<ServerBlock *> &config)
     }
 }
 
-void Connection::processPOST(std::vector<ServerBlock *> &config)
+void Connection::processPOST(configList config)
 {
     RequestTarget target = request.target(config);
     std::cout << "method type: " << httpMethodtoStr(request.method()) << std::endl;
@@ -104,11 +102,12 @@ void Connection::processPOST(std::vector<ServerBlock *> &config)
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case NOT_FOUND:
-        response.createPOSTResponse(request.rawTarget(), request);
+        // change this from raw target to resource.path
+        response.createFileResponse(request.rawTarget(), request, 201);
     }
 }
 
-void Connection::processPUT(std::vector<ServerBlock *> &config)
+void Connection::processPUT(configList config)
 {
     std::string headers;
 
@@ -119,18 +118,78 @@ void Connection::processPUT(std::vector<ServerBlock *> &config)
     switch (target.type)
     {
     case FOUND:
-        response.createHTMLResponse(409, errorPage(409), keepAlive);
+        response.createFileResponse(target.resource, request, 204);
+        break;
+    case REDIRECTION:
+        response.createRedirectResponse(target.resource, 307, keepAlive);
         break;
     case METHOD_NOT_ALLOWED:
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
-    default:
-        // response.createPOSTResponse(target.resource, request);
-        response.createPOSTResponse(request.rawTarget(), request);
+    case DIRECTORY:
+        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        break;
+    case NOT_FOUND:
+        response.createFileResponse(request.rawTarget(), request, 201);
+        break;
     }
 }
 
-void Connection::processRequest(std::vector<ServerBlock *> &config)
+void Connection::processDELETE(configList config)
+{
+    std::string headers;
+
+    RequestTarget target = request.target(config);
+    std::cout << "method type: " << request.method() << std::endl;
+    std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
+    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+    switch (target.type)
+    {
+    case FOUND:
+        response.createDELETEResponse(target.resource, request);
+        break;
+    case REDIRECTION:
+        response.createRedirectResponse(target.resource, 307, keepAlive);
+        break;
+    case METHOD_NOT_ALLOWED:
+        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        break;
+    case DIRECTORY:
+        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        break;
+    case NOT_FOUND:
+        response.createHTMLResponse(404, errorPage(404), keepAlive);
+        break;
+    }
+}
+
+void Connection::processHEAD(configList config)
+{
+    RequestTarget target = request.target(config);
+    std::cout << "method type: " << httpMethodtoStr(request.method()) << std::endl;
+    std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
+    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+    switch (target.type)
+    {
+    case FOUND:
+        response.createHEADResponse(target.resource, request);
+        break;
+    case REDIRECTION:
+        response.createRedirectResponse(target.resource, 302, keepAlive);
+        break;
+    case METHOD_NOT_ALLOWED:
+        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        break;
+    case DIRECTORY:
+        response.createDirHEADResponse(directoryListing(target.resource).length(), keepAlive);
+        break;
+    case NOT_FOUND:
+        response.createHTMLResponse(404, errorPage(404), keepAlive);
+        break;
+    }
+}
+
+void Connection::processRequest(configList config)
 {
     if (request.requestLength() == 0)
         return;
@@ -148,8 +207,13 @@ void Connection::processRequest(std::vector<ServerBlock *> &config)
             processPUT(config);
             break;
         case DELETE:
+            processDELETE(config);
             break;
+        // case HEAD:
+        //     processHEAD(config);
+        //     break;
         case OTHER:
+            processHEAD(config);
             break;
     }
     request.clear();

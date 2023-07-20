@@ -11,6 +11,7 @@
 #ifndef RESPONSE_HPP
 #define RESPONSE_HPP
 
+#include <cstddef>
 #include <ios>
 # include <iostream>
 # include <sstream>
@@ -38,6 +39,14 @@
 #define IMG_HEADERS  "HTTP/1.1 200 OK\r\nContent-Type: image/jpg\r\nContent-Length: "
 #define HTTP_HEADERS "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n"
 
+struct Headers
+{
+    int statusCode;
+    std::string contentType;
+    size_t contentLen;
+    bool keepAlive;
+};
+
 class Response
 {
     private:
@@ -56,10 +65,14 @@ class Response
         int statusCode();
         // void setResponse(char *newBuf, size_t bufLen);
         int sendResponse(int fd);
+        void setResponse(std::stringstream& ss);
+        void setResponseHeaders(std::stringstream& ss, Headers header);
         void createRedirectResponse(std::string& redirUrl, int statusCode, bool keepAlive);
         void createGETResponse(std::string filename, bool keepAlive);
-        void createPOSTResponse(std::string filename, Request &request);
-        void createPUTResponse(std::string filename, Request &request);
+        void createFileResponse(std::string filename, Request &request, int statusCode);
+        void createDELETEResponse(std::string filename, Request &request);
+        void createHEADResponse(std::string filename, Request &request);
+        void createDirHEADResponse(size_t contentLen, bool keepAlive);
         void createHTMLResponse(int statusCode, std::string page, bool keepAlive);
         void clear();
         ~Response();

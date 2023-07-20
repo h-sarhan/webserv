@@ -18,6 +18,8 @@ std::string getStatus(int statusCode)
 			return "200 OK";
 		case 201:
 			return "201 Created";
+		case 204:
+			return "204 No content";
 		case 302:
 			return "302 Found";
 		case 307:

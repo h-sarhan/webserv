@@ -17,6 +17,8 @@
 #include <iostream>
 // #include <ctime>
 
+typedef std::vector<ServerBlock *>& configList;
+
 class Connection
 {
     public:
@@ -32,10 +34,12 @@ class Connection
         Connection(int listener);
         Connection(const Connection &c);
         Connection& operator=(const Connection &c);
-        void processRequest(std::vector<ServerBlock *>& config);
-        void processGET(std::vector<ServerBlock *> &config);
-        void processPOST(std::vector<ServerBlock *> &config);
-        void processPUT(std::vector<ServerBlock *> &config);
+        void processRequest(configList config);
+        void processGET(configList config);
+        void processPOST(configList config);
+        void processPUT(configList config);
+        void processDELETE(configList config);
+        void processHEAD(configList config);
 
         bool keepConnectionAlive();
         std::string createResponseHeaders();
