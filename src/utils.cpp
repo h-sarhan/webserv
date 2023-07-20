@@ -11,6 +11,7 @@
 #include "utils.hpp"
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 
 void rightTrimStr(std::string &str, const std::string &anyOf)
 {
@@ -87,4 +88,29 @@ void removeDuplicateChar(std::string &str, const char c)
         str.erase(dupPos, 1);
         dupPos = str.find(std::string(2, c));
     }
+}
+
+std::map<std::string, std::string> parseKeyValueFile(const std::string &filename, const char delim)
+{
+    std::ifstream fileStream(filename);
+    std::map<std::string, std::string> keyVal;
+    if (!fileStream)
+    {
+        std::cerr << "Error opening '" << filename << "'." << std::endl;
+        return keyVal;
+    }
+
+    std::string key, value;
+    char sep;
+    while (fileStream)
+    {
+        fileStream >> std::skipws >> key >> std::noskipws >> sep >> std::skipws >> value;
+        if (sep != delim)
+        {
+            std::cerr << "Error reading '" << filename << "'. Invalid delimiter" << std::endl;
+            return std::map<std::string, std::string>();
+        }
+        keyVal.insert(std::make_pair(key, value));
+    }
+    return keyVal;
 }

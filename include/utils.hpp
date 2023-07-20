@@ -11,6 +11,7 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
+#include <map>
 #include <sstream>
 #include <string>
 
@@ -126,5 +127,18 @@ const std::string getLine(const std::string &filename, const unsigned int lineNu
  * @param c Duplicate character
  */
 void removeDuplicateChar(std::string &str, const char c);
+
+/**
+ * @brief Parses a key value file into a map. The file is expected to be in the following format
+ *
+ * KEY delim VALUE\n
+ * KEY delim VALUE\n
+ * ...
+ *
+ * @param filename Name of the file
+ * @param delim Delimeter used
+ * @return std::map<std::string, std::string> The file contents parsed into a map
+ */
+std::map<std::string, std::string> parseKeyValueFile(const std::string &filename, const char delim);
 
 #endif
