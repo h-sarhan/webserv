@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/20 19:36:07 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/20 20:16:57 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,7 +60,7 @@ void Connection::processGET(std::vector<ServerBlock *> &config)
     std::string headers;
 
     RequestTarget target = request.target(config);
-    std::cout << "method type: " << request.method() << std::endl;
+    std::cout << "method type: " << httpMethodtoStr(request.method()) << std::endl;
     std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
     std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
     switch (target.type)

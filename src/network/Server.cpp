@@ -238,12 +238,20 @@ void Server::startListening()
                     acceptNewConnection(i);
                 else   // its one of the clients
                 {
-                    recvData(i);
-                    // if this fd is still alive and no errors so far
-                    if (cons.count(eventFd))
-                        // check if the headers are ready, parse them if they are
-                        if (cons[eventFd].request.parseRequest())
-                            readBody(i);   // this will only be run if the headers are parsed
+                    try 
+                    {
+                        recvData(i);
+                        // if this fd is still alive and no errors so far
+                        if (cons.count(eventFd))
+                            // check if the headers are ready, parse them if they are
+                            if (cons[eventFd].request.parseRequest())
+                                readBody(i);   // this will only be run if the headers are parsed
+                    }
+                    catch (std::exception &e)
+                    {
+                        std::cerr << "not Parse error: " << e.what() << std::endl;
+                        closeConnection(i);
+                    }
                 }
             }
             else if (sockets[i].revents & POLLOUT)
