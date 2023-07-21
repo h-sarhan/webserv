@@ -6,13 +6,14 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/20 20:16:57 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/21 16:10:03 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "network/Connection.hpp"
 #include "enums/HTTPMethods.hpp"
-#include "enums/RequestTypes.hpp"
+#include "enums/ResourceTypes.hpp"
+#include "enums/conversions.hpp"
 #include "requests/Request.hpp"
 #include "responses/DefaultPages.hpp"
 #include "responses/Response.hpp"
@@ -57,45 +58,48 @@ std::string Connection::createResponseHeaders()
 
 void Connection::processGET(configList config)
 {
-    RequestTarget target = request.target(config);
-    std::cout << "method type: " << httpMethodtoStr(request.method()) << std::endl;
-    std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
-    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+    Resource target = request.resource(config);
+    std::cout << "method type: " << enumToStr(request.method()) << std::endl;
+    std::cout << request.rawTarget() << " resource found at: " << target.path << std::endl;
+    std::cout << "request type: " << enumToStr(target.type) << std::endl;
     switch (target.type)
     {
-    case FOUND:
-        response.createGETResponse(target.resource, keepAlive);
+    case EXISTING_FILE:
+        response.createGETResponse(target.path, keepAlive);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(target.resource, 302, keepAlive);
+        response.createRedirectResponse(target.path, 302, keepAlive);
         break;
-    case METHOD_NOT_ALLOWED:
+    case FORBIDDEN_METHOD:
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case DIRECTORY:
-        response.createHTMLResponse(200, directoryListing(target.resource), keepAlive);
+        response.createHTMLResponse(200, directoryListing(target.path), keepAlive);
         break;
     case NOT_FOUND:
         response.createHTMLResponse(404, errorPage(404), keepAlive);
+        break;
+    case INVALID_REQUEST:
+        response.createHTMLResponse(400, errorPage(400), keepAlive);
         break;
     }
 }
 
 void Connection::processPOST(configList config)
 {
-    RequestTarget target = request.target(config);
-    std::cout << "method type: " << httpMethodtoStr(request.method()) << std::endl;
-    std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
-    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+    Resource target = request.resource(config);
+    std::cout << "method type: " << enumToStr(request.method()) << std::endl;
+    std::cout << request.rawTarget() << " resource found at: " << target.path << std::endl;
+    std::cout << "request type: " << enumToStr(target.type) << std::endl;
     switch (target.type)
     {
-    case FOUND:
+    case EXISTING_FILE:
         response.createHTMLResponse(409, errorPage(409), keepAlive);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(target.resource, 307, keepAlive);
+        response.createRedirectResponse(target.path, 307, keepAlive);
         break;
-    case METHOD_NOT_ALLOWED:
+    case FORBIDDEN_METHOD:
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case DIRECTORY:
@@ -103,7 +107,11 @@ void Connection::processPOST(configList config)
         break;
     case NOT_FOUND:
         // change this from raw target to resource.path
-        response.createFileResponse(request.rawTarget(), request, 201);
+        response.createFileResponse(target.path, request, 201);
+        break;
+    case INVALID_REQUEST:
+        response.createHTMLResponse(400, errorPage(400), keepAlive);
+        break;
     }
 }
 
@@ -111,26 +119,29 @@ void Connection::processPUT(configList config)
 {
     std::string headers;
 
-    RequestTarget target = request.target(config);
-    std::cout << "method type: " << request.method() << std::endl;
-    std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
-    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+    Resource target = request.resource(config);
+    std::cout << "method type: " << enumToStr(request.method()) << std::endl;
+    std::cout << request.rawTarget() << " resource found at: " << target.path << std::endl;
+    std::cout << "request type: " << enumToStr(target.type) << std::endl;
     switch (target.type)
     {
-    case FOUND:
-        response.createFileResponse(target.resource, request, 204);
+    case EXISTING_FILE:
+        response.createFileResponse(target.path, request, 204);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(target.resource, 307, keepAlive);
+        response.createRedirectResponse(target.path, 307, keepAlive);
         break;
-    case METHOD_NOT_ALLOWED:
+    case FORBIDDEN_METHOD:
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case DIRECTORY:
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case NOT_FOUND:
-        response.createFileResponse(request.rawTarget(), request, 201);
+        response.createFileResponse(target.path, request, 201);
+        break;
+    case INVALID_REQUEST:
+        response.createHTMLResponse(400, errorPage(400), keepAlive);
         break;
     }
 }
@@ -139,19 +150,19 @@ void Connection::processDELETE(configList config)
 {
     std::string headers;
 
-    RequestTarget target = request.target(config);
-    std::cout << "method type: " << request.method() << std::endl;
-    std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
-    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+    Resource target = request.resource(config);
+    std::cout << "method type: " << enumToStr(request.method()) << std::endl;
+    std::cout << request.rawTarget() << " resource found at: " << target.path << std::endl;
+    std::cout << "request type: " << enumToStr(target.type) << std::endl;
     switch (target.type)
     {
-    case FOUND:
-        response.createDELETEResponse(target.resource, request);
+    case EXISTING_FILE:
+        response.createDELETEResponse(target.path, request);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(target.resource, 307, keepAlive);
+        response.createRedirectResponse(target.path, 307, keepAlive);
         break;
-    case METHOD_NOT_ALLOWED:
+    case FORBIDDEN_METHOD:
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case DIRECTORY:
@@ -159,32 +170,38 @@ void Connection::processDELETE(configList config)
         break;
     case NOT_FOUND:
         response.createHTMLResponse(404, errorPage(404), keepAlive);
+        break;
+    case INVALID_REQUEST:
+        response.createHTMLResponse(400, errorPage(400), keepAlive);
         break;
     }
 }
 
 void Connection::processHEAD(configList config)
 {
-    RequestTarget target = request.target(config);
-    std::cout << "method type: " << httpMethodtoStr(request.method()) << std::endl;
-    std::cout << request.rawTarget() << " resource found at: " << target.resource << std::endl;
-    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
+    Resource target = request.resource(config);
+    std::cout << "method type: " << enumToStr(request.method()) << std::endl;
+    std::cout << request.rawTarget() << " resource found at: " << target.path << std::endl;
+    std::cout << "request type: " << enumToStr(target.type) << std::endl;
     switch (target.type)
     {
-    case FOUND:
-        response.createHEADResponse(target.resource, request);
+    case EXISTING_FILE:
+        response.createHEADResponse(target.path, request);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(target.resource, 302, keepAlive);
+        response.createRedirectResponse(target.path, 302, keepAlive);
         break;
-    case METHOD_NOT_ALLOWED:
+    case FORBIDDEN_METHOD:
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case DIRECTORY:
-        response.createDirHEADResponse(directoryListing(target.resource).length(), keepAlive);
+        response.createDirHEADResponse(directoryListing(target.path).length(), keepAlive);
         break;
     case NOT_FOUND:
         response.createHTMLResponse(404, errorPage(404), keepAlive);
+        break;
+    case INVALID_REQUEST:
+        response.createHTMLResponse(400, errorPage(400), keepAlive);
         break;
     }
 }

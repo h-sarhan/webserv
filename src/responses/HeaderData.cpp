@@ -24,6 +24,8 @@ std::string getStatus(int statusCode)
 			return "302 Found";
 		case 307:
 			return "307 Temporary redirect";
+		case 400:
+			return "400 Bad request";
 		case 404:
 			return "404 Not found";
 		case 405:

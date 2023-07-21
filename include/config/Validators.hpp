@@ -1,8 +1,7 @@
 /**
  * @file Validators.hpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file declares various input validators used throughout config
- * file parsing
+ * @brief This file declares various input validators used throughout parsing
  * @date 2023-07-09
  *
  * @copyright Copyright (c) 2023
@@ -24,6 +23,4 @@ bool validateURL(const std::string &urlStr);
 bool validateBodySize(const std::string &bodySizeStr);
 bool validateHTMLMethod(const std::string &bodySizeStr);
 
-// A function that tests out all the input validators
-void inputValidatorTests();
 #endif

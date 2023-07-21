@@ -9,7 +9,8 @@
  */
 
 #include "network/Server.hpp"
-#include "enums/RequestTypes.hpp"
+#include "enums/ResourceTypes.hpp"
+#include "enums/conversions.hpp"
 #include "network/SystemCallException.hpp"
 #include "network/network.hpp"
 #include "responses/Response.hpp"

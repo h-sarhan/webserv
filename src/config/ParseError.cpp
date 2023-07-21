@@ -7,48 +7,54 @@
  * @copyright Copyright (c) 2023
  *
  */
+
 #include "config/ParseError.hpp"
+#include "utils.hpp"
 #include <fstream>
 #include <sstream>
 
-// ! DUMB IMPLEMENTATION: Consider storing the line somewhere
-static const std::string getLine(const std::string &filename, const unsigned int errLine)
-{
-    std::ifstream file(filename.c_str());
-
-    unsigned int lineNum = 0;
-    std::string line;
-    while (lineNum != errLine && std::getline(file, line))
-        lineNum++;
-    return line;
-}
-
+/**
+ * @brief Construct a new ParseError with an error message based on the Token where the error
+ * occurred
+ *
+ * @param errorMsg Error message
+ * @param token Token where the error ocurred
+ * @param filename Name of the config file
+ */
 ParseError::ParseError(const std::string &errorMsg, const Token &token, const std::string &filename)
 
 {
-    std::stringstream msg;
-    msg << BOLD << filename << ":" << token.line() << ":" << token.column() << RED
-        << " error: " << RESET BOLD << errorMsg << RESET "\n"
-        << "\n" RESET << getLine(filename, token.line()) << "\n"
-        << std::string(token.column() - 1, ' ') << GREEN
-        << std::string(token.contents().length(), '^') << std::endl;
-    _errorMsg = msg.str();
+    _errorMsg = BOLD + filename + ":" + toStr(token.line()) + ":" + toStr(token.column()) +
+                RED " error: " + RESET BOLD + errorMsg + RESET "\n\n" +
+                getLine(filename, token.line()) + "\n" + std::string(token.column() - 1, ' ') +
+                GREEN + std::string(token.contents().length(), '^') + RESET "\n";
 }
 
+/**
+ * @brief Construct a new ParseError with a simple error message
+ *
+ * @param errorMsg Error message
+ * @param filename Name of the config file
+ */
 ParseError::ParseError(const std::string &errorMsg, const std::string &filename)
 
 {
-    std::stringstream msg;
-    msg << BOLD << filename << ":" << RED << " error: " << RESET BOLD << errorMsg << RESET
-        << std::endl;
-    _errorMsg = msg.str();
+    _errorMsg = BOLD + filename + ":" RED " error: " RESET BOLD + errorMsg + RESET "\n";
 }
 
+/**
+ * @brief Get error message
+ *
+ * @return const char* Error message as a char *
+ */
 const char *ParseError::what() const throw()
 {
     return _errorMsg.c_str();
 }
 
+/**
+ * @brief Destroy the Parse Error object
+ */
 ParseError::~ParseError() throw()
 {
 }

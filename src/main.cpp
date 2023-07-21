@@ -10,7 +10,10 @@
 
 #include "config/Parser.hpp"
 #include "config/Validators.hpp"
+#include "config/ServerBlock.hpp"
 #include "network/Server.hpp"
+#include "tests.hpp"
+#include "utils.hpp"
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -34,6 +37,8 @@ int main(int argc, char **argv)
     // Test that request parsing works
     // requestParsingTests();
     // generateDirectoryListing(".");
+
+    chunkerTests();
     try
     {
         if (argc == 2)
@@ -49,7 +54,7 @@ int main(int argc, char **argv)
         else
         {
             // uses default config
-            std::vector<ServerBlock> config(1, createDefaultServerBlock());
+            std::vector<ServerBlock> config = ServerBlock::createDefaultConfig();
             Server s(config);
             s.startListening();
         }

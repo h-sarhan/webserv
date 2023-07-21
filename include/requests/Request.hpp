@@ -13,86 +13,91 @@
 
 #include "config/ServerBlock.hpp"
 #include "enums/HTTPMethods.hpp"
-#include "enums/RequestTypes.hpp"
+#include "requests/Resource.hpp"
 #include <map>
 
-#define REQ_BUFFER_SIZE 3000
-#define WHITESPACE      " \t\n\r\f\v"
-
-// * Important headers
-// Host: webserv.com
-// Connection: keep-alive
-// Keep-Alive: timeout=5, max=1000
-// ? Content-Length: 1000 // mehrins job i think
-// ? Transfer-encoding: chunked // mehrins job i think
-
-struct RequestTarget
-{
-    RequestTarget(const RequestType &type, const std::string &resource);
-    RequestType type;
-    std::string resource;
-};
+#define DEFAULT_HOSTNAME        "localhost"
+#define REQ_BUFFER_SIZE         2000
+#define DEFAULT_KEEP_ALIVE_TIME 5
+#define MAX_KEEP_ALIVE_TIME     20
+#define MAX_RECONNECTIONS       20
+#define DEFAULT_RECONNECTIONS   20
 
 /**
- * @brief This class defines an HTTP request
+ * @brief This class is responsible for parsing an HTTP request
  */
 class Request
 {
   private:
     HTTPMethod _httpMethod;
-    std::string _target;
-    std::map<std::string, std::string> _headers;
+    std::string _requestedURL;
+    std::map<std::string, const std::string> _headers;
     char *_buffer;
-    size_t _bodyStart;
     size_t _length;
     size_t _capacity;
+    size_t _bodyStart;
+
+    bool _valid;
 
   public:
     Request();
-
-    // Returns false if the request does not contain the full headers
-    // Throws InvalidRequestError if the request is detected to be invalid
-    bool parseRequest();
-
     Request(const Request &req);
     Request &operator=(const Request &req);
     ~Request();
 
-    const HTTPMethod &method() const;
+    // Parse the request method, resource, and headers
+    // Returns true when the request has been parsed
+    // Returns false if the request does not include the full headers
+    bool parseRequest();
 
-    char *buffer() const;
+    // Getters for attributes that have been parsed from the HTTP request
+    const HTTPMethod &method() const;
+    const char *buffer() const;
     size_t requestLength() const;
     size_t bodyStart() const;
 
-    const RequestTarget target(std::vector<ServerBlock *> config);
+    // ! Make this const
+    std::map<std::string, const std::string> &headers();
 
-    void appendToBuffer(const char *data, size_t n);
-
-    // ! Make these const when im not tired
-    // ! CACHE THESE
-    std::string userAgent();
-    std::string host();
-    std::map<std::string, std::string>& headers();
-    bool keepAlive();
-    unsigned int keepAliveTimer();
-    unsigned int maxReconnections();
+    // !! Cache these getters
+    const std::string hostname() const;      // might end up being private
+    bool keepAlive() const;                  // might not need this
+    unsigned int keepAliveTimer() const;     // might not need this
+    unsigned int maxReconnections() const;   // might not need this
+    size_t bodySize() const;
     std::string rawTarget();
+    // Appends request data to the internal buffer
+    void appendToBuffer(const char *data, const size_t n);
+
+    // !! Cache this
+    // Returns a resource object associated with the request
+    const Resource resource(const std::vector<ServerBlock *> &config) const;
+
+    // Clears the attributes of this request
     void clear();
-  
+
   private:
+    // Parses the first line of an HTTP request e.g. GET /index.html HTTP/1.1
     void parseStartLine(std::stringstream &reqStream);
+
+    // Parses a request header. e.g. Host: webserv.com
     void parseHeader(std::stringstream &reqStream);
-    void checkLineEnding(std::stringstream &reqStream);
-    const RequestTarget getTargetFromServerConfig(std::string &biggestMatch,
-                                                  const ServerBlock &serverConfig);
-    void checkStream(const std::stringstream &reqStream, const std::string &token,
-                     const std::string &errMsg);
-    void checkEOF(const std::stringstream &reqStream);
+
+    // Checks if a line ends with \r\n. Throws an exception otherwise
+    void checkLineEnding(std::stringstream &reqStream) const;
+
+    std::string formPathToResource(const std::pair<std::string, Route> &route) const;
+
+    const std::map<std::string, Route>::const_iterator getMatchingRoute(
+        const std::map<std::string, Route> &routes) const;
+
+    const Resource getResourceFromConfig(const std::map<std::string, Route> &routes) const;
+
+    // Resizes the internal buffer
     void resizeBuffer(size_t newCapacity);
+
+    // Assert that a condition is true, throw an exception otherwise
+    void assertThat(bool condition, const std::string &throwMsg) const;
 };
-
-// void requestParsingTests();
-
-void requestBufferTests();
 
 #endif

@@ -196,7 +196,7 @@ void Response::createFileResponse(std::string filename, Request &request, int st
 {
     std::stringstream responseBuffer;
     std::ofstream file;
-    std::string path("." + filename);
+    std::string path(filename);
     file.open(path.c_str());
     if (!file.good())
     {

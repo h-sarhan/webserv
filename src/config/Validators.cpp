@@ -1,8 +1,8 @@
 /**
  * @file Validators.cpp
  * @author Hassan Sarhan (hassanAsarhan@outlook.com)
- * @brief This file defines various input validators that will be used to check
- * if user input is valid
+ * @brief This file defines various input validators that will be used to check if user input is
+ * valid
  * @date 2023-07-09
  *
  * @copyright Copyright (c) 2023
@@ -167,7 +167,6 @@ bool validateDirectory(const std::string &dirPath)
  */
 bool validateBodySize(const std::string &bodySizeStr)
 {
-    // Check if the string is empty
     std::stringstream bodySizeStream(bodySizeStr);
     size_t bodySize = 0;
 
@@ -201,7 +200,7 @@ bool validatePort(const std::string &portStr)
     return port >= 1 && port <= 65535;
 }
 
-// TODO: ADD MORE CHECKS TO URL VALIDATION
+// ! ADD MORE CHECKS TO URL VALIDATION
 /**
  * @brief Check if a URL is valid
  * @todo Add more checks to the URL
@@ -212,69 +211,4 @@ bool validatePort(const std::string &portStr)
 bool validateURL(const std::string &urlStr)
 {
     return !urlStr.empty();
-}
-
-/**
- * @brief Tests for the different validation functions
- */
-void inputValidatorTests()
-{
-    assert(validateURL("") == false);
-    assert(validateURL("/") == true);
-    assert(validateURL("microsoft.com") == true);
-
-    assert(validatePort("") == false);
-    assert(validatePort("45a") == false);
-    assert(validatePort("0") == false);
-    assert(validatePort("-1") == false);
-    assert(validatePort("-") == false);
-    assert(validatePort("345678987654345") == false);
-    assert(validatePort("345 ") == false);
-    assert(validatePort("    ") == false);
-    assert(validatePort("hgvb") == false);
-    assert(validatePort("12132hgvb") == false);
-    assert(validatePort("345") == true);
-    assert(validatePort("65535") == true);
-    assert(validatePort("1") == true);
-
-    assert(validateDirectory("") == false);
-    assert(validateDirectory("./garfield") == false);
-    assert(validateDirectory("urmom") == false);
-    assert(validateDirectory("./src") == true);
-    assert(validateDirectory("./src/") == true);
-    assert(validateDirectory("src") == true);
-    assert(validateDirectory("/") == true);
-
-    assert(validateHTMLFile("dfre") == false);
-    assert(validateHTMLFile("src") == false);
-    assert(validateHTMLFile("src.html") == false);
-    assert(validateHTMLFile("404.html") == false);
-    assert(validateHTMLFile("assets/404.html") == true);
-
-    assert(validateErrorResponse("322") == false);
-    assert(validateErrorResponse("42") == false);
-    assert(validateErrorResponse("4s2") == false);
-    assert(validateErrorResponse("5s2") == false);
-    assert(validateErrorResponse("5sdd") == false);
-    assert(validateErrorResponse("5444") == false);
-    assert(validateErrorResponse("43") == false);
-    assert(validateErrorResponse("69") == false);
-    assert(validateErrorResponse("320") == false);
-    assert(validateErrorResponse("544") == true);
-    assert(validateErrorResponse("400") == true);
-    assert(validateErrorResponse("412") == true);
-    assert(validateErrorResponse("420") == true);
-
-    assert(validateHostName("w.w.w") == true);
-    assert(validateHostName("w.w.w[]") == false);
-    assert(validateHostName("") == false);
-    assert(validateHostName("|") == false);
-    assert(validateHostName(".") == false);
-    assert(validateHostName("...") == false);
-    assert(validateHostName(".2.2.") == false);
-    assert(validateHostName("w.w.w.") == false);
-    assert(validateHostName(";;dewf") == false);
-    assert(validateHostName("0/0.0.") == false);
-    assert(validateHostName("localhost") == true);
-    assert(validateHostName("google.com") == true);
 }
