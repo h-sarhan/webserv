@@ -183,25 +183,13 @@ void Response::createGETResponse(std::string filename, bool keepAlive)
         return createHTMLResponse(404, errorPage(404), false);
     // mimeType = getMimeType(filename);
     mimeType = "text/html; charset=UTF-8";
-
-    // size_t fileLen = getStreamLen(file);
     setResponseHeaders(responseBuffer,
                           createHeaders(200, mimeType, getStreamLen(file), keepAlive));
-    // responseBuffer << STATUS_LINE << getStatus(200) << CRLF;
-    // responseBuffer << CONTENT_TYPE << mimeType << CRLF;
-    // responseBuffer << CONTENT_LEN << fileLen << CRLF;
-    // if (keepAlive)
-    //     responseBuffer << KEEP_ALIVE << CRLF;
-    // responseBuffer << CRLF;
+
     responseBuffer << file.rdbuf();
     file.close();
 
     setResponse(responseBuffer);
-    // _length = getStreamLen(responseBuffer);
-    // if (_buffer != NULL)
-    //     delete[] _buffer;
-    // _buffer = new char[_length];
-    // responseBuffer.read(_buffer, _length);
 }
 
 void Response::createFileResponse(std::string filename, Request &request, int statusCode)
@@ -224,12 +212,6 @@ void Response::createFileResponse(std::string filename, Request &request, int st
     responseBuffer << LOCATION << path << CRLF;
     responseBuffer << CRLF;
     setResponse(responseBuffer);
-    
-    // _length = getStreamLen(responseBuffer);
-    // if (_buffer != NULL)
-    //     delete[] _buffer;
-    // _buffer = new char[_length];
-    // responseBuffer.read(_buffer, _length);
 }
 
 void Response::createDELETEResponse(std::string filename, Request &request)
@@ -248,12 +230,6 @@ void Response::createDELETEResponse(std::string filename, Request &request)
         responseBuffer << KEEP_ALIVE << CRLF;
     responseBuffer << CRLF;
     setResponse(responseBuffer);
-    
-    // _length = getStreamLen(responseBuffer);
-    // if (_buffer != NULL)
-    //     delete[] _buffer;
-    // _buffer = new char[_length];
-    // responseBuffer.read(_buffer, _length);
 }
 
 void Response::createHTMLResponse(int statusCode, std::string page, bool keepAlive)
@@ -262,20 +238,8 @@ void Response::createHTMLResponse(int statusCode, std::string page, bool keepAli
 
     setResponseHeaders(responseBuffer,
                           createHeaders(statusCode, HTML, page.length(), keepAlive));
-    // responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
-    // // responseBuffer << CONTENT_TYPE << getContentType(extension) << CRLF;
-    // responseBuffer << CONTENT_TYPE << HTML << CRLF;
-    // responseBuffer << CONTENT_LEN << page.length() << CRLF;
-    // if (keepAlive)
-    //     responseBuffer << KEEP_ALIVE << CRLF;
-    // responseBuffer << CRLF;
     responseBuffer << page;
     setResponse(responseBuffer);
-    // _length = getStreamLen(responseBuffer);
-    // if (_buffer != NULL)
-    //     delete[] _buffer;
-    // _buffer = new char[_length];
-    // responseBuffer.read(_buffer, _length);
 }
 
 void Response::createHEADResponse(std::string filename, Request &request)
@@ -290,24 +254,10 @@ void Response::createHEADResponse(std::string filename, Request &request)
     // mimeType = getMimeType(filename);
     mimeType = "text/html; charset=UTF-8";
 
-    // size_t fileLen = getStreamLen(file);
-    file.close();
-
     setResponseHeaders(responseBuffer,
                           createHeaders(200, mimeType, getStreamLen(file), request.keepAlive()));
-    // responseBuffer << STATUS_LINE << getStatus(200) << CRLF;
-    // responseBuffer << CONTENT_TYPE << mimeType << CRLF;
-    // responseBuffer << CONTENT_LEN << fileLen << CRLF;
-    // if (request.keepAlive())
-    //     responseBuffer << KEEP_ALIVE << CRLF;
-    // responseBuffer << CRLF;
+    file.close();
     setResponse(responseBuffer);
-
-    // _length = getStreamLen(responseBuffer);
-    // if (_buffer != NULL)
-    //     delete[] _buffer;
-    // _buffer = new char[_length];
-    // responseBuffer.read(_buffer, _length);
 }
 
 void Response::createDirHEADResponse(size_t contentLen, bool keepAlive)
@@ -316,12 +266,6 @@ void Response::createDirHEADResponse(size_t contentLen, bool keepAlive)
     
     setResponseHeaders(responseBuffer, createHeaders(200, HTML, contentLen, keepAlive));
     setResponse(responseBuffer);
-    
-    // _length = getStreamLen(responseBuffer);
-    // if (_buffer != NULL)
-    //     delete[] _buffer;
-    // _buffer = new char[_length];
-    // responseBuffer.read(_buffer, _length);
 }
 
 Response::~Response()
