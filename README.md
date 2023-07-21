@@ -85,6 +85,11 @@ This project produces no warnings even with strict warning flags on gcc and clan
     make
   ```
 
+* To run our tests
+  ```sh
+    make test
+  ```
+
 ### Usage
 
 * To run the web server with default configuration

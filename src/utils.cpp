@@ -122,7 +122,7 @@ static const char *getLineEnd(const char *start, const char *end)
     return std::search(start, end, crlf, crlf + 2);
 }
 
-char *unchunker(const char *body, const size_t bodyLength)
+char *unchunker(const char *body, size_t &bodyLength)
 {
     assert(bodyLength != 0);
 
@@ -159,6 +159,7 @@ char *unchunker(const char *body, const size_t bodyLength)
         pos = lineEnd + 2;
     }
     unchunkedBody[length] = '\0';
+    bodyLength = length;
 
     return unchunkedBody;
 }

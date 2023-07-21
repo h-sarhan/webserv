@@ -10,13 +10,8 @@
 
 #include "requests/Resource.hpp"
 
-/**
- * @brief Construct a new Resource object
- *
- * @param type Type of the resource
- * @param path Path to the resource
- */
-Resource::Resource(const ResourceType &type, const std::string &path, const Route &route)
-    : type(type), path(path), route(route)
+Resource::Resource(const ResourceType &type, const std::string &originalRequest,
+                   const std::string &path, const Route &route)
+    : type(type), originalRequest(originalRequest), path(path), route(route)
 {
 }

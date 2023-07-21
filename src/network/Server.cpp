@@ -13,6 +13,7 @@
 #include "enums/conversions.hpp"
 #include "network/SystemCallException.hpp"
 #include "network/network.hpp"
+#include "responses/Response.hpp"
 
 bool quit = false;
 
@@ -28,7 +29,6 @@ Server::Server(serverList virtualServers)
         if (portAlreadyInUse(it->port))
             continue;
         std::cout << "Setting up listener on port " << it->port << std::endl;
-        // initListener(getServerBlocks(it->port, virtualServers));
         initListener(it->port, virtualServers);
     }
 }
@@ -70,161 +70,38 @@ void Server::initListener(unsigned int port, serverList virtualServers)
     configBlocks.insert(std::make_pair(listenerFd, config));
 }
 
-// change this to use fd directly and close stuff in caller func
-void Server::readBody(size_t clientNo)
-{
-    Request &req = cons.at(sockets[clientNo].fd).request;
-
-    if (req.headers().count("content-length"))
-    {
-        std::istringstream iss(req.headers()["content-length"]);
-        size_t contentLen;
-        iss >> contentLen;
-        if (req.requestLength() != contentLen)
-            return;
-        // return here so that we dont set the events to start responding
-    }
-    else if (req.headers().count("transfer-encoding"))
-    {
-        // handle chunked transfer encoding
-        // here req.buffer() may contain a couple of chunks already or at least one
-        // my job here would be to extract the chunked data
-        // this means to skip over the chunk sizes at the start of a chunk and CRLF at the end
-
-        // if chunk size is not 0, return
-        // return here so that we dont set the events to start responding
-    }
-    std::cout << "Full request size: " << req.requestLength() << std::endl;
-    sockets[clientNo].events = POLLIN | POLLOUT;
-    std::cout << "---------------------------------------------------------\n";
-    std::cout << std::string(req.buffer(), req.buffer() + req.requestLength());
-    std::cout << "---------------------------------------------------------\n";
-}
-
-static std::string createResponse(std::string filename, std::string headers)
-{
-    std::ifstream file;
-    std::stringstream responseBuffer;
-    std::stringstream fileBuffer;
-    std::string fileContents;
-
-    file.open(filename.c_str());
-    // if (!file.good())
-    // return 404 page as response
-    fileBuffer << file.rdbuf();
-    file.close();
-    fileContents = fileBuffer.str();
-    responseBuffer << headers;
-    responseBuffer << fileContents.length() << "\r\n\r\n";
-    responseBuffer << fileContents;
-    return responseBuffer.str();
-}
-
-static std::string createHTMLResponse(std::string page, std::string headers)
-{
-    std::stringstream responseBuffer;
-
-    responseBuffer << headers;
-    responseBuffer << page.length() << "\r\n\r\n";
-    responseBuffer << page;
-    return responseBuffer.str();
-}
-
-void Server::processRequest(Connection &c)
-{
-    // Request &req = cons.at(sockets[clientNo].fd).request;
-    // int listener = cons.at()
-    // std::string &res = cons.at(sockets[clientNo].fd).response;
-    // size_t &totalSent = cons.at(sockets[clientNo].fd).totalBytesSent;
-
-    if (c.request.requestLength() > 0)
-    {
-        Resource resource = c.request.resource(configBlocks[c.listener]);
-        std::cout << "resource found at: " << resource.path << std::endl;
-        std::cout << "request type: " << enumToStr(resource.type) << std::endl;
-        switch (resource.type)
-        {
-        case EXISTING_FILE:
-            c.response = createResponse(resource.path, HTTP_HEADERS);
-            break;
-        case REDIRECTION:
-            c.response = createResponse(resource.path, HTTP_HEADERS);
-            break;
-        case FORBIDDEN_METHOD:
-            c.response = createHTMLResponse(errorPage(405), HTTP_HEADERS);
-            break;
-        case DIRECTORY:
-            c.response = createHTMLResponse(directoryListing(resource.path), HTTP_HEADERS);
-            break;
-        case NOT_FOUND:
-            c.response = createHTMLResponse(errorPage(404), HTTP_HEADERS);
-            break;
-        case INVALID_REQUEST:
-            throw std::runtime_error("Invlalid requests not handled yet");
-        }
-        c.totalBytesSent = 0;
-        c.request.clear();
-    }
-}
-
 void Server::closeConnection(int clientNo)
 {
+    std::cout << "Closing connection " << sockets[clientNo].fd << std::endl;
     close(sockets[clientNo].fd);
     cons.erase(sockets[clientNo].fd);
     sockets.erase(sockets.begin() + clientNo);
 }
 
-void Server::sendResponse(size_t clientNo)
+void Server::respondToRequest(size_t clientNo)
 {
-    ssize_t bytesSent;
-    Connection &c = cons[sockets[clientNo].fd];
-    // time_t curTime;
+    Connection &c = cons.at(sockets[clientNo].fd);
+    int sendStatus;
 
-    processRequest(c);
-    if (c.response.length() == 0)
+    c.processRequest(configBlocks.at(c.listener));
+    sendStatus = c.response.sendResponse(sockets[clientNo].fd);
+    if (sendStatus == IDLE_CONNECTION)
     {
-        std::cout << "Connection is idle: " << sockets[clientNo].fd << std::endl;
-        // time(&curTime);
-        // if (curTime - c.startTime >= c.timeOut)
-        // {
-        //     closeConnection(clientNo);
-        //     std::cout << "Connection timed out! (idle for " << c.timeOut << "s): " <<
-        //     sockets[clientNo].fd << std::endl;
-        // }
+        time_t curTime;
+        time(&curTime);
+        if (curTime - c.startTime >= c.timeOut)
+        {
+            std::cout << "Connection timed out! (idle for " << c.timeOut
+                      << "s): " << sockets[clientNo].fd << std::endl;
+            closeConnection(clientNo);
+        }
         return;
     }
-    std::cout << "Sending a response... " << std::endl;
-    bytesSent = send(sockets[clientNo].fd, c.response.c_str() + c.totalBytesSent,
-                     c.response.length() - c.totalBytesSent, 0);
-    if (bytesSent < 0)
-        std::cout << "Sending response failed: " << strerror(errno) << std::endl;
-    else
-    {
-        c.totalBytesSent += bytesSent;
-        if (c.totalBytesSent < c.response.length())   // partial send
-        {
-            std::cout << "Response only sent partially: " << bytesSent
-                      << ". Total: " << c.totalBytesSent << std::endl;
+    if (sendStatus == SEND_PARTIAL)
+        return;
+    if (sendStatus == SEND_SUCCESS)
+        if (c.keepConnectionAlive())
             return;
-        }
-        else   // everything got sent
-        {
-            std::cout << "Response sent successfully to fd " << clientNo << ", "
-                      << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent
-                      << std::endl;
-            // if (c.keepAlive) // if keep-alive was requested
-            // {
-            //     std::cout << "Connection is keep alive" << std::endl;
-            //     c.request.clear();
-            //     c.response.clear();
-            //     c.totalBytesSent = 0;
-            //     time(&c.startTime); // reset timer
-            //     return ;
-            //     clear response string, set totalBytesSent to 0 and return here!!
-            // }
-        }
-    }
-    std::cout << "Closing connection " << sockets[clientNo].fd << std::endl;
     closeConnection(clientNo);
     std::cout << "---------------------------------------------------------\n";
 }
@@ -235,15 +112,71 @@ static void sigInthandler(int sigNo)
     quit = true;
 }
 
+// change this to use fd directly and close stuff in caller func
+void Server::readBody(size_t clientNo)
+{
+    Request &req = cons.at(sockets[clientNo].fd).request;
+
+    if (req.headers().count("content-length"))
+    {
+        std::istringstream iss(req.headers()["content-length"]);
+        size_t contentLen;
+        iss >> contentLen;
+        // return here so that we dont set the events to start responding
+        if (req.requestLength() - req.bodyStart() != contentLen)
+        {
+            std::cout << "Only " << req.requestLength() << "/" << contentLen << " bytes received"
+                      << std::endl;
+            return;
+        }
+    }
+    else if (req.headers().count("transfer-encoding"))
+    {
+        std::string buf = std::string(req.buffer(), req.buffer() + req.requestLength());
+        if (buf.rfind("0\r\n\r\n") == std::string::npos)
+        {
+            std::cout << "Chunked transfer encoding in prog. " << req.requestLength()
+                      << " bytes received." << std::endl;
+            return;
+        }
+        // chunked transfer encoding completed
+        // handle chunked transfer encoding
+        // here req.buffer() may contain a couple of chunks already or at least one
+        // my job here would be to extract the chunked data
+        // this means to skip over the chunk sizes at the start of a chunk and CRLF at the end
+
+        // if chunk size is not 0, return
+        // return here so that we dont set the events to start responding
+    }
+    std::cout << "Full request size: " << req.requestLength() << std::endl;
+    sockets[clientNo].events = POLLIN | POLLOUT;
+
+    std::cout << "---------------------------------------------------------\n";
+    std::cout << std::string(req.buffer(), req.buffer() + req.bodyStart() - 1);
+    std::cout << "---------------------------------------------------------\n";
+
+    // if this a post req, the only target type we care about is METHOD_NOT_ALLOWED
+}
+
 void Server::recvData(size_t clientNo)
 {
-    char *buf = new char[REQ_BUFFER_SIZE];
     Request &req = cons.at(sockets[clientNo].fd).request;
-    int bytesRec;
+    char *buf;
+    ssize_t bytesRec;
+    size_t bufSize = 1000000;
+
+    if (!req.headers().empty() && req.headers().count("content-length"))
+    {
+        std::istringstream iss(req.headers()["content-length"]);
+        size_t contentLen;
+        iss >> contentLen;
+        bufSize = contentLen;
+    }
+    buf = new char[bufSize];
 
     // receiving request
     std::cout << "Receiving request data: " << std::endl;
-    bytesRec = recv(sockets[clientNo].fd, buf, REQ_BUFFER_SIZE, 0);
+    bytesRec = recv(sockets[clientNo].fd, buf, bufSize, 0);
     if (bytesRec < 0)
         std::cout << "Failed to receive request: " << strerror(errno) << std::endl;
     else if (bytesRec == 0)
@@ -309,16 +242,24 @@ void Server::startListening()
                     acceptNewConnection(i);
                 else   // its one of the clients
                 {
-                    recvData(i);
-                    // if this fd is still alive and no errors so far
-                    if (cons.count(eventFd))
-                        // check if the headers are ready, parse them if they are
-                        if (cons[eventFd].request.parseRequest())
-                            readBody(i);   // this will only be run if the headers are parsed
+                    try
+                    {
+                        recvData(i);
+                        // if this fd is still alive and no errors so far
+                        if (cons.count(eventFd))
+                            // check if the headers are ready, parse them if they are
+                            if (cons[eventFd].request.parseRequest())
+                                readBody(i);   // this will only be run if the headers are parsed
+                    }
+                    catch (std::exception &e)
+                    {
+                        std::cerr << "not Parse error: " << e.what() << std::endl;
+                        closeConnection(i);
+                    }
                 }
             }
             else if (sockets[i].revents & POLLOUT)
-                sendResponse(i);
+                respondToRequest(i);
         }
         if (quit)
             break;

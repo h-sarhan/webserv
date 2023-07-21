@@ -37,7 +37,7 @@ compile_commands.json
 prod_webserv
 webserv
 .cache
-run_
+run_tests
 docs/html
 docs/latex
 .build
@@ -51,3 +51,4 @@ assets/bible.txt
 tester
 assets/Personal-Website
 assets/inception
+YoupiBanane/

@@ -21,7 +21,8 @@ typedef enum
     FORBIDDEN_METHOD,
     DIRECTORY,
     NOT_FOUND,
-    INVALID_REQUEST
+    INVALID_REQUEST,
+    NO_MATCH
 } ResourceType;
 
 #endif

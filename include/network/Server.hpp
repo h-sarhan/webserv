@@ -44,8 +44,7 @@ class Server
     void closeConnection(int clientNo);
     void recvData(size_t clientNo);
     void readBody(size_t clientNo);
-    void processRequest(Connection &c);
-    void sendResponse(size_t clientNo);
+    void respondToRequest(size_t clientNo);
 
   public:
     Server(serverList virtualServers);

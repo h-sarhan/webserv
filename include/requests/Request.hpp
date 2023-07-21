@@ -35,6 +35,7 @@ class Request
     char *_buffer;
     size_t _length;
     size_t _capacity;
+    size_t _bodyStart;
     bool _valid;
 
   public:
@@ -52,6 +53,7 @@ class Request
     const HTTPMethod &method() const;
     const char *buffer() const;
     size_t requestLength() const;
+    size_t bodyStart() const;
 
     // ! Make this const
     std::map<std::string, const std::string> &headers();
@@ -62,7 +64,7 @@ class Request
     unsigned int keepAliveTimer() const;     // might not need this
     unsigned int maxReconnections() const;   // might not need this
     size_t bodySize() const;
-
+    // std::string rawTarget();
     // Appends request data to the internal buffer
     void appendToBuffer(const char *data, const size_t n);
 

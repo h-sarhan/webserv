@@ -13,26 +13,38 @@
 
 #include "network.hpp"
 #include "requests/Request.hpp"
+#include "responses/Response.hpp"
 #include <iostream>
 // #include <ctime>
+
+typedef std::vector<ServerBlock *>& configList;
 
 class Connection
 {
     public:
         int listener; // this is the server socket through which this connection was created - not to be confused with the new client fd
         Request request; // this will be an object of its respective class later and not just str
-        std::string response; // this will be an object of its respective class later and not just str
-        size_t totalBytesRec;
-        size_t totalBytesSent;
-        // bool keepAlive;
-        // time_t timeOut;
-        // time_t startTime;
+        Response response; // this will be an object of its respective class later and not just str
+
+        bool keepAlive;
+        time_t timeOut;
+        time_t startTime;
 
         Connection();
         Connection(int listener);
         Connection(const Connection &c);
         Connection& operator=(const Connection &c);
+        void processRequest(configList config);
+        void processGET(configList config);
+        void processPOST(configList config);
+        void processPUT(configList config);
+        void processDELETE(configList config);
+        void processHEAD(configList config);
+
+        bool keepConnectionAlive();
+        std::string createResponseHeaders();
         ~Connection();
+
 };
 
 #endif

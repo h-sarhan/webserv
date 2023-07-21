@@ -35,6 +35,8 @@ template <> std::string enumToStr(const HTTPMethod &enumVal)
         return "DELETE";
     case OTHER:
         return "OTHER";
+    case HEAD:
+        return "HEAD";
     }
 }
 
@@ -61,6 +63,8 @@ template <> std::string enumToStr(const ResourceType &enumVal)
         return "DIRECTORY";
     case INVALID_REQUEST:
         return "INVALID_REQUEST";
+    case NO_MATCH:
+        return "NO_MATCH";
     }
 }
 
@@ -120,7 +124,7 @@ template <> std::string enumToStr(const TokenType &enumVal)
  */
 template <> HTTPMethod strToEnum<HTTPMethod>(const std::string &str)
 {
-    static const std::string methods[] = {"GET", "POST", "PUT", "DELETE", "OTHER"};
+    static const std::string methods[] = {"GET", "POST", "PUT", "DELETE", "HEAD", "OTHER"};
 
     for (size_t i = 0; i < sizeOfArray(methods); i++)
         if (methods[i] == str)
@@ -137,7 +141,8 @@ template <> HTTPMethod strToEnum<HTTPMethod>(const std::string &str)
 template <> ResourceType strToEnum<ResourceType>(const std::string &str)
 {
     static const std::string requestTypes[] = {"EXISTING_FILE", "REDIRECTION", "FORBIDDEN_METHOD",
-                                               "DIRECTORY",     "NOT_FOUND",   "INVALID_REQUEST"};
+                                               "DIRECTORY",     "NOT_FOUND",   "INVALID_REQUEST",
+                                               "NO_MATCH"};
 
     for (size_t i = 0; i < sizeOfArray(requestTypes); i++)
         if (requestTypes[i] == str)
