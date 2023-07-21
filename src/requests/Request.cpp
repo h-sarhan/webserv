@@ -100,10 +100,10 @@ size_t Request::bodyStart() const
     return _bodyStart;
 }
 
-std::string Request::rawTarget()
-{
-    return _requestedURL;
-}
+// std::string Request::rawTarget()
+// {
+//     return _requestedURL;
+// }
 
 /**
  * @brief Check that a condition is true, else throw an InvalidRequestError exception
@@ -385,32 +385,33 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
 {
     const std::map<std::string, Route>::const_iterator &routeIt = getMatchingRoute(routes);
     if (routeIt == routes.end())
-        return Resource(NOT_FOUND, _requestedURL);
+        return Resource(NO_MATCH, _requestedURL);
 
     const Route &routeOptions = routeIt->second;
     if (routeOptions.methodsAllowed.count(_httpMethod) == 0)
-        return Resource(FORBIDDEN_METHOD, _requestedURL, routeOptions);
+        return Resource(FORBIDDEN_METHOD, _requestedURL);
     if (routeOptions.redirectTo.length() > 0)
-        return Resource(REDIRECTION, routeOptions.redirectTo, routeOptions);
+        return Resource(REDIRECTION, _requestedURL, routeOptions.redirectTo, routeOptions);
     if (routeOptions.serveDir.length() == 0)
-        return Resource(NOT_FOUND, _requestedURL, routeOptions);
+        return Resource(NOT_FOUND, _requestedURL, _requestedURL, routeOptions);
 
     const std::string &resourcePath = formPathToResource(*routeIt);
     // Check if the resource exists
     struct stat info;
     if (stat(resourcePath.c_str(), &info) != 0)
-        return Resource(NOT_FOUND, resourcePath, routeOptions);
+        return Resource(NOT_FOUND, _requestedURL, resourcePath, routeOptions);
 
     // Check if the resource is a file or a directory
     const bool isFile = info.st_mode & S_IFREG;
     const bool isDir = info.st_mode & S_IFDIR;
     if (isFile)
-        return Resource(EXISTING_FILE, resourcePath, routeOptions);
+        return Resource(EXISTING_FILE, _requestedURL, resourcePath, routeOptions);
     if (isDir && routeOptions.listDirectories == true)
-        return Resource(DIRECTORY, resourcePath, routeOptions);
+        return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
     if (isDir && !routeOptions.listDirectoriesFile.empty())
-        return Resource(EXISTING_FILE, routeOptions.listDirectoriesFile, routeOptions);
-    return Resource(NOT_FOUND, resourcePath, routeOptions);
+        return Resource(EXISTING_FILE, _requestedURL, routeOptions.listDirectoriesFile,
+                        routeOptions);
+    return Resource(NOT_FOUND, _requestedURL, resourcePath, routeOptions);
 }
 
 /**
@@ -430,7 +431,7 @@ const Resource Request::resource(const std::vector<ServerBlock *> &config) const
 
     // If no server block matches the hostname then return a NOT_FOUND resource
     if (matchedServerBlock == config.end())
-        return Resource(NOT_FOUND, _requestedURL);
+        return Resource(NO_MATCH, _requestedURL);
     return getResourceFromConfig((*matchedServerBlock)->routes);
 }
 

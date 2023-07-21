@@ -91,7 +91,8 @@ void Server::respondToRequest(size_t clientNo)
         time(&curTime);
         if (curTime - c.startTime >= c.timeOut)
         {
-            std::cout << "Connection timed out! (idle for " << c.timeOut << "s): " << sockets[clientNo].fd << std::endl;
+            std::cout << "Connection timed out! (idle for " << c.timeOut
+                      << "s): " << sockets[clientNo].fd << std::endl;
             closeConnection(clientNo);
         }
         return;
@@ -124,7 +125,8 @@ void Server::readBody(size_t clientNo)
         // return here so that we dont set the events to start responding
         if (req.requestLength() - req.bodyStart() != contentLen)
         {
-            std::cout << "Only " << req.requestLength() << "/" << contentLen << " bytes received" << std::endl;
+            std::cout << "Only " << req.requestLength() << "/" << contentLen << " bytes received"
+                      << std::endl;
             return;
         }
     }
@@ -133,7 +135,8 @@ void Server::readBody(size_t clientNo)
         std::string buf = std::string(req.buffer(), req.buffer() + req.requestLength());
         if (buf.rfind("0\r\n\r\n") == std::string::npos)
         {
-            std::cout << "Chunked transfer encoding in prog. " << req.requestLength() << " bytes received." << std::endl;
+            std::cout << "Chunked transfer encoding in prog. " << req.requestLength()
+                      << " bytes received." << std::endl;
             return;
         }
         // chunked transfer encoding completed
@@ -209,6 +212,7 @@ void Server::acceptNewConnection(size_t listenerNo)
     std::cout << "New connection! fd = " << newFd << std::endl;
     if (sockets.size() < MAX_CLIENTS)
     {
+        // ! Unitialized value originated here probably because 'sockets[listenerNo]' doesn't exist
         cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd)));
         sockets.push_back(createPollFd(newFd, POLLIN));
     }
@@ -239,7 +243,7 @@ void Server::startListening()
                     acceptNewConnection(i);
                 else   // its one of the clients
                 {
-                    try 
+                    try
                     {
                         recvData(i);
                         // if this fd is still alive and no errors so far

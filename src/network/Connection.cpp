@@ -58,23 +58,23 @@ std::string Connection::createResponseHeaders()
 
 void Connection::processGET(configList config)
 {
-    Resource target = request.resource(config);
+    Resource resource = request.resource(config);
     std::cout << "method type: " << enumToStr(request.method()) << std::endl;
-    std::cout << request.rawTarget() << " resource found at: " << target.path << std::endl;
-    std::cout << "request type: " << enumToStr(target.type) << std::endl;
-    switch (target.type)
+    std::cout << resource.originalRequest << " resource found at: " << resource.path << std::endl;
+    std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+    switch (resource.type)
     {
     case EXISTING_FILE:
-        response.createGETResponse(target.path, keepAlive);
+        response.createGETResponse(resource.path, keepAlive);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(target.path, 302, keepAlive);
+        response.createRedirectResponse(resource.path, 302, keepAlive);
         break;
     case FORBIDDEN_METHOD:
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case DIRECTORY:
-        response.createHTMLResponse(200, directoryListing(target.path), keepAlive);
+        response.createHTMLResponse(200, directoryListing(resource.path), keepAlive);
         break;
     case NOT_FOUND:
         response.createHTMLResponse(404, errorPage(404), keepAlive);
@@ -82,22 +82,24 @@ void Connection::processGET(configList config)
     case INVALID_REQUEST:
         response.createHTMLResponse(400, errorPage(400), keepAlive);
         break;
+    case NO_MATCH:
+        break;
     }
 }
 
 void Connection::processPOST(configList config)
 {
-    Resource target = request.resource(config);
+    Resource resource = request.resource(config);
     std::cout << "method type: " << enumToStr(request.method()) << std::endl;
-    std::cout << request.rawTarget() << " resource found at: " << target.path << std::endl;
-    std::cout << "request type: " << enumToStr(target.type) << std::endl;
-    switch (target.type)
+    std::cout << resource.originalRequest << " resource found at: " << resource.path << std::endl;
+    std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+    switch (resource.type)
     {
     case EXISTING_FILE:
         response.createHTMLResponse(409, errorPage(409), keepAlive);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(target.path, 307, keepAlive);
+        response.createRedirectResponse(resource.path, 307, keepAlive);
         break;
     case FORBIDDEN_METHOD:
         response.createHTMLResponse(405, errorPage(405), keepAlive);
@@ -107,10 +109,12 @@ void Connection::processPOST(configList config)
         break;
     case NOT_FOUND:
         // change this from raw target to resource.path
-        response.createFileResponse(target.path, request, 201);
+        response.createFileResponse(resource.path, request, 201);
         break;
     case INVALID_REQUEST:
         response.createHTMLResponse(400, errorPage(400), keepAlive);
+        break;
+    case NO_MATCH:
         break;
     }
 }
@@ -119,17 +123,17 @@ void Connection::processPUT(configList config)
 {
     std::string headers;
 
-    Resource target = request.resource(config);
+    Resource resource = request.resource(config);
     std::cout << "method type: " << enumToStr(request.method()) << std::endl;
-    std::cout << request.rawTarget() << " resource found at: " << target.path << std::endl;
-    std::cout << "request type: " << enumToStr(target.type) << std::endl;
-    switch (target.type)
+    std::cout << resource.originalRequest << " resource found at: " << resource.path << std::endl;
+    std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+    switch (resource.type)
     {
     case EXISTING_FILE:
-        response.createFileResponse(target.path, request, 204);
+        response.createFileResponse(resource.path, request, 204);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(target.path, 307, keepAlive);
+        response.createRedirectResponse(resource.path, 307, keepAlive);
         break;
     case FORBIDDEN_METHOD:
         response.createHTMLResponse(405, errorPage(405), keepAlive);
@@ -138,10 +142,12 @@ void Connection::processPUT(configList config)
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case NOT_FOUND:
-        response.createFileResponse(target.path, request, 201);
+        response.createFileResponse(resource.path, request, 201);
         break;
     case INVALID_REQUEST:
         response.createHTMLResponse(400, errorPage(400), keepAlive);
+        break;
+    case NO_MATCH:
         break;
     }
 }
@@ -150,17 +156,17 @@ void Connection::processDELETE(configList config)
 {
     std::string headers;
 
-    Resource target = request.resource(config);
+    Resource resource = request.resource(config);
     std::cout << "method type: " << enumToStr(request.method()) << std::endl;
-    std::cout << request.rawTarget() << " resource found at: " << target.path << std::endl;
-    std::cout << "request type: " << enumToStr(target.type) << std::endl;
-    switch (target.type)
+    std::cout << resource.originalRequest << " resource found at: " << resource.path << std::endl;
+    std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+    switch (resource.type)
     {
     case EXISTING_FILE:
-        response.createDELETEResponse(target.path, request);
+        response.createDELETEResponse(resource.path, request);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(target.path, 307, keepAlive);
+        response.createRedirectResponse(resource.path, 307, keepAlive);
         break;
     case FORBIDDEN_METHOD:
         response.createHTMLResponse(405, errorPage(405), keepAlive);
@@ -173,35 +179,39 @@ void Connection::processDELETE(configList config)
         break;
     case INVALID_REQUEST:
         response.createHTMLResponse(400, errorPage(400), keepAlive);
+        break;
+    case NO_MATCH:
         break;
     }
 }
 
 void Connection::processHEAD(configList config)
 {
-    Resource target = request.resource(config);
+    Resource resource = request.resource(config);
     std::cout << "method type: " << enumToStr(request.method()) << std::endl;
-    std::cout << request.rawTarget() << " resource found at: " << target.path << std::endl;
-    std::cout << "request type: " << enumToStr(target.type) << std::endl;
-    switch (target.type)
+    std::cout << resource.originalRequest << " resource found at: " << resource.path << std::endl;
+    std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+    switch (resource.type)
     {
     case EXISTING_FILE:
-        response.createHEADResponse(target.path, request);
+        response.createHEADResponse(resource.path, request);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(target.path, 302, keepAlive);
+        response.createRedirectResponse(resource.path, 302, keepAlive);
         break;
     case FORBIDDEN_METHOD:
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case DIRECTORY:
-        response.createDirHEADResponse(directoryListing(target.path).length(), keepAlive);
+        response.createDirHEADResponse(directoryListing(resource.path).length(), keepAlive);
         break;
     case NOT_FOUND:
         response.createHTMLResponse(404, errorPage(404), keepAlive);
         break;
     case INVALID_REQUEST:
         response.createHTMLResponse(400, errorPage(400), keepAlive);
+        break;
+    case NO_MATCH:
         break;
     }
 }
@@ -214,24 +224,24 @@ void Connection::processRequest(configList config)
     timeOut = request.keepAliveTimer();
     switch (request.method())
     {
-        case GET:
-            processGET(config);
-            break;
-        case POST:
-            processPOST(config);
-            break;
-        case PUT:
-            processPUT(config);
-            break;
-        case DELETE:
-            processDELETE(config);
-            break;
-        // case HEAD:
-        //     processHEAD(config);
-        //     break;
-        case OTHER:
-            processHEAD(config);
-            break;
+    case GET:
+        processGET(config);
+        break;
+    case POST:
+        processPOST(config);
+        break;
+    case PUT:
+        processPUT(config);
+        break;
+    case DELETE:
+        processDELETE(config);
+        break;
+    // case HEAD:
+    //     processHEAD(config);
+    //     break;
+    case OTHER:
+        processHEAD(config);
+        break;
     }
     request.clear();
 }

@@ -36,7 +36,6 @@ class Request
     size_t _length;
     size_t _capacity;
     size_t _bodyStart;
-
     bool _valid;
 
   public:
@@ -65,7 +64,7 @@ class Request
     unsigned int keepAliveTimer() const;     // might not need this
     unsigned int maxReconnections() const;   // might not need this
     size_t bodySize() const;
-    std::string rawTarget();
+    // std::string rawTarget();
     // Appends request data to the internal buffer
     void appendToBuffer(const char *data, const size_t n);
 
