@@ -113,10 +113,14 @@ void chunkerTests()
         " eget et eros.\r\n"
         "0\r\n";
 
-    char *unChunkedBody = unchunker(body, sizeOfArray(body));
-    char *unChunkedBigBody = unchunker(bigBody, sizeOfArray(bigBody));
+    unsigned long size = sizeOfArray(body);
+    char *unChunkedBody = unchunker(body, size);
+    assert(size == 24);
     assert(std::strcmp(unChunkedBody, "Mozilla"
                                       "Developer Network") == 0);
+
+    size = sizeOfArray(bigBody);
+    char *unChunkedBigBody = unchunker(bigBody, size);
     assert(std::strcmp(
                unChunkedBigBody,
                "Lorem ipsum dolor sit amet, consectetur adi"
@@ -130,6 +134,7 @@ void chunkerTests()
                " Etiam pellentesque purus eu lacus faucibus, et bibendum mauris ullamcorper."
                " Sed dapibus nunc et auctor facilisis. Nunc eu sem vel turpis eleifend tristique"
                " eget et eros.") == 0);
+    assert(size == 646);
     delete[] unChunkedBody;
     delete[] unChunkedBigBody;
     char failBody[] = "7"
@@ -138,7 +143,9 @@ void chunkerTests()
                       "0\r\n"
                       "\r\n";
     // (void)
-    char *unchunkedFailBody = unchunker(failBody, sizeOfArray(failBody));
+    size = sizeOfArray(failBody);
+    char *unchunkedFailBody = unchunker(failBody, size);
     (void) unchunkedFailBody;
     assert(unchunkedFailBody == NULL);
+    assert(size == sizeOfArray(failBody));
 }
