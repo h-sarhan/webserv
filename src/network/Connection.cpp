@@ -236,9 +236,9 @@ void Connection::processRequest(configList config)
     case DELETE:
         processDELETE(config);
         break;
-    // case HEAD:
-    //     processHEAD(config);
-    //     break;
+    case HEAD:
+        processHEAD(config);
+        break;
     case OTHER:
         processHEAD(config);
         break;
