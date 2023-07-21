@@ -359,15 +359,21 @@ size_t Request::bodySize() const
 const std::map<std::string, Route>::const_iterator Request::getMatchingRoute(
     const std::map<std::string, Route> &routes) const
 {
+    // std::map<std::string, Route>::const_iterator routeIt = routes.end();
     std::map<std::string, Route>::const_iterator routeIt = routes.end();
     for (std::map<std::string, Route>::const_iterator it = routes.begin(); it != routes.end(); it++)
     {
         // Two conditions need to be true in order for matchedLocation to equal it->first
         // 1. _requestedURL has to start with it->first
         // 2. it->first has to be greater than matchedLocation.length()
-        if (std::equal(it->first.begin(), it->first.end(), _requestedURL.begin()) &&
-            (routeIt == routes.end() || it->first.length() > routeIt->first.length()))
-            routeIt = it;
+        if (_requestedURL.length() >= it->first.length() &&
+            std::equal(it->first.begin(), it->first.end(), _requestedURL.begin()))
+        {
+            if (routeIt == routes.end())
+                routeIt = it;
+            else if (it->first.length() > routeIt->first.length())
+                routeIt = it;
+        }
     }
     return routeIt;
 }

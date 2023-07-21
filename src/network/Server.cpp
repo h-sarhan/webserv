@@ -212,7 +212,6 @@ void Server::acceptNewConnection(size_t listenerNo)
     std::cout << "New connection! fd = " << newFd << std::endl;
     if (sockets.size() < MAX_CLIENTS)
     {
-        // ! Unitialized value originated here probably because 'sockets[listenerNo]' doesn't exist
         cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd)));
         sockets.push_back(createPollFd(newFd, POLLIN));
     }
