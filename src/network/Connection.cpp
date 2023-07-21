@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/21 20:37:49 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/21 21:20:29 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,14 +48,6 @@ Connection &Connection::operator=(const Connection &c)
     return (*this);
 }
 
-std::string Connection::createResponseHeaders()
-{
-    std::string headers = HTTP_HEADERS;
-    if (keepAlive)
-        headers = headers + KEEP_ALIVE + CRLF;
-    return headers;
-}
-
 static void showResourceInfo(Resource& resource, Request& request)
 {
     std::cout << "method type: " << enumToStr(request.method()) << std::endl;
@@ -88,6 +80,7 @@ void Connection::processGET(configList config)
         response.createHTMLResponse(400, errorPage(400), keepAlive);
         break;
     case NO_MATCH:
+        response.createHTMLResponse(404, errorPage(404), keepAlive);
         break;
     }
 }
@@ -117,6 +110,7 @@ void Connection::processPOST(configList config)
         response.createHTMLResponse(400, errorPage(400), keepAlive);
         break;
     case NO_MATCH:
+        response.createHTMLResponse(404, errorPage(404), keepAlive);
         break;
     }
 }
@@ -146,6 +140,7 @@ void Connection::processPUT(configList config)
         response.createHTMLResponse(400, errorPage(400), keepAlive);
         break;
     case NO_MATCH:
+        response.createHTMLResponse(404, errorPage(404), keepAlive);
         break;
     }
 }
@@ -175,6 +170,7 @@ void Connection::processDELETE(configList config)
         response.createHTMLResponse(400, errorPage(400), keepAlive);
         break;
     case NO_MATCH:
+        response.createHTMLResponse(404, errorPage(404), keepAlive);
         break;
     }
 }
@@ -186,24 +182,25 @@ void Connection::processHEAD(configList config)
     switch (resource.type)
     {
     case EXISTING_FILE:
-        response.createHEADResponse(resource.path, request);
+        response.createHEADFileResponse(resource.path, request);
         break;
     case REDIRECTION:
         response.createRedirectResponse(resource.path, 302, keepAlive);
         break;
     case FORBIDDEN_METHOD:
-        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        response.createHEADResponse(405, NO_CONTENT, keepAlive);
         break;
     case DIRECTORY:
-        response.createDirHEADResponse(directoryListing(resource.path).length(), keepAlive);
+        response.createHEADResponse(200, HTML, keepAlive);
         break;
     case NOT_FOUND:
-        response.createHTMLResponse(404, errorPage(404), keepAlive);
+        response.createHEADResponse(404, NO_CONTENT, keepAlive);
         break;
     case INVALID_REQUEST:
-        response.createHTMLResponse(400, errorPage(400), keepAlive);
+        response.createHEADResponse(400, NO_CONTENT, keepAlive);
         break;
     case NO_MATCH:
+        response.createHEADResponse(404, NO_CONTENT, keepAlive);
         break;
     }
 }
@@ -232,7 +229,7 @@ void Connection::processRequest(configList config)
         processHEAD(config);
         break;
     case OTHER:
-        processHEAD(config);
+        response.createHTMLResponse(400, errorPage(400), keepAlive);
         break;
     }
     request.clear();

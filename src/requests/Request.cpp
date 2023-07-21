@@ -293,7 +293,7 @@ std::map<std::string, const std::string> &Request::headers()
  */
 bool Request::keepAlive() const
 {
-    return _headers.count("connection") == 0 || _headers.at("connection") != "closed";
+    return _headers.count("connection") == 0 || _headers.at("connection") != "close";
 }
 
 /**

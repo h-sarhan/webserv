@@ -135,7 +135,8 @@ void Response::createRedirectResponse(std::string &redirUrl, int statusCode, boo
 void Response::setResponseHeaders(std::stringstream &ss, Headers h)
 {
     ss << STATUS_LINE << getStatus(h.statusCode) << CRLF;
-    ss << CONTENT_TYPE << h.contentType << CRLF;
+    if (!h.contentType.empty())
+        ss << CONTENT_TYPE << h.contentType << CRLF;
     ss << CONTENT_LEN << h.contentLen << CRLF;
     if (h.keepAlive)
         ss << KEEP_ALIVE << CRLF;
@@ -187,11 +188,10 @@ void Response::createFileResponse(std::string filename, Request &request, int st
 {
     std::stringstream responseBuffer;
     std::ofstream file;
-    std::string path(filename);
-    file.open(path.c_str());
+    file.open(filename.c_str());
     if (!file.good())
     {
-        std::cout << "Cannot open file to write: " << path << std::endl;
+        std::cout << "Cannot open file to write: " << filename << std::endl;
         return createHTMLResponse(500, errorPage(500), false);
     }
     file.write(request.buffer() + request.bodyStart(),
@@ -200,7 +200,7 @@ void Response::createFileResponse(std::string filename, Request &request, int st
     responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
     if (request.keepAlive())
         responseBuffer << KEEP_ALIVE << CRLF;
-    responseBuffer << LOCATION << path << CRLF;
+    responseBuffer << LOCATION << filename << CRLF;
     responseBuffer << CRLF;
     setResponse(responseBuffer);
 }
@@ -233,7 +233,7 @@ void Response::createHTMLResponse(int statusCode, std::string page, bool keepAli
     setResponse(responseBuffer);
 }
 
-void Response::createHEADResponse(std::string filename, Request &request)
+void Response::createHEADFileResponse(std::string filename, Request &request)
 {
     std::ifstream file;
     std::stringstream responseBuffer;
@@ -249,11 +249,11 @@ void Response::createHEADResponse(std::string filename, Request &request)
     setResponse(responseBuffer);
 }
 
-void Response::createDirHEADResponse(size_t contentLen, bool keepAlive)
+void Response::createHEADResponse(int statusCode, std::string contentType, bool keepAlive)
 {
     std::stringstream responseBuffer;
     
-    setResponseHeaders(responseBuffer, createHeaders(200, HTML, contentLen, keepAlive));
+    setResponseHeaders(responseBuffer, createHeaders(statusCode, contentType, 0, keepAlive));
     setResponse(responseBuffer);
 }
 
