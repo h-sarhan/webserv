@@ -103,7 +103,6 @@ void Server::respondToRequest(size_t clientNo)
         if (c.keepConnectionAlive())
             return;
     closeConnection(clientNo);
-    std::cout << "---------------------------------------------------------\n";
 }
 
 static void sigInthandler(int sigNo)

@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/21 16:10:03 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/21 20:37:49 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,12 +56,17 @@ std::string Connection::createResponseHeaders()
     return headers;
 }
 
-void Connection::processGET(configList config)
+static void showResourceInfo(Resource& resource, Request& request)
 {
-    Resource resource = request.resource(config);
     std::cout << "method type: " << enumToStr(request.method()) << std::endl;
     std::cout << resource.originalRequest << " resource found at: " << resource.path << std::endl;
     std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+}
+
+void Connection::processGET(configList config)
+{
+    Resource resource = request.resource(config);
+    showResourceInfo(resource, request);
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -90,9 +95,7 @@ void Connection::processGET(configList config)
 void Connection::processPOST(configList config)
 {
     Resource resource = request.resource(config);
-    std::cout << "method type: " << enumToStr(request.method()) << std::endl;
-    std::cout << resource.originalRequest << " resource found at: " << resource.path << std::endl;
-    std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+    showResourceInfo(resource, request);
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -108,7 +111,6 @@ void Connection::processPOST(configList config)
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case NOT_FOUND:
-        // change this from raw target to resource.path
         response.createFileResponse(resource.path, request, 201);
         break;
     case INVALID_REQUEST:
@@ -121,12 +123,8 @@ void Connection::processPOST(configList config)
 
 void Connection::processPUT(configList config)
 {
-    std::string headers;
-
     Resource resource = request.resource(config);
-    std::cout << "method type: " << enumToStr(request.method()) << std::endl;
-    std::cout << resource.originalRequest << " resource found at: " << resource.path << std::endl;
-    std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+    showResourceInfo(resource, request);
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -154,12 +152,8 @@ void Connection::processPUT(configList config)
 
 void Connection::processDELETE(configList config)
 {
-    std::string headers;
-
     Resource resource = request.resource(config);
-    std::cout << "method type: " << enumToStr(request.method()) << std::endl;
-    std::cout << resource.originalRequest << " resource found at: " << resource.path << std::endl;
-    std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+    showResourceInfo(resource, request);
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -188,9 +182,7 @@ void Connection::processDELETE(configList config)
 void Connection::processHEAD(configList config)
 {
     Resource resource = request.resource(config);
-    std::cout << "method type: " << enumToStr(request.method()) << std::endl;
-    std::cout << resource.originalRequest << " resource found at: " << resource.path << std::endl;
-    std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+    showResourceInfo(resource, request);
     switch (resource.type)
     {
     case EXISTING_FILE:

@@ -62,15 +62,6 @@ int Response::statusCode()
     return _statusCode;
 }
 
-// void Response::setResponse(char *newBuf, size_t bufLen)
-// {
-//     if (_buffer != NULL)
-//         delete[] _buffer;
-//     _buffer = new char[bufLen];
-//     for (size_t i = 0; i < _length; i++)
-//         _buffer[i] = newBuf[i];
-// }
-
 void Response::clear()
 {
     if (_buffer != NULL)
@@ -109,6 +100,7 @@ int Response::sendResponse(int fd)
     }
     std::cout << "Response sent successfully to fd " << fd
               << ", total bytes sent = " << _totalBytesSent << std::endl;
+    std::cout << "---------------------------------------------------------\n";
     return SEND_SUCCESS;
 }
 
@@ -181,8 +173,7 @@ void Response::createGETResponse(std::string filename, bool keepAlive)
     file.open(filename.c_str(), std::ios::binary);
     if (!file.good())
         return createHTMLResponse(404, errorPage(404), false);
-    // mimeType = getMimeType(filename);
-    mimeType = "text/html; charset=UTF-8";
+    mimeType = getContentType(filename);
     setResponseHeaders(responseBuffer,
                           createHeaders(200, mimeType, getStreamLen(file), keepAlive));
 
@@ -251,9 +242,7 @@ void Response::createHEADResponse(std::string filename, Request &request)
     file.open(filename.c_str(), std::ios::binary);
     if (!file.good())
         return createHTMLResponse(404, errorPage(404), false);
-    // mimeType = getMimeType(filename);
-    mimeType = "text/html; charset=UTF-8";
-
+    mimeType = getContentType(filename);
     setResponseHeaders(responseBuffer,
                           createHeaders(200, mimeType, getStreamLen(file), request.keepAlive()));
     file.close();
