@@ -8,8 +8,8 @@
  *
  */
 
-// ! USE ITERATORS INSTEAD OF ARRAY INDICES
 #include "config/Tokenizer.hpp"
+#include "enums/conversions.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -21,12 +21,9 @@
  * @throws std::runtime_error Throws an exception when the configuration
  * file can't be opened
  */
-Tokenizer::Tokenizer(const std::string &filename) : _line(0)
+Tokenizer::Tokenizer(const std::string &filename)
 {
-    std::ifstream configStream;
-
-    // Load file
-    configStream.open(filename.c_str());
+    std::ifstream configStream(filename.c_str());
 
     // Check if the file opened correctly
     if (!configStream)
@@ -46,6 +43,8 @@ void Tokenizer::tokenizeFile(std::ifstream &configStream)
 {
     std::string lineStr;
     unsigned int lineNum = 1;
+
+    // Loop through every line tokenizing each one
     while (std::getline(configStream, lineStr))
     {
         if (!configStream)
@@ -66,21 +65,21 @@ void Tokenizer::tokenizeFile(std::ifstream &configStream)
 void Tokenizer::tokenizeLine(std::string &lineStr, const unsigned int lineNum)
 {
     // Trim out comments
-    size_t commentPos = lineStr.find('#');
-    if (commentPos != std::string::npos)
-        lineStr = lineStr.substr(0, commentPos);
+    lineStr = lineStr.substr(0, lineStr.find('#'));
 
     std::stringstream lineStream(lineStr);
     tokenIterator wordsStart(lineStream);
 
     for (tokenIterator it = wordsStart; it != tokenIterator(); it++)
     {
-        std::string wordStr = *it;
-        unsigned int wordPos;
-        if (lineStream.tellg() == -1)
-            wordPos = lineStr.length() - wordStr.length();
-        else
-            wordPos = (unsigned int) lineStream.tellg() - wordStr.length();
+        const std::string &wordStr = *it;
+
+        // Get the word position
+        int wordPos = lineStream.tellg();
+        if (wordPos == -1)
+            wordPos = lineStr.length();
+        wordPos -= wordStr.length();
+
         tokenizeWord(wordStr, wordPos, lineNum);
     }
 }
@@ -112,31 +111,27 @@ bool Tokenizer::isSingleCharToken(const char c) const
  * @brief Adds a WORD token to the token list. This also checks if the word is a
  * reserved word and changes its type appropriately
  *
- * @param wordIdx The index to where we are in the wordStr
+ * @param wordIt The iterator to where we are in the wordStr
  * @param wordStr The string containing the word
  * @param lineNum The line number we are currently in
  * @param column The column we are currently in
  */
-void Tokenizer::addWord(unsigned int &wordIdx, const std::string &wordStr,
-                        const unsigned int lineNum, const unsigned int column)
+void Tokenizer::addWordToken(std::string::const_iterator &wordIt, const std::string &wordStr,
+                             const unsigned int lineNum, const unsigned int column)
 {
-    const unsigned int wordStart = wordIdx;
+    const unsigned int wordStart = wordIt - wordStr.begin();
 
-    while (wordIdx < wordStr.length() && !isSingleCharToken(wordStr[wordIdx]))
-        wordIdx++;
+    while (wordIt < wordStr.end() && !isSingleCharToken(*wordIt))
+        wordIt++;
 
-    const unsigned int wordEnd = wordIdx;
-    if (wordIdx < wordStr.length() && isSingleCharToken(wordStr[wordIdx]) && wordIdx > 0)
-        wordIdx--;
+    const unsigned int wordEnd = wordIt - wordStr.begin();
+    if (wordIt < wordStr.end() && isSingleCharToken(*wordIt) && wordIt > wordStr.begin())
+        wordIt--;
 
-    const std::string tokenStr = wordStr.substr(wordStart, wordEnd);
+    const std::string &tokenStr = wordStr.substr(wordStart, wordEnd);
 
     // Check if the token is a reserved keyword
-    TokenType type;
-    if (strToToken.count(tokenStr) != 0)
-        type = strToToken[tokenStr];
-    else
-        type = WORD;
+    const TokenType &type = strToEnum<TokenType>(tokenStr);
 
     _tokens.push_back(Token(type, tokenStr, lineNum, column));
 }
@@ -151,78 +146,25 @@ void Tokenizer::addWord(unsigned int &wordIdx, const std::string &wordStr,
 void Tokenizer::tokenizeWord(const std::string &wordStr, const unsigned int wordPos,
                              const unsigned int lineNum)
 {
-    unsigned int wordIdx = 0;
-    while (wordIdx < wordStr.length())
+    // unsigned int wordIdx = 0;
+    std::string::const_iterator wordIt = wordStr.begin();
+    while (wordIt < wordStr.end())
     {
-        const char c = wordStr[wordIdx];
+        const char c = *wordIt;
         if (c == '#')
             return;
-        unsigned int column = wordPos + wordIdx + 1;
+        const unsigned int column = wordPos + (wordIt - wordStr.begin()) + 1;
         if (isSingleCharToken(c))
         {
             const std::string tokenStr(1, c);
-            const TokenType type = strToToken[tokenStr];
+            const TokenType &type = strToEnum<TokenType>(tokenStr);
             const Token token(type, tokenStr, lineNum, column);
             _tokens.push_back(token);
         }
         else
-            addWord(wordIdx, wordStr, lineNum, column);
-        wordIdx++;
+            addWordToken(wordIt, wordStr, lineNum, column);
+        wordIt++;
     }
-}
-
-/**
- * @brief Helper function to generate the strToToken map
- *
- */
-static const std::map<std::string, const TokenType> createStrToToken()
-{
-    std::map<std::string, const TokenType> tokenMap;
-    tokenMap.insert(std::make_pair("server", SERVER));
-    tokenMap.insert(std::make_pair("listen", LISTEN));
-    tokenMap.insert(std::make_pair("server_name", SERVER_NAME));
-    tokenMap.insert(std::make_pair("error_page", ERROR_PAGE));
-    tokenMap.insert(std::make_pair("methods", METHODS));
-    tokenMap.insert(std::make_pair("directory_listing", DIRECTORY_TOGGLE));
-    tokenMap.insert(std::make_pair("directory_listing_file", DIRECTORY_FILE));
-    tokenMap.insert(std::make_pair("cgi_extensions", CGI_EXTENSION));
-    tokenMap.insert(std::make_pair("redirect", REDIRECT));
-    tokenMap.insert(std::make_pair("location", LOCATION));
-    tokenMap.insert(std::make_pair("try_files", TRY_FILES));
-    tokenMap.insert(std::make_pair("body_size", BODY_SIZE));
-    tokenMap.insert(std::make_pair("{", LEFT_BRACE));
-    tokenMap.insert(std::make_pair("}", RIGHT_BRACE));
-    tokenMap.insert(std::make_pair("#", POUND));
-    tokenMap.insert(std::make_pair(";", SEMICOLON));
-    return tokenMap;
-}
-
-/**
- * @brief Helper function to generate the tokenToStr map
- *
- */
-static const std::map<TokenType, const std::string> createTokenToStr()
-{
-    std::map<TokenType, const std::string> tokenMap;
-    tokenMap.insert(std::make_pair(SERVER, "SERVER"));
-    tokenMap.insert(std::make_pair(LISTEN, "LISTEN"));
-    tokenMap.insert(std::make_pair(SERVER_NAME, "SERVER_NAME"));
-    tokenMap.insert(std::make_pair(ERROR_PAGE, "ERROR_PAGE"));
-    tokenMap.insert(std::make_pair(METHODS, "METHODS"));
-    tokenMap.insert(std::make_pair(DIRECTORY_TOGGLE, "DIRECTORY_LISTING"));
-    tokenMap.insert(std::make_pair(DIRECTORY_FILE, "DIRECTORY_LISTING_FILE"));
-    tokenMap.insert(std::make_pair(CGI_EXTENSION, "CGI_EXTENSIONS"));
-    tokenMap.insert(std::make_pair(REDIRECT, "REDIRECT"));
-    tokenMap.insert(std::make_pair(LOCATION, "LOCATION"));
-    tokenMap.insert(std::make_pair(TRY_FILES, "TRY_FILES"));
-    tokenMap.insert(std::make_pair(BODY_SIZE, "BODY_SIZE"));
-
-    tokenMap.insert(std::make_pair(LEFT_BRACE, "LEFT_BRACE"));
-    tokenMap.insert(std::make_pair(RIGHT_BRACE, "RIGHT_BRACE"));
-    tokenMap.insert(std::make_pair(POUND, "POUND"));
-    tokenMap.insert(std::make_pair(SEMICOLON, "SEMICOLON"));
-    tokenMap.insert(std::make_pair(WORD, "WORD"));
-    return tokenMap;
 }
 
 /**
@@ -231,7 +173,3 @@ static const std::map<TokenType, const std::string> createTokenToStr()
 Tokenizer::~Tokenizer()
 {
 }
-
-// Assigning the static maps
-std::map<std::string, const TokenType> Tokenizer::strToToken = createStrToToken();
-std::map<TokenType, const std::string> Tokenizer::tokenToStr = createTokenToStr();

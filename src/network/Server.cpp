@@ -9,7 +9,8 @@
  */
 
 #include "network/Server.hpp"
-#include "enums/RequestTypes.hpp"
+#include "enums/ResourceTypes.hpp"
+#include "enums/conversions.hpp"
 #include "network/SystemCallException.hpp"
 #include "network/network.hpp"
 
@@ -131,33 +132,39 @@ static std::string createHTMLResponse(std::string page, std::string headers)
 
 void Server::processRequest(Connection &c)
 {
-    if (c.request.requestLength() == 0)
-        return;
-    RequestTarget target = c.request.target(configBlocks[c.listener]);
-    std::cout << "resource found at: " << target.resource << std::endl;
-    std::cout << "request type: " << requestTypeToStr(target.type) << std::endl;
-    switch (target.type)
+    // Request &req = cons.at(sockets[clientNo].fd).request;
+    // int listener = cons.at()
+    // std::string &res = cons.at(sockets[clientNo].fd).response;
+    // size_t &totalSent = cons.at(sockets[clientNo].fd).totalBytesSent;
+
+    if (c.request.requestLength() > 0)
     {
-        case FOUND:
-            c.response = createResponse(target.resource, HTTP_HEADERS);
+        Resource resource = c.request.resource(configBlocks[c.listener]);
+        std::cout << "resource found at: " << resource.path << std::endl;
+        std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+        switch (resource.type)
+        {
+        case EXISTING_FILE:
+            c.response = createResponse(resource.path, HTTP_HEADERS);
             break;
         case REDIRECTION:
-            c.response = createResponse(target.resource, HTTP_HEADERS);
+            c.response = createResponse(resource.path, HTTP_HEADERS);
             break;
-        case METHOD_NOT_ALLOWED:
+        case FORBIDDEN_METHOD:
             c.response = createHTMLResponse(errorPage(405), HTTP_HEADERS);
             break;
         case DIRECTORY:
-            c.response = createHTMLResponse(directoryListing(target.resource), HTTP_HEADERS);
+            c.response = createHTMLResponse(directoryListing(resource.path), HTTP_HEADERS);
             break;
         case NOT_FOUND:
             c.response = createHTMLResponse(errorPage(404), HTTP_HEADERS);
             break;
+        case INVALID_REQUEST:
+            throw std::runtime_error("Invlalid requests not handled yet");
+        }
+        c.totalBytesSent = 0;
+        c.request.clear();
     }
-    // c.keepAlive = c.request.keepAlive();
-    // c.timeOut = c.request.keepAliveTimer();
-    c.totalBytesSent = 0;
-    c.request.clear();
 }
 
 void Server::closeConnection(int clientNo)
@@ -181,7 +188,8 @@ void Server::sendResponse(size_t clientNo)
         // if (curTime - c.startTime >= c.timeOut)
         // {
         //     closeConnection(clientNo);
-        //     std::cout << "Connection timed out! (idle for " << c.timeOut << "s): " << sockets[clientNo].fd << std::endl;
+        //     std::cout << "Connection timed out! (idle for " << c.timeOut << "s): " <<
+        //     sockets[clientNo].fd << std::endl;
         // }
         return;
     }
@@ -202,7 +210,8 @@ void Server::sendResponse(size_t clientNo)
         else   // everything got sent
         {
             std::cout << "Response sent successfully to fd " << clientNo << ", "
-                      << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent << std::endl;
+                      << sockets[clientNo].fd << ", total bytes sent = " << c.totalBytesSent
+                      << std::endl;
             // if (c.keepAlive) // if keep-alive was requested
             // {
             //     std::cout << "Connection is keep alive" << std::endl;
@@ -296,7 +305,7 @@ void Server::startListening()
             // if one of the fds got something new to read
             if (sockets[i].revents & POLLIN)
             {
-                if (configBlocks.count(eventFd)) // this fd is one of the server listeners
+                if (configBlocks.count(eventFd))   // this fd is one of the server listeners
                     acceptNewConnection(i);
                 else   // its one of the clients
                 {

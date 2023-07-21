@@ -37,7 +37,7 @@ compile_commands.json
 prod_webserv
 webserv
 .cache
-run_tests
+run_
 docs/html
 docs/latex
 .build

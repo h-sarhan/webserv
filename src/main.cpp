@@ -9,13 +9,17 @@
  */
 
 #include "config/Parser.hpp"
-#include "config/Validators.hpp"
 #include "network/Server.hpp"
+#include "tests.hpp"
+#include "utils.hpp"
+#include <cassert>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <vector>
 
+// ! Catch std::bad_alloc and other exceptions here
+// ! Clean this up
 /**
  * @brief Entrypoint to our program
  *
@@ -23,6 +27,7 @@
  */
 int main(int argc, char **argv)
 {
+    (void) argv;
     if (argc > 2)
     {
         std::cerr << "" << std::endl;
@@ -30,26 +35,24 @@ int main(int argc, char **argv)
     }
 
     // Test that validators work
-    inputValidatorTests();
     // Test that request parsing works
-    // requestParsingTests();
     // generateDirectoryListing(".");
+
+    chunkerTests();
     try
     {
         if (argc == 2)
         {
             std::string filename = argv[1];
-            // ConfigTokenizer tokenizer(filename);
-            // std::vector<Token> tokens = tokenizer.tokens();
             Parser parser(filename);
-            std::vector<ServerBlock>& config = parser.getConfig();
+            std::vector<ServerBlock> &config = parser.getConfig();
             Server s(config);
             s.startListening();
         }
         else
         {
             // uses default config
-            std::vector<ServerBlock> config(1, createDefaultServerBlock());
+            std::vector<ServerBlock> config = ServerBlock::createDefaultConfig();
             Server s(config);
             s.startListening();
         }

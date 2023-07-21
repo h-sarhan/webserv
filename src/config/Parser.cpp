@@ -12,20 +12,20 @@
 #include "config/ParseError.hpp"
 #include "config/Tokenizer.hpp"
 #include "config/Validators.hpp"
+#include "enums/conversions.hpp"
+#include "utils.hpp"
 #include <cassert>
 #include <limits>
 #include <sstream>
 
 // * Config file Grammar
-
 // CONFIG_FILE := SERVER [SERVER]...
 // SERVER := "server" { [SRV_OPTION]... LISTEN  [SRV_OPTION]...}
 // LISTEN := "listen" valid_port ;
 // SRV_OPTION := SERVER_NAME | ERROR_PAGE
 // SERVER_NAME := "server_name" valid_hostname ;
 // ERROR_PAGE := "error_page" valid_error_response valid_HTML_path ;
-// LOCATION := "location" valid_URL {
-//                      [LOC_OPTION]... (TRY_FILES | REDIRECT) [LOC_OPTION]...}
+// LOCATION := "location" valid_URL { [LOC_OPTION]... (TRY_FILES | REDIRECT) [LOC_OPTION]...}
 // TRY_FILES := "try_files" valid_dir ;
 // REDIRECT := "redirect" valid_URL ;
 // LOC_OPTION := BODY_SIZE | METHODS | DIR_LISTING | DIR_LISTING_FILE | CGI
@@ -35,86 +35,95 @@
 // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path ;
 // CGI := "cgi_extensions" ("php" | "python")... ;
 
-// TODO: I use `(atEnd() || currentToken() != TOKEN)` a lot to check if the next
-// TODO: token matches the grammar. I should encapsulate this into a function
-
-HTTPMethod strToHTTPMethod(const std::string &str)
-{
-    if (str == "GET")
-        return GET;
-    if (str == "POST")
-        return POST;
-    if (str == "DELETE")
-        return DELETE;
-    if (str == "PUT")
-        return PUT;
-    return OTHER;
-}
-
-std::string httpMethodtoStr(HTTPMethod tkn)
-{
-    if (tkn == GET)
-        return "GET";
-    if (tkn == POST)
-        return "POST";
-    if (tkn == DELETE)
-        return "DELETE";
-    if (tkn == PUT)
-        return "PUT";
-    return "ERROR";
-}
-
+/**
+ * @brief Construct a new Parser object with the config file it will parse
+ *
+ * @param configFile
+ */
 Parser::Parser(const std::string &configFile) : _filename(configFile)
 {
-    Tokenizer tokenizer(configFile);
+    const Tokenizer tokenizer(configFile);
 
     const std::vector<Token> &tokens = tokenizer.tokens();
-    if (tokens.empty())
-        throw ParseError("config file cannot be empty", _filename);
+    assertThat(!tokens.empty(), EMPTY_CONFIG);
 
     _currToken = tokens.begin();
     _lastToken = tokens.end();
     parseConfig();
 }
 
+/**
+ * @brief Parse the configuration file
+ *
+ */
 void Parser::parseConfig()
 {
     // * CONFIG_FILE := SERVER [SERVER]...
     parseServerBlock();
-    assert(currentToken() == RIGHT_BRACE);
     advanceToken();
     while (!atEnd() && currentToken() == SERVER)
     {
         parseServerBlock();
-        assert(currentToken() == RIGHT_BRACE);
         advanceToken();
     }
-    if (!atEnd())
-        throwParseError("expected top level `server` rule");
+    assertThat(atEnd(), EXPECTED_SERVER);
 }
 
-void Parser::parseServerBlock()
+/**
+ * @brief Assert that the current token is of a specific type, otherwise throw an exception
+ *
+ * @param type Token type to check
+ * @param errMsg Error message to throw
+ */
+void Parser::matchToken(const TokenType type, const std::string &errMsg) const
+{
+    assertThat(!atEnd() && currentToken() == type, errMsg);
+}
+
+/**
+ * @brief Assert that the condition is true, if not throw an exception
+ *
+ * @param condition Condition to check
+ * @param errMsg Error message to throw
+ */
+void Parser::assertThat(bool condition, const std::string &errMsg) const
+{
+    if (!condition)
+        throwParseError(errMsg);
+}
+
+/**
+ * @brief Reset the parsed attributes of a server block
+ */
+void Parser::resetServerBlockAttributes()
 {
     _parsedAttributes.erase(SERVER_NAME);
     _parsedAttributes.erase(LISTEN);
     _parsedErrorPages.clear();
+}
 
+/**
+ * @brief Parse a server block from the config file
+ *
+ */
+void Parser::parseServerBlock()
+{
+    resetServerBlockAttributes();
+
+    // Push an empty server block and get an iterator to it
     _serverConfig.push_back(ServerBlock());
     _currServerBlock = _serverConfig.end() - 1;
 
-    if (atEnd() || currentToken() != SERVER)
-        throwParseError("expected top level `server` rule");
-    assert(currentToken() == SERVER);
-    advanceToken();
+    // Set default value for localhost
+    _currServerBlock->hostname = "localhost";
 
-    if (atEnd() || currentToken() != LEFT_BRACE)
-        throwParseError("expected '{' to start server block");
-    assert(currentToken() == LEFT_BRACE);
-    advanceToken();
+    matchToken(SERVER, EXPECTED_SERVER);
 
-    if (atEnd() || !atServerOption())
-        throwParseError("expected a valid server option");
-    assert(atServerOption());
+    advanceToken();
+    matchToken(LEFT_BRACE, EXPECTED_BLOCK_START("server"));
+
+    advanceToken();
+    assertThat(atServerOption(), EXPECTED_OPTION("server"));
 
     while (!atEnd() && atServerOption())
     {
@@ -122,20 +131,15 @@ void Parser::parseServerBlock()
         advanceToken();
     }
 
-    if (atEnd() || currentToken() != RIGHT_BRACE)
-        throwParseError("unexpected token");
-    assert(currentToken() == RIGHT_BRACE);
+    matchToken(RIGHT_BRACE, EXPECTED_BLOCK_END("server"));
 
-    if (_parsedAttributes.count(LISTEN) == 0)
-        throwParseError("server block missing `listen` rule");
-
-    if (_parsedAttributes.count(LOCATION) == 0)
-        throwParseError("server block missing `location` block");
-
-    if (_currServerBlock->hostname.empty())
-        _currServerBlock->hostname = "localhost";
+    assertThat(_parsedAttributes.count(LISTEN) != 0, SERVER_MISSING("listen"));
+    assertThat(_parsedAttributes.count(LOCATION) != 0, SERVER_MISSING("location"));
 }
 
+/**
+ * @brief Parse a server block option: One of `listen`, `server_name`, `error_page`, or `location`
+ */
 void Parser::parseServerOption()
 {
     switch (currentToken())
@@ -153,103 +157,87 @@ void Parser::parseServerOption()
         parseLocationBlock();
         break;
     default:
-        throwParseError("expected a valid server option");
+        throwParseError(EXPECTED_OPTION("server"));
     }
 }
 
+/**
+ * @brief Parse the `listen` rule
+ */
 void Parser::parseListenRule()
 {
     // LISTEN := "listen" valid_port SEMICOLON
-    if (_parsedAttributes.count(LISTEN) != 0)
-        throwParseError("duplicate `listen` rule not allowed");
+
+    assertThat(_parsedAttributes.count(LISTEN) == 0, DUPLICATE("listen"));
     advanceToken();
 
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected a valid port number");
-    assert(currentToken() == WORD);
+    matchToken(WORD, INVALID("port"));
 
-    if (validatePort(_currToken->contents()) == false)
-        throwParseError("expected a valid port number");
+    assertThat(validatePort(_currToken->contents()), INVALID("port"));
 
-    std::stringstream portStream(_currToken->contents());
-
-    portStream >> _currServerBlock->port;
+    _currServerBlock->port = fromStr<unsigned int>(_currToken->contents());
 
     advanceToken();
-    if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected a `;`");
+    matchToken(SEMICOLON, EXPECTED_SEMICOLON);
 
-    // _listenSet = true;
     _parsedAttributes.insert(LISTEN);
 }
 
+/**
+ * @brief Parse the `server_name` rule
+ */
 void Parser::parseServerName()
 {
     // SERVER_NAME := "server_name" valid_hostname SEMICOLON
-    if (_parsedAttributes.count(SERVER_NAME) != 0)
-        throwParseError("duplicate `server_name` rule not allowed");
+
+    assertThat(_parsedAttributes.count(SERVER_NAME) == 0, DUPLICATE("server_name"));
     advanceToken();
 
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected a valid host name");
-    assert(currentToken() == WORD);
+    matchToken(WORD, INVALID("hostname"));
 
-    if (validateHostName(_currToken->contents()) == false)
-        throwParseError("expected a valid host name");
+    assertThat(validateHostName(_currToken->contents()), INVALID("hostname"));
 
     _currServerBlock->hostname = _currToken->contents();
 
     advanceToken();
 
-    if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected a `;`");
+    matchToken(SEMICOLON, EXPECTED_SEMICOLON);
     _parsedAttributes.insert(SERVER_NAME);
 }
 
+/**
+ * @brief Parse the `error_page` rule
+ */
 void Parser::parseErrorPage()
 {
     // ERROR_PAGE := "error_page" valid_error_response valid_HTML_path SEMICOLON
-    int response;
-    std::string htmlPath;
-
     advanceToken();
 
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected a 4XX or 5XX response code");
-    assert(currentToken() == WORD);
+    matchToken(WORD, INVALID_ERROR_RESPONSE);
 
-    if (validateErrorResponse(_currToken->contents()) == false)
-        throwParseError("expected a 4XX or 5XX response code");
+    assertThat(validateErrorResponse(_currToken->contents()), INVALID_ERROR_RESPONSE);
 
-    std::stringstream responseStream(_currToken->contents());
-    responseStream >> response;
+    const int response = fromStr<int>(_currToken->contents());
 
-    if (_parsedErrorPages.count(response) != 0)
-        throwParseError("duplicate response code not allowed");
+    assertThat(_parsedErrorPages.count(response) == 0, DUPLICATE("error_reponse"));
     advanceToken();
 
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected a valid path to an HTML file");
-    assert(currentToken() == WORD);
+    matchToken(WORD, INVALID("HTML file"));
 
-    if (validateHTMLFile(_currToken->contents()) == false)
-        throwParseError("expected a valid path to an HTML file");
+    assertThat(validateHTMLFile(_currToken->contents()), INVALID("HTML file"));
 
-    std::stringstream htmlStream(_currToken->contents());
-    htmlStream >> htmlPath;
-    _currServerBlock->errorPages.insert(std::make_pair(response, htmlPath));
+    _currServerBlock->errorPages.insert(std::make_pair(response, _currToken->contents()));
 
     _parsedErrorPages.insert(response);
     advanceToken();
-    if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected a `;`");
+    matchToken(SEMICOLON, EXPECTED_SEMICOLON);
 }
 
-void Parser::parseLocationBlock()
+/**
+ * @brief Reset parsed location block attributes
+ */
+void Parser::resetLocationBlockAttributes()
 {
-    // LOCATION := "location" valid_URL LEFT_BRACE [LOC_OPTION]... (TRY_FILES | \
-    // REDIRECT) [LOC_OPTION]...RIGHT_BRACE
-
     _parsedAttributes.erase(TRY_FILES);
     _parsedAttributes.erase(REDIRECT);
     _parsedAttributes.erase(BODY_SIZE);
@@ -257,49 +245,60 @@ void Parser::parseLocationBlock()
     _parsedAttributes.erase(DIRECTORY_TOGGLE);
     _parsedAttributes.erase(DIRECTORY_FILE);
     _parsedAttributes.erase(CGI_EXTENSION);
+}
+
+/**
+ * @brief parse a `location` block
+ */
+void Parser::parseLocationBlock()
+{
+    // LOCATION := "location" valid_URL LEFT_BRACE [LOC_OPTION]... (TRY_FILES | \
+    // REDIRECT) [LOC_OPTION]...RIGHT_BRACE
+
+    resetLocationBlockAttributes();
 
     advanceToken();
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected valid path");
-    assert(currentToken() == WORD);
+    matchToken(WORD, INVALID("path"));
 
     std::string routePath = _currToken->contents();
 
-    // trim '/' from route path
-    if (routePath != "/" && *--routePath.end() == '/')
-        routePath = routePath.substr(0, routePath.length() - 1);
+    // Trim '/' from route path
+    if (routePath != "/")
+        rightTrimStr(routePath, "/");
+
+    // Insert an empty route block
     _currRoute = _currServerBlock->routes.insert(std::make_pair(routePath, Route())).first;
 
-    advanceToken();
-    if (atEnd() || currentToken() != LEFT_BRACE)
-        throwParseError("expected `{` to start location block");
-    assert(currentToken() == LEFT_BRACE);
-    advanceToken();
+    // Set default values
+    _currRoute->second.bodySize = std::numeric_limits<unsigned int>::max();
+    _currRoute->second.methodsAllowed.insert(GET);
 
-    if (atEnd() || !atLocationOption())
-        throwParseError("expected a valid location option");
-    assert(atLocationOption());
+    advanceToken();
+    matchToken(LEFT_BRACE, EXPECTED_BLOCK_START("location"));
+
+    advanceToken();
+    assertThat(atLocationOption(), INVALID("location option"));
 
     while (!atEnd() && atLocationOption())
     {
         parseLocationOption();
         advanceToken();
     }
-    if (atEnd())
-        throwParseError("unexpected end of file");
-    if (currentToken() != RIGHT_BRACE)
-        throwParseError("unexpected token");
 
-    if (_parsedAttributes.count(REDIRECT) == 0 && _parsedAttributes.count(TRY_FILES) == 0)
-        throwParseError("location block requires either a `try_files` or a `redirect` rule");
+    assertThat(!atEnd(), UNEXPECTED_EOF);
+
+    matchToken(RIGHT_BRACE, EXPECTED_BLOCK_END("location"));
+
+    assertThat(_parsedAttributes.count(REDIRECT) != 0 || _parsedAttributes.count(TRY_FILES) != 0,
+               MISSING_LOCATION_OPTION);
+
     _parsedAttributes.insert(LOCATION);
-
-    if (_currRoute->second.bodySize == 0)
-        _currRoute->second.bodySize = std::numeric_limits<unsigned int>::max();
-    if (_currRoute->second.methodsAllowed.empty())
-        _currRoute->second.methodsAllowed.insert(GET);
 }
 
+/**
+ * @brief Parse a `location` option. One of: `try_files` `redirect` `body_size` `methods`
+ *                                           `directory_toggle` `directory_file` `cgi_extension`
+ */
 void Parser::parseLocationOption()
 {
     switch (currentToken())
@@ -331,173 +330,156 @@ void Parser::parseLocationOption()
     }
 }
 
+/**
+ * @brief Parse the `try_files` rule
+ */
 void Parser::parseTryFiles()
 {
-    if (_parsedAttributes.count(TRY_FILES) != 0)
-        throwParseError("multiple `try_files` rules not allowed");
-
-    if (_parsedAttributes.count(REDIRECT) != 0)
-        throwParseError("a location block cannot have both a `try_files` and a "
-                        "`redirect` rule");
     // TRY_FILES := "try_files" valid_dir SEMICOLON
-    advanceToken();
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected a valid directory");
-    assert(currentToken() == WORD);
+    assertThat(_parsedAttributes.count(TRY_FILES) == 0, DUPLICATE("try_files"));
 
-    if (validateDirectory(_currToken->contents()) == false)
-        throwParseError("invalid directory");
+    assertThat(_parsedAttributes.count(REDIRECT) == 0, ADDITIONAL_LOCATION_OPTION);
+
+    advanceToken();
+    matchToken(WORD, INVALID("directory"));
+
+    assertThat(validateDirectory(_currToken->contents()), INVALID("directory"));
 
     _currRoute->second.serveDir = _currToken->contents();
 
     advanceToken();
-    if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected a `;`");
-    // _tryFilesSet = true;
+    matchToken(SEMICOLON, EXPECTED_SEMICOLON);
     _parsedAttributes.insert(TRY_FILES);
 }
 
+/**
+ * @brief Parse the `body_size` rule
+ */
 void Parser::parseBodySize()
 {
     // BODY_SIZE := "body_size" positive_number SEMICOLON
-    if (_parsedAttributes.count(BODY_SIZE) != 0)
-        throwParseError("multiple `body_size` rules not allowed");
-    advanceToken();
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected a valid body size in bytes [10 - 2^32]");
-    assert(currentToken() == WORD);
-
-    if (validateBodySize(_currToken->contents()) == false)
-        throwParseError("expected a valid body size in bytes [10 - 2^32]");
-
-    std::stringstream bodySizeStream(_currToken->contents());
-
-    bodySizeStream >> _currRoute->second.bodySize;
+    assertThat(_parsedAttributes.count(BODY_SIZE) == 0, DUPLICATE("body_size"));
 
     advanceToken();
-    if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected `;`");
-    assert(currentToken() == SEMICOLON);
+    matchToken(WORD, INVALID("body size [10 - 2^32]"));
+
+    assertThat(validateBodySize(_currToken->contents()), INVALID("body size [10 - 2^32]"));
+
+    _currRoute->second.bodySize = fromStr<size_t>(_currToken->contents());
+
+    advanceToken();
+    matchToken(SEMICOLON, "expected `;`");
 
     _parsedAttributes.insert(BODY_SIZE);
 }
 
+/**
+ * @brief Parse the `methods` rule
+ */
 void Parser::parseHTTPMethods()
 {
     // METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT")... SEMICOLON
     std::set<HTTPMethod> &methods = _currRoute->second.methodsAllowed;
-    if (_parsedAttributes.count(METHODS) != 0)
-        throwParseError("multiple `method` rules not allowed");
+    methods.clear();
+
+    assertThat(_parsedAttributes.count(METHODS) == 0, DUPLICATE("method"));
+
     advanceToken();
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("Expected HTTP method");
-    assert(currentToken() == WORD);
+    matchToken(WORD, INVALID("method"));
 
     while (!atEnd() && currentToken() == WORD)
     {
-        const HTTPMethod method = strToHTTPMethod(_currToken->contents());
-        if (method == OTHER)
-            throwParseError("invalid HTTP `method` specified");
+        const HTTPMethod method = strToEnum<HTTPMethod>(_currToken->contents());
 
-        if (methods.count(method) != 0)
-            throwParseError("duplicate method specified");
+        assertThat(method != OTHER, INVALID("method"));
+        assertThat(methods.count(method) == 0, DUPLICATE_METHOD);
 
         methods.insert(method);
         advanceToken();
     }
-    if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected `;`");
 
+    matchToken(SEMICOLON, EXPECTED_SEMICOLON);
     _parsedAttributes.insert(METHODS);
 }
 
+/**
+ * @brief Parse the `redirect` rule
+ */
 void Parser::parseRedirect()
 {
     // REDIRECT := "redirect" valid_URL SEMICOLON
-    if (_parsedAttributes.count(REDIRECT) != 0)
-        throwParseError("multiple `redirect` rules not allowed");
-    if (_parsedAttributes.count(TRY_FILES) != 0)
-        throwParseError("a location block cannot have both a `try_files` and a "
-                        "`redirect` rule");
+    assertThat(_parsedAttributes.count(REDIRECT) == 0, DUPLICATE("redirect"));
+    assertThat(_parsedAttributes.count(TRY_FILES) == 0, ADDITIONAL_LOCATION_OPTION);
 
     advanceToken();
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected a valid URL");
-    assert(currentToken() == WORD);
+    matchToken(WORD, INVALID("URL"));
 
-    if (validateURL(_currToken->contents()) == false)
-        throwParseError("expected a valid URL");
+    assertThat(validateURL(_currToken->contents()) == true, INVALID("URL"));
 
     _currRoute->second.redirectTo = _currToken->contents();
 
     advanceToken();
-    if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected a `;`");
+    matchToken(SEMICOLON, EXPECTED_SEMICOLON);
 
     _parsedAttributes.insert(REDIRECT);
 }
 
+/**
+ * @brief Parse the `directory_listing` rule
+ */
 void Parser::parseDirectoryToggle()
 {
     // DIR_LISTING := "directory_listing" ("true" | "false") SEMICOLON
-    if (_parsedAttributes.count(DIRECTORY_TOGGLE) != 0)
-        throwParseError("multiple `directory_listing` rules not allowed");
+    assertThat(_parsedAttributes.count(DIRECTORY_TOGGLE) == 0, DUPLICATE("directory_listing"));
 
     advanceToken();
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected a `true` or `false`");
-    assert(currentToken() == WORD);
+    matchToken(WORD, INVALID("bool. `true` or `false`"));
+
+    assertThat(_currToken->contents() == "true" || _currToken->contents() == "false",
+               INVALID("bool. `true` or `false`"));
 
     bool &toggle = _currRoute->second.listDirectories;
     if (_currToken->contents() == "true")
         toggle = true;
-    else if (_currToken->contents() == "false")
-        toggle = false;
     else
-        throwParseError("expected a `true` or `false`");
-    advanceToken();
+        toggle = false;
 
-    if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected `;`");
-    assert(currentToken() == SEMICOLON);
+    advanceToken();
+    matchToken(SEMICOLON, EXPECTED_SEMICOLON);
 
     _parsedAttributes.insert(DIRECTORY_TOGGLE);
 }
 
+/**
+ * @brief Parse the `directory_listing_file` rule
+ */
 void Parser::parseDirectoryFile()
 {
     // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path SEMICOLON
-    if (_parsedAttributes.count(DIRECTORY_FILE) != 0)
-        throwParseError("multiple `directory_listing_file` rules not allowed");
+    assertThat(_parsedAttributes.count(DIRECTORY_FILE) == 0, DUPLICATE("directory_listing_file"));
 
     advanceToken();
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected valid path to HTML file");
-    assert(currentToken() == WORD);
+    matchToken(WORD, INVALID("path to an HTML file"));
 
-    if (validateHTMLFile(_currToken->contents()) == false)
-        throwParseError("expected valid path to HTML file");
+    assertThat(validateHTMLFile(_currToken->contents()) == true, INVALID("path to an HTML file"));
 
     _currRoute->second.listDirectoriesFile = _currToken->contents();
 
     advanceToken();
-    if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected `;`");
-    assert(currentToken() == SEMICOLON);
+    matchToken(SEMICOLON, EXPECTED_SEMICOLON);
 
     _parsedAttributes.insert(DIRECTORY_FILE);
 }
 
+// ! This will need changing once we start working on CGI
 void Parser::parseCGI()
 {
     // CGI := "cgi_extensions" ("php" | "python")... SEMICOLON
     if (_parsedAttributes.count(CGI_EXTENSION) != 0)
-        throwParseError("multiple `cgi_extensions` rules not allowed");
+        throwParseError(DUPLICATE("cgi_extensions"));
 
     advanceToken();
-    if (atEnd() || currentToken() != WORD)
-        throwParseError("expected valid cgi");
-    assert(currentToken() == WORD);
+    matchToken(WORD, INVALID("cgi extension"));
 
     std::set<std::string> &cgis = _currRoute->second.cgiExtensions;
     while (!atEnd() && currentToken() == WORD)
@@ -512,53 +494,111 @@ void Parser::parseCGI()
         cgis.insert(cgi);
         advanceToken();
     }
-    if (atEnd() || currentToken() != SEMICOLON)
-        throwParseError("expected `;`");
+    matchToken(SEMICOLON, EXPECTED_SEMICOLON);
 
     _parsedAttributes.insert(CGI_EXTENSION);
 }
 
+/**
+ * @brief Will check the current token and determine if it is a `server` option
+ *
+ * @return true if the current token is a `server' option
+ */
 bool Parser::atServerOption() const
 {
-    return (currentToken() == SERVER_NAME || currentToken() == ERROR_PAGE ||
-            currentToken() == LISTEN || currentToken() == LOCATION);
+    if (atEnd())
+        return false;
+    switch (currentToken())
+    {
+    case SERVER_NAME:
+    case ERROR_PAGE:
+    case LISTEN:
+    case LOCATION:
+        return true;
+    default:
+        return false;
+    }
 }
 
+/**
+ * @brief Will check the current token and determine if it is a `location` option
+ *
+ * @return true if the current token is a `location` option
+ */
 bool Parser::atLocationOption() const
 {
-    return (currentToken() == TRY_FILES || currentToken() == BODY_SIZE ||
-            currentToken() == METHODS || currentToken() == DIRECTORY_TOGGLE ||
-            currentToken() == CGI_EXTENSION || currentToken() == REDIRECT ||
-            currentToken() == DIRECTORY_FILE);
+    if (atEnd())
+        return false;
+    switch (currentToken())
+    {
+    case TRY_FILES:
+    case BODY_SIZE:
+    case METHODS:
+    case DIRECTORY_TOGGLE:
+    case CGI_EXTENSION:
+    case REDIRECT:
+    case DIRECTORY_FILE:
+        return true;
+    default:
+        return false;
+    }
 }
 
+/**
+ * @brief Throw a parse error using the invalid token. Goes to the previous token if it is the last
+ * one
+ * @param msg
+ */
 void Parser::throwParseError(const std::string &msg) const
 {
-    const Token token = atEnd() ? *(_currToken - 1) : *_currToken;
+    const Token &token = atEnd() ? *(_currToken - 1) : *_currToken;
     throw ParseError(msg, token, _filename);
 }
 
+/**
+ * @brief Get the current token type. Throws an exception if an attempt to access an invalid token
+ * was made
+ *
+ * @return TokenType Current token type
+ */
 TokenType Parser::currentToken() const
 {
     if (atEnd())
         throwParseError("unexpected end of file");
-    return (_currToken)->type();
+    return _currToken->type();
 }
 
+/**
+ * @brief Go to the next token
+ */
 void Parser::advanceToken()
 {
     _currToken++;
 }
 
+/**
+ * @brief Determine if we have reached the end of the token list
+ *
+ * @return true if we are at the end of the token list
+ */
 bool Parser::atEnd() const
 {
     return _currToken >= _lastToken;
 }
 
+/**
+ * @brief Destroy the Parser object
+ *
+ */
 Parser::~Parser()
 {
 }
 
+/**
+ * @brief Get the list of ServerBlocks that make up our configuration
+ *
+ * @return std::vector<ServerBlock>& The list of ServerBlocks produced from the config file
+ */
 std::vector<ServerBlock> &Parser::getConfig()
 {
     return _serverConfig;
