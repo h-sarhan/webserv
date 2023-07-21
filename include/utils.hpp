@@ -153,9 +153,10 @@ std::map<std::string, std::string> parseKeyValueFile(const std::string &filename
  * @brief Unchunks a body recieved by a chunked HTTP request
  *
  * @param body Entire message body as a byte buffer
- * @param bodyLength Body length in bytes
+ * @param bodyLength Body length in bytes. This will be updated with the length of the unchunked
+ * body
  * @return char* The new unchunked body, or NULL if the body is invalid
  */
-char *unchunker(const char *body, const size_t bodyLength);
+char *unchunker(const char *body, size_t &bodyLength);
 
 #endif
