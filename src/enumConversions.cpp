@@ -35,6 +35,8 @@ template <> std::string enumToStr(const HTTPMethod &enumVal)
         return "DELETE";
     case OTHER:
         return "OTHER";
+    case HEAD:
+        return "HEAD";
     }
 }
 
@@ -122,7 +124,7 @@ template <> std::string enumToStr(const TokenType &enumVal)
  */
 template <> HTTPMethod strToEnum<HTTPMethod>(const std::string &str)
 {
-    static const std::string methods[] = {"GET", "POST", "PUT", "DELETE", "OTHER"};
+    static const std::string methods[] = {"GET", "POST", "PUT", "DELETE", "HEAD", "OTHER"};
 
     for (size_t i = 0; i < sizeOfArray(methods); i++)
         if (methods[i] == str)

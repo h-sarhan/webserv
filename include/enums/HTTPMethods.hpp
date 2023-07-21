@@ -20,6 +20,7 @@ typedef enum
     POST,
     PUT,
     DELETE,
+    HEAD,
     OTHER
 } HTTPMethod;
 

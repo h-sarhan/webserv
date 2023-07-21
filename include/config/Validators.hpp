@@ -21,6 +21,5 @@ bool validateDirectory(const std::string &dirPath);
 bool validatePort(const std::string &portStr);
 bool validateURL(const std::string &urlStr);
 bool validateBodySize(const std::string &bodySizeStr);
-bool validateHTMLMethod(const std::string &bodySizeStr);
 
 #endif

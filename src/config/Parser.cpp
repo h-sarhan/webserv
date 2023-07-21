@@ -30,7 +30,7 @@
 // REDIRECT := "redirect" valid_URL ;
 // LOC_OPTION := BODY_SIZE | METHODS | DIR_LISTING | DIR_LISTING_FILE | CGI
 // BODY_SIZE := "body_size" positive_number ;
-// METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT")... ;
+// METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT" | "HEAD")... ;
 // DIR_LISTING := "directory_listing" ("true" | "false") ;
 // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path ;
 // CGI := "cgi_extensions" ("php" | "python")... ;
