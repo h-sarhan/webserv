@@ -105,10 +105,10 @@ template <> std::string enumToStr(const TokenType &enumVal)
         return "BODY_SIZE";
     case METHODS:
         return "METHODS";
-    case DIRECTORY_TOGGLE:
-        return "DIRECTORY_TOGGLE";
-    case DIRECTORY_FILE:
-        return "DIRECTORY_FILE";
+    case DIRECTORY_LISTING:
+        return "DIRECTORY_LISTING";
+    case INDEX:
+        return "INDEX";
     case CGI_EXTENSION:
         return "CGI_EXTENSION";
     case REDIRECT:
@@ -171,7 +171,7 @@ template <> TokenType strToEnum<TokenType>(const std::string &str)
                                              "body_size",
                                              "methods",
                                              "directory_listing",
-                                             "directory_listing_file",
+                                             "index",
                                              "cgi_extensions",
                                              "redirect"};
 

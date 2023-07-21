@@ -55,14 +55,6 @@ template <typename T> T getNext(std::iostream &stream)
     return val;
 }
 
-// template <typename T> T getNext(char *bytes, size_t n)
-// {
-//     std::stringstream stream(std::string(bytes, bytes + n));
-//     T val;
-//     stream >> val;
-//     return val;
-// }
-
 /**
  * @brief Templated function to write to a string
  *
@@ -158,5 +150,29 @@ std::map<std::string, std::string> parseKeyValueFile(const std::string &filename
  * @return char* The new unchunked body, or NULL if the body is invalid
  */
 char *unchunker(const char *body, size_t &bodyLength);
+
+/**
+ * @brief Checks if the given path points to an existing file or directory
+ *
+ * @param path Path to resource
+ * @return bool true if it exists
+ */
+bool exists(const std::string &path);
+
+/**
+ * @brief Checks if the given path is an existing file
+ *
+ * @param path Path to file
+ * @return bool true if it is a file
+ */
+bool isFile(const std::string &path);
+
+/**
+ * @brief Checks if the given path is an existing directory
+ *
+ * @param path Path to directory
+ * @return bool true if it is a directory
+ */
+bool isDir(const std::string &path);
 
 #endif

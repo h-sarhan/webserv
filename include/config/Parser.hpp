@@ -81,8 +81,8 @@ class Parser
     void parseBodySize();
     void parseHTTPMethods();
     void parseRedirect();
-    void parseDirectoryToggle();
-    void parseDirectoryFile();
+    void parseDirectoryListing();
+    void parseIndex();
     void parseCGI();
 
     // Methods to reset parsed attributes

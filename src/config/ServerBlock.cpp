@@ -29,7 +29,7 @@ static Route createDefaultRoute()
 
     // Directory listing is on by default
     defaultRoute.listDirectories = true;
-    defaultRoute.listDirectoriesFile = "";
+    defaultRoute.indexFile = "";
 
     // Only GET is allowed by default
     defaultRoute.methodsAllowed.insert(GET);
@@ -71,7 +71,7 @@ static void printRoute(std::string &str, const std::pair<std::string, Route> &ro
         str += "\t\tRedirect URL: " + route.second.redirectTo + "\n";
     str += "\t\tList directory?: ";
     route.second.listDirectories ? str += "yes\n" : str += "no\n";
-    "\t\tList directory file: " + route.second.listDirectoriesFile + "\n";
+    "\t\tList directory file: " + route.second.indexFile + "\n";
     str += "\t\tMax body size: " + toStr(route.second.bodySize) + "\n";
     str += "\t\tMethods allowed: ";
     for (std::set<HTTPMethod>::const_iterator it = route.second.methodsAllowed.begin();

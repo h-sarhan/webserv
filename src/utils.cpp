@@ -13,6 +13,7 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <sys/stat.h>
 
 void rightTrimStr(std::string &str, const std::string &anyOf)
 {
@@ -162,4 +163,28 @@ char *unchunker(const char *body, size_t &bodyLength)
     bodyLength = length;
 
     return unchunkedBody;
+}
+
+bool exists(const std::string &path)
+{
+    struct stat info;
+    return stat(path.c_str(), &info) == 0;
+}
+
+bool isFile(const std::string &path)
+{
+    struct stat info;
+
+    if (stat(path.c_str(), &info) != 0)
+        return false;
+    return info.st_mode & S_IFREG;
+}
+
+bool isDir(const std::string &path)
+{
+    struct stat info;
+
+    if (stat(path.c_str(), &info) != 0)
+        return false;
+    return info.st_mode & S_IFDIR;
 }

@@ -32,7 +32,7 @@
 // BODY_SIZE := "body_size" positive_number ;
 // METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT" | "HEAD")... ;
 // DIR_LISTING := "directory_listing" ("true" | "false") ;
-// DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path ;
+// INDEX := "index" filename ;
 // CGI := "cgi_extensions" ("php" | "python")... ;
 
 /**
@@ -242,8 +242,8 @@ void Parser::resetLocationBlockAttributes()
     _parsedAttributes.erase(REDIRECT);
     _parsedAttributes.erase(BODY_SIZE);
     _parsedAttributes.erase(METHODS);
-    _parsedAttributes.erase(DIRECTORY_TOGGLE);
-    _parsedAttributes.erase(DIRECTORY_FILE);
+    _parsedAttributes.erase(DIRECTORY_LISTING);
+    _parsedAttributes.erase(INDEX);
     _parsedAttributes.erase(CGI_EXTENSION);
 }
 
@@ -297,7 +297,7 @@ void Parser::parseLocationBlock()
 
 /**
  * @brief Parse a `location` option. One of: `try_files` `redirect` `body_size` `methods`
- *                                           `directory_toggle` `directory_file` `cgi_extension`
+ *                                           `directory_listing` `index` `cgi_extension`
  */
 void Parser::parseLocationOption()
 {
@@ -315,11 +315,11 @@ void Parser::parseLocationOption()
     case METHODS:
         parseHTTPMethods();
         break;
-    case DIRECTORY_TOGGLE:
-        parseDirectoryToggle();
+    case DIRECTORY_LISTING:
+        parseDirectoryListing();
         break;
-    case DIRECTORY_FILE:
-        parseDirectoryFile();
+    case INDEX:
+        parseIndex();
         break;
     case CGI_EXTENSION:
         parseCGI();
@@ -427,10 +427,10 @@ void Parser::parseRedirect()
 /**
  * @brief Parse the `directory_listing` rule
  */
-void Parser::parseDirectoryToggle()
+void Parser::parseDirectoryListing()
 {
     // DIR_LISTING := "directory_listing" ("true" | "false") SEMICOLON
-    assertThat(_parsedAttributes.count(DIRECTORY_TOGGLE) == 0, DUPLICATE("directory_listing"));
+    assertThat(_parsedAttributes.count(DIRECTORY_LISTING) == 0, DUPLICATE("directory_listing"));
 
     advanceToken();
     matchToken(WORD, INVALID("bool. `true` or `false`"));
@@ -447,28 +447,26 @@ void Parser::parseDirectoryToggle()
     advanceToken();
     matchToken(SEMICOLON, EXPECTED_SEMICOLON);
 
-    _parsedAttributes.insert(DIRECTORY_TOGGLE);
+    _parsedAttributes.insert(DIRECTORY_LISTING);
 }
 
 /**
- * @brief Parse the `directory_listing_file` rule
+ * @brief Parse the `index` rule
  */
-void Parser::parseDirectoryFile()
+void Parser::parseIndex()
 {
-    // DIR_LISTING_FILE := "directory_listing_file" valid_HTML_path SEMICOLON
-    assertThat(_parsedAttributes.count(DIRECTORY_FILE) == 0, DUPLICATE("directory_listing_file"));
+    // INDEX := "index" filename SEMICOLON
+    assertThat(_parsedAttributes.count(INDEX) == 0, DUPLICATE("index"));
 
     advanceToken();
-    matchToken(WORD, INVALID("path to an HTML file"));
+    matchToken(WORD, INVALID("path to an file"));
 
-    assertThat(validateHTMLFile(_currToken->contents()) == true, INVALID("path to an HTML file"));
-
-    _currRoute->second.listDirectoriesFile = _currToken->contents();
+    _currRoute->second.indexFile = _currToken->contents();
 
     advanceToken();
     matchToken(SEMICOLON, EXPECTED_SEMICOLON);
 
-    _parsedAttributes.insert(DIRECTORY_FILE);
+    _parsedAttributes.insert(INDEX);
 }
 
 // ! This will need changing once we start working on CGI
@@ -534,10 +532,10 @@ bool Parser::atLocationOption() const
     case TRY_FILES:
     case BODY_SIZE:
     case METHODS:
-    case DIRECTORY_TOGGLE:
+    case DIRECTORY_LISTING:
     case CGI_EXTENSION:
     case REDIRECT:
-    case DIRECTORY_FILE:
+    case INDEX:
         return true;
     default:
         return false;

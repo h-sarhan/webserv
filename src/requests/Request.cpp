@@ -18,7 +18,6 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
-#include <sys/stat.h>
 
 /**
  * @brief Construct a new Request object
@@ -402,21 +401,20 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
         return Resource(NOT_FOUND, _requestedURL, _requestedURL, routeOptions);
 
     const std::string &resourcePath = formPathToResource(*routeIt);
-    // Check if the resource exists
-    struct stat info;
-    if (stat(resourcePath.c_str(), &info) != 0)
+
+    if (exists(resourcePath) == false)
         return Resource(NOT_FOUND, _requestedURL, resourcePath, routeOptions);
 
-    // Check if the resource is a file or a directory
-    const bool isFile = info.st_mode & S_IFREG;
-    const bool isDir = info.st_mode & S_IFDIR;
-    if (isFile)
+    if (isFile(resourcePath))
         return Resource(EXISTING_FILE, _requestedURL, resourcePath, routeOptions);
-    if (isDir && routeOptions.listDirectories == true)
+
+    if (isDir(resourcePath) && routeOptions.listDirectories == true)
         return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
-    if (isDir && !routeOptions.listDirectoriesFile.empty())
-        return Resource(EXISTING_FILE, _requestedURL, routeOptions.listDirectoriesFile,
-                        routeOptions);
+
+    const std::string &indexFile = resourcePath + "/" + routeOptions.indexFile;
+    if (isDir(resourcePath) && isFile(indexFile))
+        return Resource(EXISTING_FILE, _requestedURL, indexFile, routeOptions);
+
     return Resource(NOT_FOUND, _requestedURL, resourcePath, routeOptions);
 }
 
