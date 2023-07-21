@@ -16,4 +16,10 @@
  */
 void inputValidatorTests();
 
+/**
+ * @brief Tests for the chunked transfer encoding unchunker
+ *
+ */
+void chunkerTests();
+
 #endif

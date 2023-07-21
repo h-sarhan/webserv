@@ -10,6 +10,7 @@
 
 #include "config/Parser.hpp"
 #include "network/Server.hpp"
+#include "tests.hpp"
 #include "utils.hpp"
 #include <cassert>
 #include <cstdlib>
@@ -37,13 +38,7 @@ int main(int argc, char **argv)
     // Test that request parsing works
     // generateDirectoryListing(".");
 
-    const std::map<std::string, std::string> &keyval = parseKeyValueFile("mime_types.txt", ' ');
-    for (std::map<std::string, std::string>::const_iterator it = keyval.begin(); it != keyval.end();
-         it++)
-    {
-        std::cout << "File extension: '" << it->first << "'\t\tMime-type: '" << it->second << "'."
-                  << std::endl;
-    }
+    chunkerTests();
     try
     {
         if (argc == 2)

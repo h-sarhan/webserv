@@ -10,6 +10,7 @@
 
 #include "utils.hpp"
 #include <algorithm>
+#include <cassert>
 #include <fstream>
 #include <iostream>
 
@@ -29,7 +30,7 @@ void trimStr(std::string &str, const std::string &anyOf)
     rightTrimStr(str, anyOf);
 }
 
-char getHex(const std::string &str)
+unsigned int getHex(const std::string &str)
 {
     std::stringstream ss;
     unsigned int ch;
@@ -92,7 +93,7 @@ void removeDuplicateChar(std::string &str, const char c)
 
 std::map<std::string, std::string> parseKeyValueFile(const std::string &filename, const char delim)
 {
-    std::ifstream fileStream(filename);
+    std::ifstream fileStream(filename.c_str());
     std::map<std::string, std::string> keyVal;
     if (!fileStream)
     {
@@ -113,4 +114,51 @@ std::map<std::string, std::string> parseKeyValueFile(const std::string &filename
         keyVal.insert(std::make_pair(key, value));
     }
     return keyVal;
+}
+
+static const char *getLineEnd(const char *start, const char *end)
+{
+    static const char *crlf = "\r\n";
+    return std::search(start, end, crlf, crlf + 2);
+}
+
+char *unchunker(const char *body, const size_t bodyLength)
+{
+    assert(bodyLength != 0);
+
+    const char *pos = body;
+    const char *bodyEnd = body + bodyLength;
+
+    // read chunk size
+    const char *lineEnd = getLineEnd(pos, bodyEnd);
+    if (lineEnd == bodyEnd)
+        return NULL;
+    char *unchunkedBody = new char[bodyLength + 1];
+    unsigned int chunkLen = getHex(std::string(pos, lineEnd));
+    unsigned int length = 0;
+    pos = lineEnd + 2;
+    while (chunkLen > 0)
+    {
+        // lineEnd = getLineEnd(pos, bodyEnd);
+        lineEnd = pos + chunkLen;
+        if (lineEnd == bodyEnd || length > bodyLength || lineEnd[0] != '\r' || lineEnd[1] != '\n')
+        {
+            delete[] unchunkedBody;
+            return NULL;
+        }
+        std::copy(pos, lineEnd, unchunkedBody + length);
+        length += chunkLen;
+        pos = lineEnd + 2;
+        lineEnd = getLineEnd(pos, bodyEnd);
+        if (lineEnd == bodyEnd)
+        {
+            delete[] unchunkedBody;
+            return NULL;
+        }
+        chunkLen = getHex(std::string(pos, lineEnd));
+        pos = lineEnd + 2;
+    }
+    unchunkedBody[length] = '\0';
+
+    return unchunkedBody;
 }

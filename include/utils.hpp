@@ -55,6 +55,14 @@ template <typename T> T getNext(std::iostream &stream)
     return val;
 }
 
+// template <typename T> T getNext(char *bytes, size_t n)
+// {
+//     std::stringstream stream(std::string(bytes, bytes + n));
+//     T val;
+//     stream >> val;
+//     return val;
+// }
+
 /**
  * @brief Templated function to write to a string
  *
@@ -99,7 +107,7 @@ void trimStr(std::string &str, const std::string &anyOf);
  * @param str Hexadecimal string
  * @return char ASCII character
  */
-char getHex(const std::string &str);
+unsigned int getHex(const std::string &str);
 
 /**
  * @brief Decodes URL encoded characters from a URL and strips out any query parameters
@@ -140,5 +148,14 @@ void removeDuplicateChar(std::string &str, const char c);
  * @return std::map<std::string, std::string> The file contents parsed into a map
  */
 std::map<std::string, std::string> parseKeyValueFile(const std::string &filename, const char delim);
+
+/**
+ * @brief Unchunks a body recieved by a chunked HTTP request
+ *
+ * @param body Entire message body as a byte buffer
+ * @param bodyLength Body length in bytes
+ * @return char* The new unchunked body, or NULL if the body is invalid
+ */
+char *unchunker(const char *body, const size_t bodyLength);
 
 #endif
