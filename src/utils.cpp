@@ -123,54 +123,6 @@ std::map<std::string, std::string> parseKeyValueFile(const std::string &filename
     return keyVal;
 }
 
-static const char *getLineEnd(const char *start, const char *end)
-{
-    static const char *crlf = "\r\n";
-    return std::search(start, end, crlf, crlf + 2);
-}
-
-char *unchunker(const char *body, size_t &bodyLength)
-{
-    assert(bodyLength != 0);
-
-    const char *pos = body;
-    const char *bodyEnd = body + bodyLength;
-
-    // read chunk size
-    const char *lineEnd = getLineEnd(pos, bodyEnd);
-    if (lineEnd == bodyEnd)
-        return NULL;
-    char *unchunkedBody = new char[bodyLength + 1];
-    unsigned int chunkLen = getHex(std::string(pos, lineEnd));
-    unsigned int length = 0;
-    pos = lineEnd + 2;
-    while (chunkLen > 0)
-    {
-        // lineEnd = getLineEnd(pos, bodyEnd);
-        lineEnd = pos + chunkLen;
-        if (lineEnd == bodyEnd || length > bodyLength || lineEnd[0] != '\r' || lineEnd[1] != '\n')
-        {
-            delete[] unchunkedBody;
-            return NULL;
-        }
-        std::copy(pos, lineEnd, unchunkedBody + length);
-        length += chunkLen;
-        pos = lineEnd + 2;
-        lineEnd = getLineEnd(pos, bodyEnd);
-        if (lineEnd == bodyEnd)
-        {
-            delete[] unchunkedBody;
-            return NULL;
-        }
-        chunkLen = getHex(std::string(pos, lineEnd));
-        pos = lineEnd + 2;
-    }
-    unchunkedBody[length] = '\0';
-    bodyLength = length;
-
-    return unchunkedBody;
-}
-
 bool exists(const std::string &path)
 {
     struct stat info;

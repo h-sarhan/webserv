@@ -142,16 +142,6 @@ void removeDuplicateChar(std::string &str, const char c);
 std::map<std::string, std::string> parseKeyValueFile(const std::string &filename, const char delim);
 
 /**
- * @brief Unchunks a body recieved by a chunked HTTP request
- *
- * @param body Entire message body as a byte buffer
- * @param bodyLength Body length in bytes. This will be updated with the length of the unchunked
- * body
- * @return char* The new unchunked body, or NULL if the body is invalid
- */
-char *unchunker(const char *body, size_t &bodyLength);
-
-/**
  * @brief Checks if the given path points to an existing file or directory
  *
  * @param path Path to resource

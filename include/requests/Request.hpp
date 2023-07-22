@@ -75,6 +75,9 @@ class Request
     // Clears the attributes of this request
     void clear();
 
+    // Unchunks the request if it is chunked, and updates the request and length
+    void unchunk();
+
   private:
     // Parses the first line of an HTTP request e.g. GET /index.html HTTP/1.1
     void parseStartLine(std::stringstream &reqStream);

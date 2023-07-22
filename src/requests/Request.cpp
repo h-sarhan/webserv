@@ -442,6 +442,59 @@ const Resource Request::resource(const std::vector<ServerBlock *> &config) const
     return getResourceFromConfig((*matchedServerBlock)->routes);
 }
 
+static const char *getLineEnd(const char *start, const char *end)
+{
+    static const char *crlf = "\r\n";
+    return std::search(start, end, crlf, crlf + 2);
+}
+
+/**
+ * @brief Unchunks a request encoded in chunked transfer encoding
+ *
+ */
+void Request::unchunk()
+{
+    const char *pos = _buffer + _bodyStart;
+    const char *reqEnd = _buffer + _length;
+    unsigned int newLength = _bodyStart;
+
+    // Read chunk size
+    const char *lineEnd = getLineEnd(pos, reqEnd);
+    if (lineEnd == reqEnd)
+        return;
+
+    // Allocate for unchunked request and copy start line and headers
+    char *unchunkedRequest = new char[_length + 1];
+    std::copy(_buffer, _buffer + _bodyStart, unchunkedRequest);
+
+    unsigned int chunkLen = getHex(std::string(pos, lineEnd));
+    pos = lineEnd + 2;
+    while (chunkLen > 0)
+    {
+        lineEnd = pos + chunkLen;
+        if (lineEnd == reqEnd || newLength > _length || lineEnd[0] != '\r' || lineEnd[1] != '\n')
+        {
+            delete[] unchunkedRequest;
+            return;
+        }
+        std::copy(pos, lineEnd, unchunkedRequest + newLength);
+        newLength += chunkLen;
+        pos = lineEnd + 2;
+        lineEnd = getLineEnd(pos, reqEnd);
+        if (lineEnd == reqEnd)
+        {
+            delete[] unchunkedRequest;
+            return;
+        }
+        chunkLen = getHex(std::string(pos, lineEnd));
+        pos = lineEnd + 2;
+    }
+    delete[] _buffer;
+    unchunkedRequest[newLength] = '\0';
+    _length = newLength;
+    _buffer = unchunkedRequest;
+}
+
 /**
  * @brief Resize buffer to new capacity
  *
