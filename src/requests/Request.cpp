@@ -395,9 +395,14 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
     if (routeOptions.methodsAllowed.count(_httpMethod) == 0)
         return Resource(FORBIDDEN_METHOD, _requestedURL);
     if (routeOptions.redirectTo.length() > 0)
-        return Resource(REDIRECTION, _requestedURL, routeOptions.redirectTo, routeOptions);
-    if (routeOptions.serveDir.length() == 0)
-        return Resource(NOT_FOUND, _requestedURL, _requestedURL, routeOptions);
+    {
+        std::string resourcePath(_requestedURL);
+        resourcePath.erase(0, routeIt->first.length());
+        resourcePath.insert(resourcePath.begin(), routeOptions.redirectTo.begin(),
+                            routeOptions.redirectTo.end());
+        resourcePath = sanitizeURL(resourcePath);
+        return Resource(REDIRECTION, _requestedURL, resourcePath, routeOptions);
+    }
 
     const std::string &resourcePath =
         formPathToResource(routeOptions.serveDir, _requestedURL, routeIt->first);
@@ -408,12 +413,12 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
     if (isFile(resourcePath))
         return Resource(EXISTING_FILE, _requestedURL, resourcePath, routeOptions);
 
-    if (isDir(resourcePath) && routeOptions.autoIndex == true)
-        return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
-
     const std::string &indexFile = sanitizeURL(resourcePath + "/" + routeOptions.indexFile);
     if (isDir(resourcePath) && isFile(indexFile))
         return Resource(EXISTING_FILE, _requestedURL, indexFile, routeOptions);
+
+    if (isDir(resourcePath) && routeOptions.autoIndex == true)
+        return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
 
     if (isDir(resourcePath) && !isFile(indexFile))
         return Resource(NOT_FOUND, _requestedURL, indexFile, routeOptions);
