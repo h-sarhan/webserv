@@ -9,6 +9,8 @@
  */
 
 #include "responses/HeaderData.hpp"
+#include "utils.hpp"
+#include <map>
 
 std::string getStatus(int statusCode)
 {
@@ -38,4 +40,17 @@ std::string getStatus(int statusCode)
 	return "500 Internal Server Error";
 }
 
-std::string getContentType(std::string extension);
+std::string getContentType(std::string filename)
+{
+    static const std::map<std::string, std::string> mimeTypes = parseKeyValueFile("mime_types.txt", ' ');
+    if (mimeTypes.empty())
+    {
+        std::cout << "could not open mime_types txt" << std::endl;
+        return "application/octet-stream";
+    }
+    size_t extensionStart = filename.rfind(".");
+    if (extensionStart != std::string::npos)
+        if (mimeTypes.count(&filename[extensionStart]))
+            return mimeTypes.at(&filename[extensionStart]);
+    return "application/octet-stream";
+}

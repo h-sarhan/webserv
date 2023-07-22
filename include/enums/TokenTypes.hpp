@@ -31,10 +31,10 @@ typedef enum
     TRY_FILES,
     BODY_SIZE,
     METHODS,
-    DIRECTORY_TOGGLE,
-    DIRECTORY_FILE,
+    AUTO_INDEX,
+    INDEX,
     CGI_EXTENSION,
-    REDIRECT,
+    RETURN,
 
     // Literals.
     WORD

@@ -28,10 +28,10 @@
 #define INVALID_ERROR_RESPONSE      "expected a 4XX or 5XX response code"
 #define UNEXPECTED_EOF              "unexpected end of file"
 #define DUPLICATE_METHOD            "duplicate HTTP method specified"
-#define MISSING_LOCATION_OPTION     "location block requires either a `try_files` or a `redirect` rule"
+#define MISSING_LOCATION_OPTION     "location block requires either a `try_files` or a `return` rule"
 #define ADDITIONAL_LOCATION_OPTION                                                                 \
     "a location block cannot have both a `try_files` and a "                                       \
-    "`redirect` rule"
+    "`return` rule"
 
 /**
  * @brief This class is responsible for parsing the config file
@@ -80,9 +80,9 @@ class Parser
     void parseTryFiles();
     void parseBodySize();
     void parseHTTPMethods();
-    void parseRedirect();
-    void parseDirectoryToggle();
-    void parseDirectoryFile();
+    void parseReturn();
+    void parseAutoIndex();
+    void parseIndex();
     void parseCGI();
 
     // Methods to reset parsed attributes
