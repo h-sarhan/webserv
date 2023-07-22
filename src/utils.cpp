@@ -42,6 +42,9 @@ unsigned int getHex(const std::string &str)
 
 void sanitizeURL(std::string &url)
 {
+    // Remove duplicate slashes
+    removeDuplicateChar(url, '/');
+
     // Trim query parameters
     const size_t queryPos = url.find("?");
     if (queryPos != std::string::npos)

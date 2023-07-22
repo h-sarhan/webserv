@@ -377,12 +377,13 @@ const std::map<std::string, Route>::const_iterator Request::getMatchingRoute(
     return routeIt;
 }
 
+// ! Generalize this function. It takes a serving directory, a full user request, and a route path
 std::string Request::formPathToResource(const std::pair<std::string, Route> &route) const
 {
     std::string resourcePath =
         route.second.serveDir + "/" +
         _requestedURL.substr(_requestedURL.find(route.first) + route.first.length());
-    removeDuplicateChar(resourcePath, '/');
+    sanitizeURL(resourcePath);
     return resourcePath;
 }
 
@@ -411,9 +412,13 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
     if (isDir(resourcePath) && routeOptions.autoIndex == true)
         return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
 
-    const std::string &indexFile = resourcePath + "/" + routeOptions.indexFile;
+    std::string indexFile = resourcePath + "/" + routeOptions.indexFile;
+    sanitizeURL(indexFile);
     if (isDir(resourcePath) && isFile(indexFile))
         return Resource(EXISTING_FILE, _requestedURL, indexFile, routeOptions);
+
+    if (isDir(resourcePath) && !isFile(indexFile))
+        return Resource(NOT_FOUND, _requestedURL, indexFile, routeOptions);
 
     return Resource(NOT_FOUND, _requestedURL, resourcePath, routeOptions);
 }
