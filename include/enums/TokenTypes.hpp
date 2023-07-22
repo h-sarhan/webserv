@@ -31,7 +31,7 @@ typedef enum
     TRY_FILES,
     BODY_SIZE,
     METHODS,
-    DIRECTORY_LISTING,
+    AUTO_INDEX,
     INDEX,
     CGI_EXTENSION,
     REDIRECT,

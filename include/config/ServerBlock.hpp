@@ -24,7 +24,7 @@ struct Route
 {
     std::string serveDir;                  // Required
     size_t bodySize;                       // Optional
-    bool listDirectories;                  // Optional, false by default
+    bool autoIndex;                        // Optional, false by default
     std::set<std::string> cgiExtensions;   // Optional
     std::string indexFile;                 // Optional
     std::string redirectTo;                // Required if serveDir is not provided

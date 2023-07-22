@@ -28,10 +28,10 @@
 // LOCATION := "location" valid_URL { [LOC_OPTION]... (TRY_FILES | REDIRECT) [LOC_OPTION]...}
 // TRY_FILES := "try_files" valid_dir ;
 // REDIRECT := "redirect" valid_URL ;
-// LOC_OPTION := BODY_SIZE | METHODS | DIR_LISTING | DIR_LISTING_FILE | CGI
+// LOC_OPTION := BODY_SIZE | METHODS | AUTO_INDEX | INDEX | CGI
 // BODY_SIZE := "body_size" positive_number ;
 // METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT" | "HEAD")... ;
-// DIR_LISTING := "directory_listing" ("true" | "false") ;
+// AUTO_INDEX := "autoindex" ("true" | "false") ;
 // INDEX := "index" filename ;
 // CGI := "cgi_extensions" ("php" | "python")... ;
 
@@ -242,7 +242,7 @@ void Parser::resetLocationBlockAttributes()
     _parsedAttributes.erase(REDIRECT);
     _parsedAttributes.erase(BODY_SIZE);
     _parsedAttributes.erase(METHODS);
-    _parsedAttributes.erase(DIRECTORY_LISTING);
+    _parsedAttributes.erase(AUTO_INDEX);
     _parsedAttributes.erase(INDEX);
     _parsedAttributes.erase(CGI_EXTENSION);
 }
@@ -297,7 +297,7 @@ void Parser::parseLocationBlock()
 
 /**
  * @brief Parse a `location` option. One of: `try_files` `redirect` `body_size` `methods`
- *                                           `directory_listing` `index` `cgi_extension`
+ *                                           `auto_index` `index` `cgi_extension`
  */
 void Parser::parseLocationOption()
 {
@@ -315,8 +315,8 @@ void Parser::parseLocationOption()
     case METHODS:
         parseHTTPMethods();
         break;
-    case DIRECTORY_LISTING:
-        parseDirectoryListing();
+    case AUTO_INDEX:
+        parseAutoIndex();
         break;
     case INDEX:
         parseIndex();
@@ -425,12 +425,12 @@ void Parser::parseRedirect()
 }
 
 /**
- * @brief Parse the `directory_listing` rule
+ * @brief Parse the `autoindex` rule
  */
-void Parser::parseDirectoryListing()
+void Parser::parseAutoIndex()
 {
-    // DIR_LISTING := "directory_listing" ("true" | "false") SEMICOLON
-    assertThat(_parsedAttributes.count(DIRECTORY_LISTING) == 0, DUPLICATE("directory_listing"));
+    // AUTO_INDEX := "autoindex" ("true" | "false") SEMICOLON
+    assertThat(_parsedAttributes.count(AUTO_INDEX) == 0, DUPLICATE("autoindex"));
 
     advanceToken();
     matchToken(WORD, INVALID("bool. `true` or `false`"));
@@ -438,7 +438,7 @@ void Parser::parseDirectoryListing()
     assertThat(_currToken->contents() == "true" || _currToken->contents() == "false",
                INVALID("bool. `true` or `false`"));
 
-    bool &toggle = _currRoute->second.listDirectories;
+    bool &toggle = _currRoute->second.autoIndex;
     if (_currToken->contents() == "true")
         toggle = true;
     else
@@ -447,7 +447,7 @@ void Parser::parseDirectoryListing()
     advanceToken();
     matchToken(SEMICOLON, EXPECTED_SEMICOLON);
 
-    _parsedAttributes.insert(DIRECTORY_LISTING);
+    _parsedAttributes.insert(AUTO_INDEX);
 }
 
 /**
@@ -532,7 +532,7 @@ bool Parser::atLocationOption() const
     case TRY_FILES:
     case BODY_SIZE:
     case METHODS:
-    case DIRECTORY_LISTING:
+    case AUTO_INDEX:
     case CGI_EXTENSION:
     case REDIRECT:
     case INDEX:

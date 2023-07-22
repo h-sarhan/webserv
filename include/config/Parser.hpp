@@ -81,7 +81,7 @@ class Parser
     void parseBodySize();
     void parseHTTPMethods();
     void parseRedirect();
-    void parseDirectoryListing();
+    void parseAutoIndex();
     void parseIndex();
     void parseCGI();
 

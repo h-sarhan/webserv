@@ -105,8 +105,8 @@ template <> std::string enumToStr(const TokenType &enumVal)
         return "BODY_SIZE";
     case METHODS:
         return "METHODS";
-    case DIRECTORY_LISTING:
-        return "DIRECTORY_LISTING";
+    case AUTO_INDEX:
+        return "AUTO_INDEX";
     case INDEX:
         return "INDEX";
     case CGI_EXTENSION:
@@ -158,22 +158,11 @@ template <> ResourceType strToEnum<ResourceType>(const std::string &str)
  */
 template <> TokenType strToEnum<TokenType>(const std::string &str)
 {
-    static const std::string tokenTypes[] = {"{",
-                                             "}",
-                                             "#",
-                                             ";",
-                                             "server",
-                                             "listen",
-                                             "server_name",
-                                             "error_page",
-                                             "location",
-                                             "try_files",
-                                             "body_size",
-                                             "methods",
-                                             "directory_listing",
-                                             "index",
-                                             "cgi_extensions",
-                                             "redirect"};
+    static const std::string tokenTypes[] = {
+        "{",         "}",           "#",          ";",        "server",
+        "listen",    "server_name", "error_page", "location", "try_files",
+        "body_size", "methods",     "autoindex",  "index",    "cgi_extensions",
+        "redirect"};
 
     for (size_t i = 0; i < sizeOfArray(tokenTypes); i++)
         if (tokenTypes[i] == str)

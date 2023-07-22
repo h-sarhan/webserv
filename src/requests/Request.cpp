@@ -408,7 +408,7 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
     if (isFile(resourcePath))
         return Resource(EXISTING_FILE, _requestedURL, resourcePath, routeOptions);
 
-    if (isDir(resourcePath) && routeOptions.listDirectories == true)
+    if (isDir(resourcePath) && routeOptions.autoIndex == true)
         return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
 
     const std::string &indexFile = resourcePath + "/" + routeOptions.indexFile;
