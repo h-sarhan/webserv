@@ -271,7 +271,6 @@ void Parser::parseLocationBlock()
 
     // Set default values
     _currRoute->second.bodySize = std::numeric_limits<unsigned int>::max();
-    _currRoute->second.methodsAllowed.insert(GET);
 
     advanceToken();
     matchToken(LEFT_BRACE, EXPECTED_BLOCK_START("location"));
@@ -292,6 +291,14 @@ void Parser::parseLocationBlock()
     assertThat(_parsedAttributes.count(RETURN) != 0 || _parsedAttributes.count(TRY_FILES) != 0,
                MISSING_LOCATION_OPTION);
 
+    if (_parsedAttributes.count(METHODS) == 0)
+    {
+        _currRoute->second.methodsAllowed.insert(GET);
+        _currRoute->second.methodsAllowed.insert(POST);
+        _currRoute->second.methodsAllowed.insert(PUT);
+        _currRoute->second.methodsAllowed.insert(DELETE);
+        _currRoute->second.methodsAllowed.insert(HEAD);
+    }
     _parsedAttributes.insert(LOCATION);
 }
 

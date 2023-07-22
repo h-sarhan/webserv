@@ -10,7 +10,7 @@
 
 #include "responses/Response.hpp"
 #include "responses/DefaultPages.hpp"
-#include <sys/_types/_ssize_t.h>
+// #include <sys/_types/_ssize_t.h>
 
 Response::Response() : _buffer(NULL), _length(0), _totalBytesSent(0), _statusCode(0)
 {
@@ -157,7 +157,7 @@ static Headers createHeaders(int statusCode, std::string contentType, size_t con
     return h;
 }
 
-void Response::setResponse(std::stringstream& ss)
+void Response::setResponse(std::stringstream &ss)
 {
     _length = getStreamLen(ss);
     if (_buffer != NULL)
@@ -176,8 +176,7 @@ void Response::createGETResponse(std::string filename, bool keepAlive)
     if (!file.good())
         return createHTMLResponse(404, errorPage(404), false);
     mimeType = getContentType(filename);
-    setResponseHeaders(responseBuffer,
-                          createHeaders(200, mimeType, getStreamLen(file), keepAlive));
+    setResponseHeaders(responseBuffer, createHeaders(200, mimeType, getStreamLen(file), keepAlive));
 
     responseBuffer << file.rdbuf();
     file.close();
@@ -195,8 +194,7 @@ void Response::createFileResponse(std::string filename, Request &request, int st
         std::cout << "Cannot open file to write: " << filename << std::endl;
         return createHTMLResponse(500, errorPage(500), false);
     }
-    file.write(request.buffer() + request.bodyStart(),
-               request.length() - request.bodyStart());
+    file.write(request.buffer() + request.bodyStart(), request.length() - request.bodyStart());
     file.close();
     responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
     if (request.keepAlive())
@@ -228,8 +226,7 @@ void Response::createHTMLResponse(int statusCode, std::string page, bool keepAli
 {
     std::stringstream responseBuffer;
 
-    setResponseHeaders(responseBuffer,
-                          createHeaders(statusCode, HTML, page.length(), keepAlive));
+    setResponseHeaders(responseBuffer, createHeaders(statusCode, HTML, page.length(), keepAlive));
     responseBuffer << page;
     setResponse(responseBuffer);
 }
@@ -245,7 +242,7 @@ void Response::createHEADFileResponse(std::string filename, Request &request)
         return createHTMLResponse(404, errorPage(404), false);
     mimeType = getContentType(filename);
     setResponseHeaders(responseBuffer,
-                          createHeaders(200, mimeType, getStreamLen(file), request.keepAlive()));
+                       createHeaders(200, mimeType, getStreamLen(file), request.keepAlive()));
     file.close();
     setResponse(responseBuffer);
 }
@@ -253,7 +250,7 @@ void Response::createHEADFileResponse(std::string filename, Request &request)
 void Response::createHEADResponse(int statusCode, std::string contentType, bool keepAlive)
 {
     std::stringstream responseBuffer;
-    
+
     setResponseHeaders(responseBuffer, createHeaders(statusCode, contentType, 0, keepAlive));
     setResponse(responseBuffer);
 }

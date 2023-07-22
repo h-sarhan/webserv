@@ -469,7 +469,7 @@ void Request::unchunk()
         return;
 
     // Allocate for unchunked request and copy start line and headers
-    char *unchunkedRequest = new char[_length + 1];
+    char *unchunkedRequest = new char[_capacity + 1];
     std::copy(_buffer, _buffer + _bodyStart, unchunkedRequest);
 
     unsigned int chunkLen = getHex(std::string(pos, lineEnd));
