@@ -101,7 +101,7 @@ void Server::respondToRequest(size_t clientNo)
     Connection &c = cons.at(sockets[clientNo].fd);
     int sendStatus;
 
-    c.processRequest(configBlocks.at(c.listener));
+    c.processRequest();
     sendStatus = c.response.sendResponse(sockets[clientNo].fd);
     if (sendStatus == IDLE_CONNECTION)
     {

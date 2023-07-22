@@ -72,7 +72,7 @@ class Request
 
     // !! Cache this
     // Returns a resource object associated with the request
-    const Resource resource(const std::vector<ServerBlock *> &config) const;
+    const Resource resource() const;
 
     // Clears the attributes of this request
     void clear();

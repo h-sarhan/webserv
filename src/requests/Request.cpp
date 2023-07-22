@@ -445,15 +445,11 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
  * @param config Configuration to scan through
  * @return const Resource The resource requested
  */
-const Resource Request::resource(const std::vector<ServerBlock *> &config) const
+const Resource Request::resource() const
 {
-    (void)config;
-
     std::vector<ServerBlock *>& newConfig = Server::getConfig(_listener);
-    std::cout << RED << "newConfig size = " << newConfig.size() << "fd = " << _listener << RESET << std::endl;
     if (!_valid)
         return Resource(INVALID_REQUEST);
-
     // Find server block with the correct hostname
     std::vector<ServerBlock *>::const_iterator matchedServerBlock =
         std::find_if(newConfig.begin(), newConfig.end(), HostNameMatcher(hostname()));
@@ -555,7 +551,6 @@ void Request::clear()
     _length = 0;
     _httpMethod = OTHER;
     _valid = true;
-    _listener = -1;
 }
 
 /**

@@ -55,9 +55,9 @@ static void showResourceInfo(Resource &resource, Request &request)
     std::cout << "request type: " << enumToStr(resource.type) << std::endl;
 }
 
-void Connection::processGET(configList config)
+void Connection::processGET()
 {
-    Resource resource = request.resource(config);
+    Resource resource = request.resource();
     showResourceInfo(resource, request);
     switch (resource.type)
     {
@@ -85,9 +85,9 @@ void Connection::processGET(configList config)
     }
 }
 
-void Connection::processPOST(configList config)
+void Connection::processPOST()
 {
-    Resource resource = request.resource(config);
+    Resource resource = request.resource();
     showResourceInfo(resource, request);
     switch (resource.type)
     {
@@ -115,9 +115,9 @@ void Connection::processPOST(configList config)
     }
 }
 
-void Connection::processPUT(configList config)
+void Connection::processPUT()
 {
-    Resource resource = request.resource(config);
+    Resource resource = request.resource();
     showResourceInfo(resource, request);
     switch (resource.type)
     {
@@ -145,9 +145,9 @@ void Connection::processPUT(configList config)
     }
 }
 
-void Connection::processDELETE(configList config)
+void Connection::processDELETE()
 {
-    Resource resource = request.resource(config);
+    Resource resource = request.resource();
     showResourceInfo(resource, request);
     switch (resource.type)
     {
@@ -175,9 +175,9 @@ void Connection::processDELETE(configList config)
     }
 }
 
-void Connection::processHEAD(configList config)
+void Connection::processHEAD()
 {
-    Resource resource = request.resource(config);
+    Resource resource = request.resource();
     showResourceInfo(resource, request);
     switch (resource.type)
     {
@@ -205,7 +205,7 @@ void Connection::processHEAD(configList config)
     }
 }
 
-void Connection::processRequest(configList config)
+void Connection::processRequest()
 {
     if (request.length() == 0)
         return;
@@ -214,19 +214,19 @@ void Connection::processRequest(configList config)
     switch (request.method())
     {
     case GET:
-        processGET(config);
+        processGET();
         break;
     case POST:
-        processPOST(config);
+        processPOST();
         break;
     case PUT:
-        processPUT(config);
+        processPUT();
         break;
     case DELETE:
-        processDELETE(config);
+        processDELETE();
         break;
     case HEAD:
-        processHEAD(config);
+        processHEAD();
         break;
     case OTHER:
         response.createHTMLResponse(400, errorPage(400), keepAlive);
