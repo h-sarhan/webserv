@@ -90,7 +90,7 @@ const char *Request::buffer() const
  *
  * @return size_t Amount of bytes in the request
  */
-size_t Request::requestLength() const
+size_t Request::length() const
 {
     return _length;
 }

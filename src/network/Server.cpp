@@ -122,32 +122,26 @@ void Server::readBody(size_t clientNo)
         size_t contentLen;
         iss >> contentLen;
         // return here so that we dont set the events to start responding
-        if (req.requestLength() - req.bodyStart() != contentLen)
+        if (req.length() - req.bodyStart() != contentLen)
         {
-            std::cout << "Only " << req.requestLength() << "/" << contentLen << " bytes received"
+            std::cout << "Only " << req.length() << " / " << contentLen << " bytes received"
                       << std::endl;
             return;
         }
     }
     else if (req.headers().count("transfer-encoding"))
     {
-        std::string buf = std::string(req.buffer(), req.buffer() + req.requestLength());
-        if (buf.rfind("0\r\n\r\n") == std::string::npos)
+        char lastChunk[] = "0\r\n\r\n";
+        const char *found = std::search(req.buffer() + POS(READ_SIZE, req.length()), req.buffer() + req.length(), lastChunk, lastChunk + 5);
+        if (found == req.buffer() + req.length()) // not found 
         {
-            std::cout << "Chunked transfer encoding in prog. " << req.requestLength()
+            std::cout << "Chunked transfer encoding in prog. " << req.length()
                       << " bytes received." << std::endl;
             return;
         }
-        // chunked transfer encoding completed
-        // handle chunked transfer encoding
-        // here req.buffer() may contain a couple of chunks already or at least one
-        // my job here would be to extract the chunked data
-        // this means to skip over the chunk sizes at the start of a chunk and CRLF at the end
-
-        // if chunk size is not 0, return
-        // return here so that we dont set the events to start responding
+        // req.unchunk();
     }
-    std::cout << "Full request size: " << req.requestLength() << std::endl;
+    std::cout << "Full request size: " << req.length() << std::endl;
     sockets[clientNo].events = POLLIN | POLLOUT;
 
     std::cout << "---------------------------------------------------------\n";
@@ -162,7 +156,7 @@ void Server::recvData(size_t clientNo)
     Request &req = cons.at(sockets[clientNo].fd).request;
     char *buf;
     ssize_t bytesRec;
-    size_t bufSize = 1000000;
+    size_t bufSize = READ_SIZE;
 
     if (!req.headers().empty() && req.headers().count("content-length"))
     {
@@ -187,10 +181,6 @@ void Server::recvData(size_t clientNo)
         return;
     }
     req.appendToBuffer(buf, bytesRec);
-    // std::cout << "bytes = " << bytesRec << ", msg: " << std::endl;
-    // std::cout << "---------------------------------------------------------\n";
-    // std::cout << buf;
-    // std::cout << "---------------------------------------------------------\n";
     delete[] buf;
 }
 
