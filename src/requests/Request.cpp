@@ -395,9 +395,14 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
     if (routeOptions.methodsAllowed.count(_httpMethod) == 0)
         return Resource(FORBIDDEN_METHOD, _requestedURL);
     if (routeOptions.redirectTo.length() > 0)
-        return Resource(REDIRECTION, _requestedURL, routeOptions.redirectTo, routeOptions);
-    if (routeOptions.serveDir.length() == 0)
-        return Resource(NOT_FOUND, _requestedURL, _requestedURL, routeOptions);
+    {
+        std::string resourcePath(_requestedURL);
+        resourcePath.erase(0, routeIt->first.length());
+        resourcePath.insert(resourcePath.begin(), routeOptions.redirectTo.begin(),
+                            routeOptions.redirectTo.end());
+        resourcePath = sanitizeURL(resourcePath);
+        return Resource(REDIRECTION, _requestedURL, resourcePath, routeOptions);
+    }
 
     const std::string &resourcePath =
         formPathToResource(routeOptions.serveDir, _requestedURL, routeIt->first);
