@@ -37,9 +37,11 @@ class Request
     size_t _capacity;
     size_t _bodyStart;
     bool _valid;
+    int _listener;
 
   public:
     Request();
+    Request(int listener);
     Request(const Request &req);
     Request &operator=(const Request &req);
     ~Request();

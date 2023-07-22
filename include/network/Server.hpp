@@ -22,22 +22,15 @@
 #define MAX_CLIENTS 10
 #define READ_SIZE 1000000
 #define POS(x, y) (y <= x ? 0 : y - x)
-// struct Connection
-// {
-//     std::string request;
-//     std::string response;
-//     size_t totalBytesRec;
-//     size_t totalBytesSent;
-// };
 
 typedef std::vector<ServerBlock> &serverList;
 
 class Server
 {
   private:
+    static std::map<int, std::vector<ServerBlock *> > configBlocks;
     std::vector<pollfd> sockets;
     std::map<int, Connection> cons;   // maps a socket fd to its connection data
-    std::map<int, std::vector<ServerBlock *> > configBlocks;
 
     bool portAlreadyInUse(unsigned int port);
     void initListener(unsigned int port, serverList virtualServers);
@@ -46,11 +39,13 @@ class Server
     void recvData(size_t clientNo);
     void readBody(size_t clientNo);
     void respondToRequest(size_t clientNo);
-
+  
   public:
     Server(serverList virtualServers);
     void startListening();
+    static std::vector<ServerBlock *>& getConfig(int listener);
     ~Server();
+
 };
 
 #endif

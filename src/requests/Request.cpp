@@ -13,6 +13,7 @@
 #include "enums/conversions.hpp"
 #include "requests/InvalidRequestError.hpp"
 #include "utils.hpp"
+#include "network/Server.hpp"
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -24,7 +25,18 @@
  */
 Request::Request()
     : _httpMethod(), _requestedURL(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
-      _capacity(REQ_BUFFER_SIZE), _bodyStart(0), _valid(true)
+      _capacity(REQ_BUFFER_SIZE), _bodyStart(0), _valid(true), _listener(-1)
+{
+}
+
+/**
+ * @brief Construct a new Request object with listener
+ * 
+ * @param listener 
+ */
+Request::Request(int listener)
+    : _httpMethod(), _requestedURL(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
+      _capacity(REQ_BUFFER_SIZE), _bodyStart(0), _valid(true), _listener(listener)
 {
 }
 
@@ -36,7 +48,7 @@ Request::Request()
 Request::Request(const Request &req)
     : _httpMethod(req.method()), _requestedURL(req._requestedURL), _headers(req._headers),
       _buffer(new char[req._capacity]), _length(req._length), _capacity(req._capacity),
-      _bodyStart(req._bodyStart), _valid(req._valid)
+      _bodyStart(req._bodyStart), _valid(req._valid), _listener(req._listener)
 {
     std::copy(req._buffer, req._buffer + _length, _buffer);
 }
@@ -58,6 +70,7 @@ Request &Request::operator=(const Request &req)
     _capacity = req._capacity;
     _valid = req._valid;
     _bodyStart = req._bodyStart;
+    _listener = req._listener;
     delete[] _buffer;
     _buffer = new char[_capacity];
     std::copy(req._buffer, req._buffer + _length, _buffer);
@@ -434,15 +447,19 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
  */
 const Resource Request::resource(const std::vector<ServerBlock *> &config) const
 {
+    (void)config;
+
+    std::vector<ServerBlock *>& newConfig = Server::getConfig(_listener);
+    std::cout << RED << "newConfig size = " << newConfig.size() << "fd = " << _listener << RESET << std::endl;
     if (!_valid)
         return Resource(INVALID_REQUEST);
 
     // Find server block with the correct hostname
     std::vector<ServerBlock *>::const_iterator matchedServerBlock =
-        std::find_if(config.begin(), config.end(), HostNameMatcher(hostname()));
+        std::find_if(newConfig.begin(), newConfig.end(), HostNameMatcher(hostname()));
 
     // If no server block matches the hostname then return a NOT_FOUND resource
-    if (matchedServerBlock == config.end())
+    if (matchedServerBlock == newConfig.end())
         return Resource(NO_MATCH, _requestedURL);
     return getResourceFromConfig((*matchedServerBlock)->routes);
 }
@@ -538,6 +555,7 @@ void Request::clear()
     _length = 0;
     _httpMethod = OTHER;
     _valid = true;
+    _listener = -1;
 }
 
 /**

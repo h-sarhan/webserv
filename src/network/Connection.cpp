@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/22 13:57:58 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/22 20:44:53 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ Connection::Connection()
 }
 
 Connection::Connection(int listener)
-    : listener(listener), request(), response(), keepAlive(false), timeOut(0), startTime(0)
+    : listener(listener), request(listener), response(), keepAlive(false), timeOut(0), startTime(0)
 {
 }
 
