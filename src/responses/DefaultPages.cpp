@@ -14,40 +14,8 @@
 #include <fstream>
 #include <sstream>
 
-// ! BUG: This does not always provide the correct URLs
-const std::string directoryListing(const std::string &dirPath)
-{
-    throw std::runtime_error("This function is broken pls use the directoryListing function that "
-                             "takes a Resource object");
-
-    std::string html = COMMON_HEAD "\t\t<title>Directory listing for " + dirPath +
-                       " </title>\n"
-                       "\t</head>\n"
-                       "\t<body>\n"
-                       "\t\t<h1>Directory listing for " +
-                       dirPath +
-                       " </h1>\n"
-                       "\t\t<hr>\n"
-                       "\t\t<ul>\n";
-    DIR *dirPtr = opendir(dirPath.c_str());
-    if (dirPtr == NULL)
-        return html +
-               "\t\t<li>COULD NOT OPEN DIRECTORY</li>\n\t\t</ul>\n\t\t<hr>\n\t</body>\n</html>\n";
-    struct dirent *dir = readdir(dirPtr);
-    while (dir)
-    {
-        std::string filename = dir->d_name;
-        filename = (dir->d_type & DT_DIR) ? filename + "/" : filename;
-        html += "\t\t\t<li><a href=\"" + filename + "\">" + filename + "</a></li>\n";
-        dir = readdir(dirPtr);
-    }
-    closedir(dirPtr);
-    return html + "\t\t</ul>\n\t\t<hr>\n\t</body>\n</html>\n";
-}
-
 const std::string directoryListing(const Resource &dir)
 {
-    // ! NOT DONE YET
     std::string html = COMMON_HEAD "\t\t<title>Directory listing for " + dir.originalRequest +
                        " </title>\n"
                        "\t</head>\n"
@@ -59,14 +27,15 @@ const std::string directoryListing(const Resource &dir)
                        "\t\t<ul>\n";
     DIR *dirPtr = opendir(dir.path.c_str());
     if (dirPtr == NULL)
-        return html +
-               "\t\t<li>COULD NOT OPEN DIRECTORY</li>\n\t\t</ul>\n\t\t<hr>\n\t</body>\n</html>\n";
+        return html + "\t\t<li>COULD NOT OPEN"
+                      "DIRECTORY</ li>\n\t\t</ ul>\n\t\t<hr>\n\t</ body>\n</ html>\n ";
     struct dirent *dirElement = readdir(dirPtr);
     while (dirElement)
     {
         const std::string &filename = dirElement->d_name;
-        // filename = (dirElement->d_type & DT_DIR) ? filename + "/" : filename;
-        html += "\t\t\t<li><a href=\"" + filename + "\">" + filename + "</a></li>\n";
+        std::string url = dir.originalRequest + "/" + filename;
+        sanitizeURL(url);
+        html += "\t\t\t<li><a href=\"" + url + "\">" + filename + "</a></li>\n";
         dirElement = readdir(dirPtr);
     }
     closedir(dirPtr);
