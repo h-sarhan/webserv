@@ -413,12 +413,12 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
     if (isFile(resourcePath))
         return Resource(EXISTING_FILE, _requestedURL, resourcePath, routeOptions);
 
-    if (isDir(resourcePath) && routeOptions.autoIndex == true)
-        return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
-
     const std::string &indexFile = sanitizeURL(resourcePath + "/" + routeOptions.indexFile);
     if (isDir(resourcePath) && isFile(indexFile))
         return Resource(EXISTING_FILE, _requestedURL, indexFile, routeOptions);
+
+    if (isDir(resourcePath) && routeOptions.autoIndex == true)
+        return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
 
     if (isDir(resourcePath) && !isFile(indexFile))
         return Resource(NOT_FOUND, _requestedURL, indexFile, routeOptions);
