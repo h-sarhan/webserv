@@ -98,7 +98,7 @@ void chunkerTests()
     req1.unchunk();
 
     assert(strcmp("POST /urmom HTTP/1.1\r\n\r\nMozillaDeveloper Network", req1.buffer()) == 0);
-    assert(req1.requestLength() == 48);
+    assert(req1.length() == 48);
 
     char bigBody[] =
         "POST /urmom HTTP/1.1\r\n"
@@ -146,7 +146,7 @@ void chunkerTests()
                " Sed dapibus nunc et auctor facilisis. Nunc eu sem vel turpis eleifend tristique"
                " eget et eros.",
                req2.buffer()) == 0);
-    assert(req2.requestLength() == 670);
+    assert(req2.length() == 670);
     char failBody[] = "POST /urmom HTTP/1.1\r\n\r\n"
                       "7\r\n"
                       "Mozilla"
@@ -160,7 +160,7 @@ void chunkerTests()
     req3.parseRequest();
     req3.unchunk();
 
-    assert(req3.requestLength() == 62);
+    assert(req3.length() == 62);
     assert(std::strncmp("POST /urmom HTTP/1.1\r\n\r\n"
                         "7\r\n"
                         "Mozilla"
@@ -168,5 +168,5 @@ void chunkerTests()
                         "Developer Network\r\n"
                         "0\r\n"
                         "\r\n",
-                        req3.buffer(), req3.requestLength()) == 0);
+                        req3.buffer(), req3.length()) == 0);
 }

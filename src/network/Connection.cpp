@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/21 21:20:29 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/22 13:57:58 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -207,7 +207,7 @@ void Connection::processHEAD(configList config)
 
 void Connection::processRequest(configList config)
 {
-    if (request.requestLength() == 0)
+    if (request.length() == 0)
         return;
     keepAlive = request.keepAlive();
     timeOut = request.keepAliveTimer();

@@ -195,7 +195,7 @@ void Response::createFileResponse(std::string filename, Request &request, int st
         return createHTMLResponse(500, errorPage(500), false);
     }
     file.write(request.buffer() + request.bodyStart(),
-               request.requestLength() - request.bodyStart());
+               request.length() - request.bodyStart());
     file.close();
     responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
     if (request.keepAlive())

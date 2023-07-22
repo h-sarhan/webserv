@@ -52,7 +52,7 @@ class Request
     // Getters for attributes that have been parsed from the HTTP request
     const HTTPMethod &method() const;
     const char *buffer() const;
-    size_t requestLength() const;
+    size_t length() const;
     size_t bodyStart() const;
 
     // ! Make this const

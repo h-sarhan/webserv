@@ -20,7 +20,8 @@
 #include "responses/DefaultPages.hpp"
 
 #define MAX_CLIENTS 10
-
+#define READ_SIZE 1000000
+#define POS(x, y) (y <= x ? 0 : y - x)
 // struct Connection
 // {
 //     std::string request;
