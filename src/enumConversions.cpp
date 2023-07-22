@@ -111,8 +111,8 @@ template <> std::string enumToStr(const TokenType &enumVal)
         return "INDEX";
     case CGI_EXTENSION:
         return "CGI_EXTENSION";
-    case REDIRECT:
-        return "REDIRECT";
+    case RETURN:
+        return "RETURN";
     }
 }
 
@@ -173,7 +173,7 @@ template <> TokenType strToEnum<TokenType>(const std::string &str)
                                              "autoindex",
                                              "index",
                                              "cgi_extensions",
-                                             "redirect"};
+                                             "return"};
 
     for (size_t i = 0; i < sizeOfArray(tokenTypes); i++)
         if (tokenTypes[i] == str)

@@ -25,9 +25,9 @@
 // SRV_OPTION := SERVER_NAME | ERROR_PAGE
 // SERVER_NAME := "server_name" valid_hostname ;
 // ERROR_PAGE := "error_page" valid_error_response valid_HTML_path ;
-// LOCATION := "location" valid_URL { [LOC_OPTION]... (TRY_FILES | REDIRECT) [LOC_OPTION]...}
+// LOCATION := "location" valid_URL { [LOC_OPTION]... (TRY_FILES | RETURN) [LOC_OPTION]...}
 // TRY_FILES := "try_files" valid_dir ;
-// REDIRECT := "redirect" valid_URL ;
+// RETURN := "return" valid_URL ;
 // LOC_OPTION := BODY_SIZE | METHODS | AUTO_INDEX | INDEX | CGI
 // BODY_SIZE := "client_max_body_size" positive_number ;
 // METHODS := "limit_except" ("GET" | "POST" | "DELETE" | "PUT" | "HEAD")... ;
@@ -239,7 +239,7 @@ void Parser::parseErrorPage()
 void Parser::resetLocationBlockAttributes()
 {
     _parsedAttributes.erase(TRY_FILES);
-    _parsedAttributes.erase(REDIRECT);
+    _parsedAttributes.erase(RETURN);
     _parsedAttributes.erase(BODY_SIZE);
     _parsedAttributes.erase(METHODS);
     _parsedAttributes.erase(AUTO_INDEX);
@@ -253,7 +253,7 @@ void Parser::resetLocationBlockAttributes()
 void Parser::parseLocationBlock()
 {
     // LOCATION := "location" valid_URL LEFT_BRACE [LOC_OPTION]... (TRY_FILES | \
-    // REDIRECT) [LOC_OPTION]...RIGHT_BRACE
+    // RETURN) [LOC_OPTION]...RIGHT_BRACE
 
     resetLocationBlockAttributes();
 
@@ -289,14 +289,14 @@ void Parser::parseLocationBlock()
 
     matchToken(RIGHT_BRACE, EXPECTED_BLOCK_END("location"));
 
-    assertThat(_parsedAttributes.count(REDIRECT) != 0 || _parsedAttributes.count(TRY_FILES) != 0,
+    assertThat(_parsedAttributes.count(RETURN) != 0 || _parsedAttributes.count(TRY_FILES) != 0,
                MISSING_LOCATION_OPTION);
 
     _parsedAttributes.insert(LOCATION);
 }
 
 /**
- * @brief Parse a `location` option. One of: `try_files` `redirect` `client_max_body_size`
+ * @brief Parse a `location` option. One of: `try_files` `return` `client_max_body_size`
  * `limit_except` `auto_index` `index` `cgi_extension`
  */
 void Parser::parseLocationOption()
@@ -306,8 +306,8 @@ void Parser::parseLocationOption()
     case TRY_FILES:
         parseTryFiles();
         break;
-    case REDIRECT:
-        parseRedirect();
+    case RETURN:
+        parseReturn();
         break;
     case BODY_SIZE:
         parseBodySize();
@@ -338,7 +338,7 @@ void Parser::parseTryFiles()
     // TRY_FILES := "try_files" valid_dir SEMICOLON
     assertThat(_parsedAttributes.count(TRY_FILES) == 0, DUPLICATE("try_files"));
 
-    assertThat(_parsedAttributes.count(REDIRECT) == 0, ADDITIONAL_LOCATION_OPTION);
+    assertThat(_parsedAttributes.count(RETURN) == 0, ADDITIONAL_LOCATION_OPTION);
 
     advanceToken();
     matchToken(WORD, INVALID("directory"));
@@ -403,12 +403,12 @@ void Parser::parseHTTPMethods()
 }
 
 /**
- * @brief Parse the `redirect` rule
+ * @brief Parse the `return` rule
  */
-void Parser::parseRedirect()
+void Parser::parseReturn()
 {
-    // REDIRECT := "redirect" valid_URL SEMICOLON
-    assertThat(_parsedAttributes.count(REDIRECT) == 0, DUPLICATE("redirect"));
+    // RETURN := "return" valid_URL SEMICOLON
+    assertThat(_parsedAttributes.count(RETURN) == 0, DUPLICATE("return"));
     assertThat(_parsedAttributes.count(TRY_FILES) == 0, ADDITIONAL_LOCATION_OPTION);
 
     advanceToken();
@@ -421,7 +421,7 @@ void Parser::parseRedirect()
     advanceToken();
     matchToken(SEMICOLON, EXPECTED_SEMICOLON);
 
-    _parsedAttributes.insert(REDIRECT);
+    _parsedAttributes.insert(RETURN);
 }
 
 /**
@@ -534,7 +534,7 @@ bool Parser::atLocationOption() const
     case METHODS:
     case AUTO_INDEX:
     case CGI_EXTENSION:
-    case REDIRECT:
+    case RETURN:
     case INDEX:
         return true;
     default:

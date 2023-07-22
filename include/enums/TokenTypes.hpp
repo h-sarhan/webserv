@@ -34,7 +34,7 @@ typedef enum
     AUTO_INDEX,
     INDEX,
     CGI_EXTENSION,
-    REDIRECT,
+    RETURN,
 
     // Literals.
     WORD
