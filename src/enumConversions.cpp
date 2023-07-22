@@ -140,12 +140,12 @@ template <> HTTPMethod strToEnum<HTTPMethod>(const std::string &str)
  */
 template <> ResourceType strToEnum<ResourceType>(const std::string &str)
 {
-    static const std::string requestTypes[] = {"EXISTING_FILE", "REDIRECTION", "FORBIDDEN_METHOD",
-                                               "DIRECTORY",     "NOT_FOUND",   "INVALID_REQUEST",
-                                               "NO_MATCH"};
+    static const std::string resourceTypes[] = {"EXISTING_FILE", "REDIRECTION", "FORBIDDEN_METHOD",
+                                                "DIRECTORY",     "NOT_FOUND",   "INVALID_REQUEST",
+                                                "NO_MATCH"};
 
-    for (size_t i = 0; i < sizeOfArray(requestTypes); i++)
-        if (requestTypes[i] == str)
+    for (size_t i = 0; i < sizeOfArray(resourceTypes); i++)
+        if (resourceTypes[i] == str)
             return static_cast<ResourceType>(i);
     return NOT_FOUND;
 }
@@ -169,7 +169,7 @@ template <> TokenType strToEnum<TokenType>(const std::string &str)
                                              "location",
                                              "try_files",
                                              "client_max_body_size",
-                                             "methods",
+                                             "limit_except",
                                              "autoindex",
                                              "index",
                                              "cgi_extensions",

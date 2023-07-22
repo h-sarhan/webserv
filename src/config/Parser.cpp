@@ -30,7 +30,7 @@
 // REDIRECT := "redirect" valid_URL ;
 // LOC_OPTION := BODY_SIZE | METHODS | AUTO_INDEX | INDEX | CGI
 // BODY_SIZE := "client_max_body_size" positive_number ;
-// METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT" | "HEAD")... ;
+// METHODS := "limit_except" ("GET" | "POST" | "DELETE" | "PUT" | "HEAD")... ;
 // AUTO_INDEX := "autoindex" ("true" | "false") ;
 // INDEX := "index" filename ;
 // CGI := "cgi_extensions" ("php" | "python")... ;
@@ -296,8 +296,8 @@ void Parser::parseLocationBlock()
 }
 
 /**
- * @brief Parse a `location` option. One of: `try_files` `redirect` `client_max_body_size` `methods`
- *                                           `auto_index` `index` `cgi_extension`
+ * @brief Parse a `location` option. One of: `try_files` `redirect` `client_max_body_size`
+ * `limit_except` `auto_index` `index` `cgi_extension`
  */
 void Parser::parseLocationOption()
 {
@@ -378,7 +378,7 @@ void Parser::parseBodySize()
  */
 void Parser::parseHTTPMethods()
 {
-    // METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT")... SEMICOLON
+    // METHODS := "limit_except" ("GET" | "POST" | "DELETE" | "PUT")... SEMICOLON
     std::set<HTTPMethod> &methods = _currRoute->second.methodsAllowed;
     methods.clear();
 

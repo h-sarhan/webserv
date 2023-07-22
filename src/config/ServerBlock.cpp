@@ -31,8 +31,12 @@ static Route createDefaultRoute()
     defaultRoute.autoIndex = true;
     defaultRoute.indexFile = "";
 
-    // Only GET is allowed by default
+    // All methods are allowed by default
     defaultRoute.methodsAllowed.insert(GET);
+    defaultRoute.methodsAllowed.insert(POST);
+    defaultRoute.methodsAllowed.insert(PUT);
+    defaultRoute.methodsAllowed.insert(DELETE);
+    defaultRoute.methodsAllowed.insert(HEAD);
     return defaultRoute;
 }
 
