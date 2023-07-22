@@ -29,7 +29,7 @@
 // TRY_FILES := "try_files" valid_dir ;
 // REDIRECT := "redirect" valid_URL ;
 // LOC_OPTION := BODY_SIZE | METHODS | AUTO_INDEX | INDEX | CGI
-// BODY_SIZE := "body_size" positive_number ;
+// BODY_SIZE := "client_max_body_size" positive_number ;
 // METHODS := "methods" ("GET" | "POST" | "DELETE" | "PUT" | "HEAD")... ;
 // AUTO_INDEX := "autoindex" ("true" | "false") ;
 // INDEX := "index" filename ;
@@ -296,7 +296,7 @@ void Parser::parseLocationBlock()
 }
 
 /**
- * @brief Parse a `location` option. One of: `try_files` `redirect` `body_size` `methods`
+ * @brief Parse a `location` option. One of: `try_files` `redirect` `client_max_body_size` `methods`
  *                                           `auto_index` `index` `cgi_extension`
  */
 void Parser::parseLocationOption()
@@ -353,12 +353,12 @@ void Parser::parseTryFiles()
 }
 
 /**
- * @brief Parse the `body_size` rule
+ * @brief Parse the `client_max_body_size` rule
  */
 void Parser::parseBodySize()
 {
-    // BODY_SIZE := "body_size" positive_number SEMICOLON
-    assertThat(_parsedAttributes.count(BODY_SIZE) == 0, DUPLICATE("body_size"));
+    // BODY_SIZE := "cleint_max_body_size" positive_number SEMICOLON
+    assertThat(_parsedAttributes.count(BODY_SIZE) == 0, DUPLICATE("client_max_body_size"));
 
     advanceToken();
     matchToken(WORD, INVALID("body size [10 - 2^32]"));

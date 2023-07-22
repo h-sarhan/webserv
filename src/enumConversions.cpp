@@ -158,11 +158,22 @@ template <> ResourceType strToEnum<ResourceType>(const std::string &str)
  */
 template <> TokenType strToEnum<TokenType>(const std::string &str)
 {
-    static const std::string tokenTypes[] = {
-        "{",         "}",           "#",          ";",        "server",
-        "listen",    "server_name", "error_page", "location", "try_files",
-        "body_size", "methods",     "autoindex",  "index",    "cgi_extensions",
-        "redirect"};
+    static const std::string tokenTypes[] = {"{",
+                                             "}",
+                                             "#",
+                                             ";",
+                                             "server",
+                                             "listen",
+                                             "server_name",
+                                             "error_page",
+                                             "location",
+                                             "try_files",
+                                             "client_max_body_size",
+                                             "methods",
+                                             "autoindex",
+                                             "index",
+                                             "cgi_extensions",
+                                             "redirect"};
 
     for (size_t i = 0; i < sizeOfArray(tokenTypes); i++)
         if (tokenTypes[i] == str)
