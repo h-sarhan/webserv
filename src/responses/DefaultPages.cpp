@@ -33,8 +33,7 @@ const std::string directoryListing(const Resource &dir)
     while (dirElement)
     {
         const std::string &filename = dirElement->d_name;
-        std::string url = dir.originalRequest + "/" + filename;
-        sanitizeURL(url);
+        const std::string &url = sanitizeURL(dir.originalRequest + "/" + filename);
         html += "\t\t\t<li><a href=\"" + url + "\">" + filename + "</a></li>\n";
         dirElement = readdir(dirPtr);
     }

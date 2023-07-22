@@ -85,8 +85,6 @@ class Request
     // Checks if a line ends with \r\n. Throws an exception otherwise
     void checkLineEnding(std::stringstream &reqStream) const;
 
-    std::string formPathToResource(const std::pair<std::string, Route> &route) const;
-
     const std::map<std::string, Route>::const_iterator getMatchingRoute(
         const std::map<std::string, Route> &routes) const;
 

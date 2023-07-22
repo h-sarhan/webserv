@@ -106,7 +106,7 @@ unsigned int getHex(const std::string &str);
  *
  * @param url URL to sanitize
  */
-void sanitizeURL(std::string &url);
+std::string sanitizeURL(const std::string &url);
 
 /**
  * @brief Get a line as a string from a file given the line number

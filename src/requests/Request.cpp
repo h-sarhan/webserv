@@ -182,7 +182,7 @@ void Request::parseStartLine(std::stringstream &reqStream)
     assertThat(!_requestedURL.empty(), "Invalid resource in start line");
 
     // Clean the resource URL
-    sanitizeURL(_requestedURL);
+    _requestedURL = sanitizeURL(_requestedURL);
 
     // Check HTTP version
     const std::string &httpVersion = getNext<std::string>(reqStream);
@@ -378,13 +378,11 @@ const std::map<std::string, Route>::const_iterator Request::getMatchingRoute(
 }
 
 // ! Generalize this function. It takes a serving directory, a full user request, and a route path
-std::string Request::formPathToResource(const std::pair<std::string, Route> &route) const
+static std::string formPathToResource(const std::string &servingDirectory,
+                                      const std::string &userRequest,
+                                      const std::string &matchedRoute)
 {
-    std::string resourcePath =
-        route.second.serveDir + "/" +
-        _requestedURL.substr(_requestedURL.find(route.first) + route.first.length());
-    sanitizeURL(resourcePath);
-    return resourcePath;
+    return sanitizeURL(servingDirectory + "/" + userRequest.substr(matchedRoute.length()));
 }
 
 const Resource Request::getResourceFromConfig(const std::map<std::string, Route> &routes) const
@@ -401,7 +399,8 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
     if (routeOptions.serveDir.length() == 0)
         return Resource(NOT_FOUND, _requestedURL, _requestedURL, routeOptions);
 
-    const std::string &resourcePath = formPathToResource(*routeIt);
+    const std::string &resourcePath =
+        formPathToResource(routeOptions.serveDir, _requestedURL, routeIt->first);
 
     if (exists(resourcePath) == false)
         return Resource(NOT_FOUND, _requestedURL, resourcePath, routeOptions);
@@ -412,8 +411,7 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
     if (isDir(resourcePath) && routeOptions.autoIndex == true)
         return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
 
-    std::string indexFile = resourcePath + "/" + routeOptions.indexFile;
-    sanitizeURL(indexFile);
+    const std::string &indexFile = sanitizeURL(resourcePath + "/" + routeOptions.indexFile);
     if (isDir(resourcePath) && isFile(indexFile))
         return Resource(EXISTING_FILE, _requestedURL, indexFile, routeOptions);
 
