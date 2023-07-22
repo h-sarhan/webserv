@@ -139,7 +139,9 @@ void Server::readBody(size_t clientNo)
                       << " bytes received." << std::endl;
             return;
         }
-        // req.unchunk();
+        std::cout << "Unchunking request: Old size = " << req.length();
+        req.unchunk();
+        std::cout << ", New size = " << req.length() << std::endl;
     }
     std::cout << "Full request size: " << req.length() << std::endl;
     sockets[clientNo].events = POLLIN | POLLOUT;
@@ -147,8 +149,6 @@ void Server::readBody(size_t clientNo)
     std::cout << "---------------------------------------------------------\n";
     std::cout << std::string(req.buffer(), req.buffer() + req.bodyStart() - 1);
     std::cout << "---------------------------------------------------------\n";
-
-    // if this a post req, the only target type we care about is METHOD_NOT_ALLOWED
 }
 
 void Server::recvData(size_t clientNo)
