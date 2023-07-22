@@ -14,29 +14,28 @@
 #include <fstream>
 #include <sstream>
 
-// ! BUG: This does not always provide the correct URLs
-const std::string directoryListing(const std::string &dirPath)
+const std::string directoryListing(const Resource &dir)
 {
-    std::string html = COMMON_HEAD "\t\t<title>Directory listing for " + dirPath +
+    std::string html = COMMON_HEAD "\t\t<title>Directory listing for " + dir.originalRequest +
                        " </title>\n"
                        "\t</head>\n"
                        "\t<body>\n"
                        "\t\t<h1>Directory listing for " +
-                       dirPath +
+                       dir.originalRequest +
                        " </h1>\n"
                        "\t\t<hr>\n"
                        "\t\t<ul>\n";
-    DIR *dirPtr = opendir(dirPath.c_str());
+    DIR *dirPtr = opendir(dir.path.c_str());
     if (dirPtr == NULL)
-        return html +
-               "\t\t<li>COULD NOT OPEN DIRECTORY</li>\n\t\t</ul>\n\t\t<hr>\n\t</body>\n</html>\n";
-    struct dirent *dir = readdir(dirPtr);
-    while (dir)
+        return html + "\t\t<li>COULD NOT OPEN"
+                      "DIRECTORY</ li>\n\t\t</ ul>\n\t\t<hr>\n\t</ body>\n</ html>\n ";
+    struct dirent *dirElement = readdir(dirPtr);
+    while (dirElement)
     {
-        std::string filename = dir->d_name;
-        filename = (dir->d_type & DT_DIR) ? filename + "/" : filename;
-        html += "\t\t\t<li><a href=\"" + filename + "\">" + filename + "</a></li>\n";
-        dir = readdir(dirPtr);
+        const std::string &filename = dirElement->d_name;
+        const std::string &url = sanitizeURL(dir.originalRequest + "/" + filename);
+        html += "\t\t\t<li><a href=\"" + url + "\">" + filename + "</a></li>\n";
+        dirElement = readdir(dirPtr);
     }
     closedir(dirPtr);
     return html + "\t\t</ul>\n\t\t<hr>\n\t</body>\n</html>\n";

@@ -27,12 +27,16 @@ static Route createDefaultRoute()
     // Max body size is ~4GB by default
     defaultRoute.bodySize = std::numeric_limits<unsigned int>::max();
 
-    // Directory listing is on by default
-    defaultRoute.listDirectories = true;
-    defaultRoute.listDirectoriesFile = "";
+    // Auto indexing is on by default
+    defaultRoute.autoIndex = true;
+    defaultRoute.indexFile = "";
 
-    // Only GET is allowed by default
+    // All methods are allowed by default
     defaultRoute.methodsAllowed.insert(GET);
+    defaultRoute.methodsAllowed.insert(POST);
+    defaultRoute.methodsAllowed.insert(PUT);
+    defaultRoute.methodsAllowed.insert(DELETE);
+    defaultRoute.methodsAllowed.insert(HEAD);
     return defaultRoute;
 }
 
@@ -69,9 +73,9 @@ static void printRoute(std::string &str, const std::pair<std::string, Route> &ro
         str += "\t\tServing directory: " + route.second.serveDir + "\n";
     if (!route.second.redirectTo.empty())
         str += "\t\tRedirect URL: " + route.second.redirectTo + "\n";
-    str += "\t\tList directory?: ";
-    route.second.listDirectories ? str += "yes\n" : str += "no\n";
-    "\t\tList directory file: " + route.second.listDirectoriesFile + "\n";
+    str += "\t\tAuto index?: ";
+    route.second.autoIndex ? str += "yes\n" : str += "no\n";
+    "\t\tIndex file: " + route.second.indexFile + "\n";
     str += "\t\tMax body size: " + toStr(route.second.bodySize) + "\n";
     str += "\t\tMethods allowed: ";
     for (std::set<HTTPMethod>::const_iterator it = route.second.methodsAllowed.begin();

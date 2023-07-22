@@ -18,7 +18,6 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
-#include <sys/stat.h>
 
 /**
  * @brief Construct a new Request object
@@ -183,7 +182,7 @@ void Request::parseStartLine(std::stringstream &reqStream)
     assertThat(!_requestedURL.empty(), "Invalid resource in start line");
 
     // Clean the resource URL
-    sanitizeURL(_requestedURL);
+    _requestedURL = sanitizeURL(_requestedURL);
 
     // Check HTTP version
     const std::string &httpVersion = getNext<std::string>(reqStream);
@@ -378,13 +377,12 @@ const std::map<std::string, Route>::const_iterator Request::getMatchingRoute(
     return routeIt;
 }
 
-std::string Request::formPathToResource(const std::pair<std::string, Route> &route) const
+// ! Generalize this function. It takes a serving directory, a full user request, and a route path
+static std::string formPathToResource(const std::string &servingDirectory,
+                                      const std::string &userRequest,
+                                      const std::string &matchedRoute)
 {
-    std::string resourcePath =
-        route.second.serveDir + "/" +
-        _requestedURL.substr(_requestedURL.find(route.first) + route.first.length());
-    removeDuplicateChar(resourcePath, '/');
-    return resourcePath;
+    return sanitizeURL(servingDirectory + "/" + userRequest.substr(matchedRoute.length()));
 }
 
 const Resource Request::getResourceFromConfig(const std::map<std::string, Route> &routes) const
@@ -401,22 +399,25 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
     if (routeOptions.serveDir.length() == 0)
         return Resource(NOT_FOUND, _requestedURL, _requestedURL, routeOptions);
 
-    const std::string &resourcePath = formPathToResource(*routeIt);
-    // Check if the resource exists
-    struct stat info;
-    if (stat(resourcePath.c_str(), &info) != 0)
+    const std::string &resourcePath =
+        formPathToResource(routeOptions.serveDir, _requestedURL, routeIt->first);
+
+    if (exists(resourcePath) == false)
         return Resource(NOT_FOUND, _requestedURL, resourcePath, routeOptions);
 
-    // Check if the resource is a file or a directory
-    const bool isFile = info.st_mode & S_IFREG;
-    const bool isDir = info.st_mode & S_IFDIR;
-    if (isFile)
+    if (isFile(resourcePath))
         return Resource(EXISTING_FILE, _requestedURL, resourcePath, routeOptions);
-    if (isDir && routeOptions.listDirectories == true)
+
+    if (isDir(resourcePath) && routeOptions.autoIndex == true)
         return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
-    if (isDir && !routeOptions.listDirectoriesFile.empty())
-        return Resource(EXISTING_FILE, _requestedURL, routeOptions.listDirectoriesFile,
-                        routeOptions);
+
+    const std::string &indexFile = sanitizeURL(resourcePath + "/" + routeOptions.indexFile);
+    if (isDir(resourcePath) && isFile(indexFile))
+        return Resource(EXISTING_FILE, _requestedURL, indexFile, routeOptions);
+
+    if (isDir(resourcePath) && !isFile(indexFile))
+        return Resource(NOT_FOUND, _requestedURL, indexFile, routeOptions);
+
     return Resource(NOT_FOUND, _requestedURL, resourcePath, routeOptions);
 }
 
@@ -439,6 +440,59 @@ const Resource Request::resource(const std::vector<ServerBlock *> &config) const
     if (matchedServerBlock == config.end())
         return Resource(NO_MATCH, _requestedURL);
     return getResourceFromConfig((*matchedServerBlock)->routes);
+}
+
+static const char *getLineEnd(const char *start, const char *end)
+{
+    static const char *crlf = "\r\n";
+    return std::search(start, end, crlf, crlf + 2);
+}
+
+/**
+ * @brief Unchunks a request encoded in chunked transfer encoding
+ *
+ */
+void Request::unchunk()
+{
+    const char *pos = _buffer + _bodyStart;
+    const char *reqEnd = _buffer + _length;
+    unsigned int newLength = _bodyStart;
+
+    // Read chunk size
+    const char *lineEnd = getLineEnd(pos, reqEnd);
+    if (lineEnd == reqEnd)
+        return;
+
+    // Allocate for unchunked request and copy start line and headers
+    char *unchunkedRequest = new char[_length + 1];
+    std::copy(_buffer, _buffer + _bodyStart, unchunkedRequest);
+
+    unsigned int chunkLen = getHex(std::string(pos, lineEnd));
+    pos = lineEnd + 2;
+    while (chunkLen > 0)
+    {
+        lineEnd = pos + chunkLen;
+        if (lineEnd == reqEnd || newLength > _length || lineEnd[0] != '\r' || lineEnd[1] != '\n')
+        {
+            delete[] unchunkedRequest;
+            return;
+        }
+        std::copy(pos, lineEnd, unchunkedRequest + newLength);
+        newLength += chunkLen;
+        pos = lineEnd + 2;
+        lineEnd = getLineEnd(pos, reqEnd);
+        if (lineEnd == reqEnd)
+        {
+            delete[] unchunkedRequest;
+            return;
+        }
+        chunkLen = getHex(std::string(pos, lineEnd));
+        pos = lineEnd + 2;
+    }
+    delete[] _buffer;
+    unchunkedRequest[newLength] = '\0';
+    _length = newLength;
+    _buffer = unchunkedRequest;
 }
 
 /**

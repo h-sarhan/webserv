@@ -48,7 +48,7 @@ Connection &Connection::operator=(const Connection &c)
     return (*this);
 }
 
-static void showResourceInfo(Resource& resource, Request& request)
+static void showResourceInfo(Resource &resource, Request &request)
 {
     std::cout << "method type: " << enumToStr(request.method()) << std::endl;
     std::cout << resource.originalRequest << " resource found at: " << resource.path << std::endl;
@@ -71,7 +71,7 @@ void Connection::processGET(configList config)
         response.createHTMLResponse(405, errorPage(405), keepAlive);
         break;
     case DIRECTORY:
-        response.createHTMLResponse(200, directoryListing(resource.path), keepAlive);
+        response.createHTMLResponse(200, directoryListing(resource), keepAlive);
         break;
     case NOT_FOUND:
         response.createHTMLResponse(404, errorPage(404), keepAlive);

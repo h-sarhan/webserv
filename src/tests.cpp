@@ -10,6 +10,7 @@
 
 #include "tests.hpp"
 #include "config/Validators.hpp"
+#include "requests/Request.hpp"
 #include "utils.hpp"
 #include <cassert>
 #include <cstring>
@@ -81,14 +82,27 @@ void inputValidatorTests()
 
 void chunkerTests()
 {
-    char body[] = "7\r\n"
+    char body[] = "POST /urmom HTTP/1.1\r\n"
+                  "\r\n"
+                  "7\r\n"
                   "Mozilla\r\n"
                   "11\r\n"
                   "Developer Network\r\n"
                   "0\r\n"
                   "\r\n";
 
+    Request req1;
+
+    req1.appendToBuffer(body, sizeOfArray(body) - 1);
+    req1.parseRequest();
+    req1.unchunk();
+
+    assert(strcmp("POST /urmom HTTP/1.1\r\n\r\nMozillaDeveloper Network", req1.buffer()) == 0);
+    assert(req1.requestLength() == 48);
+
     char bigBody[] =
+        "POST /urmom HTTP/1.1\r\n"
+        "\r\n"
         "2b\r\n"
         "Lorem ipsum dolor sit amet, consectetur adi\r\n"
         "3e\r\n"
@@ -113,17 +127,14 @@ void chunkerTests()
         " eget et eros.\r\n"
         "0\r\n";
 
-    unsigned long size = sizeOfArray(body);
-    char *unChunkedBody = unchunker(body, size);
-    assert(size == 24);
-    assert(std::strcmp(unChunkedBody, "Mozilla"
-                                      "Developer Network") == 0);
+    Request req2;
 
-    size = sizeOfArray(bigBody);
-    char *unChunkedBigBody = unchunker(bigBody, size);
+    req2.appendToBuffer(bigBody, sizeOfArray(bigBody) - 1);
+    req2.parseRequest();
+    req2.unchunk();
+
     assert(std::strcmp(
-               unChunkedBigBody,
-               "Lorem ipsum dolor sit amet, consectetur adi"
+               "POST /urmom HTTP/1.1\r\n\r\nLorem ipsum dolor sit amet, consectetur adi"
                "piscing elit. Sed ut dui euismod, aliquam massa nec, fermentum"
                " odio. Quisque volutpat venenatis elit, ac feugiat nibh facilisis nec."
                " In sed justo eget sapien fermentum egestas."
@@ -133,19 +144,29 @@ void chunkerTests()
                " Duis vulputate ex vel ex scelerisque, nec pulvinar sapien efficitur."
                " Etiam pellentesque purus eu lacus faucibus, et bibendum mauris ullamcorper."
                " Sed dapibus nunc et auctor facilisis. Nunc eu sem vel turpis eleifend tristique"
-               " eget et eros.") == 0);
-    assert(size == 646);
-    delete[] unChunkedBody;
-    delete[] unChunkedBigBody;
-    char failBody[] = "7"
+               " eget et eros.",
+               req2.buffer()) == 0);
+    assert(req2.requestLength() == 670);
+    char failBody[] = "POST /urmom HTTP/1.1\r\n\r\n"
+                      "7\r\n"
+                      "Mozilla"
                       "11\r\n"
                       "Developer Network\r\n"
                       "0\r\n"
                       "\r\n";
-    // (void)
-    size = sizeOfArray(failBody);
-    char *unchunkedFailBody = unchunker(failBody, size);
-    (void) unchunkedFailBody;
-    assert(unchunkedFailBody == NULL);
-    assert(size == sizeOfArray(failBody));
+
+    Request req3;
+    req3.appendToBuffer(failBody, sizeOfArray(failBody) - 1);
+    req3.parseRequest();
+    req3.unchunk();
+
+    assert(req3.requestLength() == 62);
+    assert(std::strncmp("POST /urmom HTTP/1.1\r\n\r\n"
+                        "7\r\n"
+                        "Mozilla"
+                        "11\r\n"
+                        "Developer Network\r\n"
+                        "0\r\n"
+                        "\r\n",
+                        req3.buffer(), req3.requestLength()) == 0);
 }

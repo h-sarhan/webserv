@@ -13,6 +13,7 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <sys/stat.h>
 
 void rightTrimStr(std::string &str, const std::string &anyOf)
 {
@@ -39,18 +40,23 @@ unsigned int getHex(const std::string &str)
     return ch;
 }
 
-void sanitizeURL(std::string &url)
+std::string sanitizeURL(const std::string &url)
 {
+    std::string sanitizedUrl(url);
+
+    // Remove duplicate slashes
+    removeDuplicateChar(sanitizedUrl, '/');
+
     // Trim query parameters
-    const size_t queryPos = url.find("?");
+    const size_t queryPos = sanitizedUrl.find("?");
     if (queryPos != std::string::npos)
-        url.erase(queryPos);
+        sanitizedUrl.erase(queryPos);
 
     // Replace '+' with ' '
-    std::replace(url.begin(), url.end(), '+', ' ');
+    std::replace(sanitizedUrl.begin(), sanitizedUrl.end(), '+', ' ');
 
     // Decode % hexadecimal characters
-    for (std::string::iterator it = url.begin(); it < url.end() - 2; it++)
+    for (std::string::iterator it = sanitizedUrl.begin(); it < sanitizedUrl.end() - 2; it++)
     {
         if (*it != '%')
             continue;
@@ -63,8 +69,9 @@ void sanitizeURL(std::string &url)
         *it = getHex(hexStr);
 
         // Erase the next two characters and get a valid iterator
-        it = url.erase(it + 1, it + 3) - 1;
+        it = sanitizedUrl.erase(it + 1, it + 3) - 1;
     }
+    return sanitizedUrl;
 }
 
 const std::string getLine(const std::string &filename, const unsigned int lineNum)
@@ -116,50 +123,26 @@ std::map<std::string, std::string> parseKeyValueFile(const std::string &filename
     return keyVal;
 }
 
-static const char *getLineEnd(const char *start, const char *end)
+bool exists(const std::string &path)
 {
-    static const char *crlf = "\r\n";
-    return std::search(start, end, crlf, crlf + 2);
+    struct stat info;
+    return stat(path.c_str(), &info) == 0;
 }
 
-char *unchunker(const char *body, size_t &bodyLength)
+bool isFile(const std::string &path)
 {
-    assert(bodyLength != 0);
+    struct stat info;
 
-    const char *pos = body;
-    const char *bodyEnd = body + bodyLength;
+    if (stat(path.c_str(), &info) != 0)
+        return false;
+    return info.st_mode & S_IFREG;
+}
 
-    // read chunk size
-    const char *lineEnd = getLineEnd(pos, bodyEnd);
-    if (lineEnd == bodyEnd)
-        return NULL;
-    char *unchunkedBody = new char[bodyLength + 1];
-    unsigned int chunkLen = getHex(std::string(pos, lineEnd));
-    unsigned int length = 0;
-    pos = lineEnd + 2;
-    while (chunkLen > 0)
-    {
-        // lineEnd = getLineEnd(pos, bodyEnd);
-        lineEnd = pos + chunkLen;
-        if (lineEnd == bodyEnd || length > bodyLength || lineEnd[0] != '\r' || lineEnd[1] != '\n')
-        {
-            delete[] unchunkedBody;
-            return NULL;
-        }
-        std::copy(pos, lineEnd, unchunkedBody + length);
-        length += chunkLen;
-        pos = lineEnd + 2;
-        lineEnd = getLineEnd(pos, bodyEnd);
-        if (lineEnd == bodyEnd)
-        {
-            delete[] unchunkedBody;
-            return NULL;
-        }
-        chunkLen = getHex(std::string(pos, lineEnd));
-        pos = lineEnd + 2;
-    }
-    unchunkedBody[length] = '\0';
-    bodyLength = length;
+bool isDir(const std::string &path)
+{
+    struct stat info;
 
-    return unchunkedBody;
+    if (stat(path.c_str(), &info) != 0)
+        return false;
+    return info.st_mode & S_IFDIR;
 }
