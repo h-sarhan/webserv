@@ -181,6 +181,9 @@ void Server::recvData(size_t clientNo)
         return;
     }
     req.appendToBuffer(buf, bytesRec);
+    // std::cout << "------------------------- partial req -------------------------"  << std::endl;
+    // std::cout << std::string(req.buffer(), req.buffer() + req.length()) << std::endl;
+    
     delete[] buf;
 }
 
@@ -207,7 +210,7 @@ void Server::acceptNewConnection(size_t listenerNo)
     else
     {
         std::cout << "Maximum clients reached, dropping this connection" << std::endl;
-        // send 503 error page
+        // todo: send 503 error page
         close(newFd);
     }
 }

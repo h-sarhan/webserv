@@ -10,6 +10,7 @@
 
 #include "responses/Response.hpp"
 #include "responses/DefaultPages.hpp"
+#include <sys/_types/_ssize_t.h>
 
 Response::Response() : _buffer(NULL), _length(0), _totalBytesSent(0), _statusCode(0)
 {

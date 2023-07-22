@@ -33,12 +33,11 @@ int main(int argc, char **argv)
     }
 
     // Test that validators work
-    inputValidatorTests();
+    // inputValidatorTests();
     // Test that request parsing works
     // requestParsingTests();
     // generateDirectoryListing(".");
-
-    chunkerTests();
+    // chunkerTests();
     try
     {
         if (argc == 2)
