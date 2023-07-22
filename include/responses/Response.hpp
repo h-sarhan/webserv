@@ -35,6 +35,7 @@
 
 // content types
 # define HTML "text/html; charset=UTF-8"
+# define NO_CONTENT ""
 
 #define IMG_HEADERS  "HTTP/1.1 200 OK\r\nContent-Type: image/jpg\r\nContent-Length: "
 #define HTTP_HEADERS "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n"
@@ -71,8 +72,8 @@ class Response
         void createGETResponse(std::string filename, bool keepAlive);
         void createFileResponse(std::string filename, Request &request, int statusCode);
         void createDELETEResponse(std::string filename, Request &request);
-        void createHEADResponse(std::string filename, Request &request);
-        void createDirHEADResponse(size_t contentLen, bool keepAlive);
+        void createHEADFileResponse(std::string filename, Request &request);
+        void createHEADResponse(int statusCode, std::string contentType, bool keepAlive);
         void createHTMLResponse(int statusCode, std::string page, bool keepAlive);
         void clear();
         ~Response();

@@ -40,9 +40,7 @@ class Connection
         void processPUT(configList config);
         void processDELETE(configList config);
         void processHEAD(configList config);
-
         bool keepConnectionAlive();
-        std::string createResponseHeaders();
         ~Connection();
 
 };

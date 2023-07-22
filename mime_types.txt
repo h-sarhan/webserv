@@ -5,7 +5,7 @@
 .doc application/msword
 .bin application/octet-stream
 .gif image/gif
-.html text/html
+.html text/html;charset=UTF-8
 .jpeg image/jpeg
 .jpg image/jpeg
 .js application/javascript
