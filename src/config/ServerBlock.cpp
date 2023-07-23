@@ -121,12 +121,12 @@ HostNameMatcher::HostNameMatcher(const std::string &hostname) : _hostname(hostna
 {
 }
 
-bool HostNameMatcher::operator()(const ServerBlock *serverBlock)
+bool HostNameMatcher::operator()(const ServerBlock *serverBlock) const
 {
     return serverBlock && _hostname == serverBlock->hostname;
 }
 
-bool HostNameMatcher::operator()(const ServerBlock &serverBlock)
+bool HostNameMatcher::operator()(const ServerBlock &serverBlock) const
 {
     return _hostname == serverBlock.hostname;
 }

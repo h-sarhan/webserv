@@ -59,8 +59,8 @@ std::ostream &operator<<(std::ostream &os, const std::vector<ServerBlock> &confi
 struct HostNameMatcher
 {
     HostNameMatcher(const std::string &hostname);
-    bool operator()(const ServerBlock *serverBlock);
-    bool operator()(const ServerBlock &serverBlock);
+    bool operator()(const ServerBlock *serverBlock) const;
+    bool operator()(const ServerBlock &serverBlock) const;
 
   private:
     const std::string &_hostname;

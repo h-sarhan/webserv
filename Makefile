@@ -10,8 +10,8 @@ RESPONSE_DIR = $(SRC_DIR)/responses
 LOGGER_DIR = $(SRC_DIR)/logger
 
 CONFIG_SRC = Tokenizer.cpp Token.cpp Parser.cpp ParseError.cpp Validators.cpp ServerBlock.cpp
-NETWORK_SRC = Server.cpp ServerInfo.cpp Connection.cpp 
-REQUEST_SRC = Request.cpp InvalidRequestError.cpp Resource.cpp
+NETWORK_SRC = Server.cpp ServerInfo.cpp Connection.cpp
+REQUEST_SRC = Request.cpp InvalidRequestError.cpp RequestParser.cpp
 RESPONSE_SRC = DefaultPages.cpp Response.cpp HeaderData.cpp
 LOGGER_SRC = Logger.cpp
 
