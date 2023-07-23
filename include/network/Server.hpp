@@ -20,7 +20,7 @@
 #include "responses/DefaultPages.hpp"
 #include "logger/Logger.hpp"
 
-#define MAX_CLIENTS 10
+#define MAX_CLIENTS 20
 #define READ_SIZE 1000000
 #define POS(x, y) (y <= x ? 0 : y - x)
 

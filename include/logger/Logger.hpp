@@ -29,6 +29,7 @@ class Logger
   private:
     std::ostream &_os; // output stream for logs, default 
     std::string _color;
+    std::string getTimeStamp();
 
   public:
     Logger(std::ostream &os = std::cout);

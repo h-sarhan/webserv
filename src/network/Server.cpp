@@ -196,7 +196,7 @@ void Server::recvData(size_t clientNo)
     if (bytesRec < 0)
         log(ERR) << "Failed to receive request from connection" << sockets[clientNo].fd << ": " << strerror(errno) << std::endl;
     else if (bytesRec == 0)
-        log(ERR) << "Connection " << sockets[clientNo].fd << "closed by client" << std::endl;
+        log(ERR) << "Connection " << sockets[clientNo].fd << " closed by client" << std::endl;
     if (bytesRec <= 0)
     {
         closeConnection(clientNo);

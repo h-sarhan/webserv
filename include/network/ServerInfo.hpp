@@ -13,6 +13,7 @@
 
 #include "SystemCallException.hpp"
 #include "network.hpp"
+#define BACKLOG  10
 
 class ServerInfo
 {

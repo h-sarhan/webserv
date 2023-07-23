@@ -34,7 +34,6 @@
 #include <unistd.h>
 #include <vector>
 
-#define BACKLOG  10
 #define PORT         "1234"
 #define HW_HTML                                                                                    \
     "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: "                \
