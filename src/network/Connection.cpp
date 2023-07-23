@@ -19,18 +19,18 @@
 #include "responses/Response.hpp"
 
 Connection::Connection()
-    : listener(-1), request(), response(), keepAlive(false), timeOut(0), startTime(0), reqComplete(false)
+    : listener(-1), request(), response(), keepAlive(false), timeOut(0), startTime(0)
 {
 }
 
 Connection::Connection(int listener)
-    : listener(listener), request(listener), response(), keepAlive(false), timeOut(0), startTime(0), reqComplete(false)
+    : listener(listener), request(listener), response(), keepAlive(false), timeOut(0), startTime(0)
 {
 }
 
 Connection::Connection(const Connection &c)
     : listener(c.listener), request(c.request), response(c.response), keepAlive(c.keepAlive),
-      timeOut(c.timeOut), startTime(c.startTime), reqComplete(c.reqComplete)
+      timeOut(c.timeOut), startTime(c.startTime)
 {
 }
 
@@ -44,7 +44,6 @@ Connection &Connection::operator=(const Connection &c)
         this->keepAlive = c.keepAlive;
         this->timeOut = c.timeOut;
         this->startTime = c.startTime;
-        this->reqComplete = c.reqComplete;
     }
     return (*this);
 }

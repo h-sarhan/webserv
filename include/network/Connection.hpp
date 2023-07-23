@@ -33,7 +33,7 @@ class Connection
         bool keepAlive;
         time_t timeOut;
         time_t startTime;
-        bool reqComplete;
+        // bool reqComplete;
 
         Connection();
         Connection(int listener);
