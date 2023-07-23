@@ -26,6 +26,12 @@ Logger &Logger::operator<<(Manipulator pf)
     return *this;
 }
 
+Logger& Logger::getLogger()
+{
+	static Logger log;
+	return log;
+}
+
 std::ostream& Logger::os()
 {
 	return _os;
@@ -35,10 +41,3 @@ std::string& Logger::color()
 {
 	return _color;
 }
-
-
-// template <class T> Logger &operator<<(Logger &log, const T &output)
-// {
-//     log._os << log._color << output << RESET;
-//     return log;
-// }

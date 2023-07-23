@@ -18,43 +18,6 @@
 #define INFO BLUE
 #define SUCCESS GREEN
 
-// class Logger
-// {
-//   private:
-//     std::ostream &_os;
-//     std::string _color;
-//   public:
-//     Logger();
-//     Logger &operator()(const std::string &color);
-
-//     typedef std::ostream &(*Manipulator)(std::ostream &);
-//     Logger &operator<<(Manipulator pf);
-
-//     template <class T> friend Logger &operator<<(Logger &log, const T &output);
-
-// };
-
-// Logger::Logger() : _os(std::cout), _color(WHITE)
-// {
-// }
-
-// Logger &Logger::operator()(const std::string &color)
-// {
-//     this->_color = color;
-//     return *this;
-// }
-
-// Logger &Logger::operator<<(Manipulator pf)
-// {
-//     _os << pf;
-//     return *this;
-// }
-
-// template <class T> Logger &operator<<(Logger &log, const T &output)
-// {
-//     log._os << log._color << output << RESET;
-//     return log;
-// }
 typedef std::ostream &(*Manipulator)(std::ostream &);
 
 class Logger
@@ -67,6 +30,7 @@ class Logger
     Logger(std::ostream &os = std::cout);
     Logger &operator()(const std::string &color);
     Logger &operator<<(Manipulator pf);
+    static Logger &getLogger();
     std::ostream& os();
     std::string& color();
 };

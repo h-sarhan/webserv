@@ -29,6 +29,7 @@
 #include "logger/Logger.hpp"
 
 bool quit = false;
+Logger &log = Logger::getLogger();
 
 std::map<int, std::vector<ServerBlock *> > Server::configBlocks = std::map<int, std::vector<ServerBlock *> >();
 
@@ -41,7 +42,6 @@ Server::Server(serverList virtualServers)
     {
         if (portAlreadyInUse(it->port))
             continue;
-        Logger log;
         log(INFO) << "Setting up listener on port " << it->port << std::endl;
         initListener(it->port, virtualServers);
     }
