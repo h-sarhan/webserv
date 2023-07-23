@@ -17,10 +17,14 @@
 
 // Colors
 #define RED        "\x1b[31m"
-#define RESET      "\x1b[0m"
+#define WHITE      "\x1b[37m"
+#define BLUE       "\x1b[34m"
 #define YELLOW     "\x1b[33m"
+#define PURPLE     "\x1b[35m"
+#define CYAN       "\x1b[36m"
 #define GREEN      "\x1B[32m"
 #define BOLD       "\x1b[1m"
+#define RESET      "\x1b[0m"
 #define WHITESPACE " \t\n\r\f\v"
 
 // Get the size of an array if it is known at compile time

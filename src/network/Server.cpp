@@ -26,8 +26,10 @@
 #include "network/SystemCallException.hpp"
 #include "network/network.hpp"
 #include "responses/Response.hpp"
+#include "logger/Logger.hpp"
 
 bool quit = false;
+
 std::map<int, std::vector<ServerBlock *> > Server::configBlocks = std::map<int, std::vector<ServerBlock *> >();
 
 Server::Server(serverList virtualServers)
@@ -39,7 +41,8 @@ Server::Server(serverList virtualServers)
     {
         if (portAlreadyInUse(it->port))
             continue;
-        std::cout << "Setting up listener on port " << it->port << std::endl;
+        Logger log;
+        log(INFO) << "Setting up listener on port " << it->port << std::endl;
         initListener(it->port, virtualServers);
     }
 }
