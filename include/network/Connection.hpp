@@ -17,8 +17,9 @@
 #include <iostream>
 #include "logger/Logger.hpp"
 
-class Connection
+class Connection : Logger
 {
+    using Logger::log;
     private:
         void showResourceInfo(Resource &resource);
         void processGET();
@@ -34,6 +35,7 @@ class Connection
         bool keepAlive;
         time_t timeOut;
         time_t startTime;
+        // Logger& log;
 
         Connection();
         Connection(int listener);

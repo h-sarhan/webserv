@@ -32,12 +32,15 @@ class Logger
     std::string getTimeStamp();
 
   public:
+    static Logger& log;
     Logger(std::ostream &os = std::cout);
+    Logger(const Logger& log);
     Logger &operator()(const std::string &color);
     Logger &operator<<(Manipulator pf);
     static Logger &getLogger();
     std::ostream& os();
     std::string& color();
+    ~Logger();
 };
 
 template <class T> Logger &operator<<(Logger &log, const T &output)
@@ -46,6 +49,5 @@ template <class T> Logger &operator<<(Logger &log, const T &output)
     return log;
 }
 
-static Logger& log = Logger::getLogger();
 
 #endif

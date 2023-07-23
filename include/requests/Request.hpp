@@ -13,6 +13,7 @@
 
 #include "config/ServerBlock.hpp"
 #include "enums/HTTPMethods.hpp"
+#include "logger/Logger.hpp"
 #include "requests/Resource.hpp"
 #include <map>
 
@@ -26,8 +27,10 @@
 /**
  * @brief This class is responsible for parsing an HTTP request
  */
-class Request
+class Request : Logger
 {
+  using Logger::log;
+  
   private:
     HTTPMethod _httpMethod;
     std::string _requestedURL;

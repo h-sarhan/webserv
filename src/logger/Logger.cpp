@@ -9,8 +9,19 @@
  */
 
 #include "logger/Logger.hpp"
+#include <unistd.h>
+
+Logger& Logger::log = Logger::getLogger();
 
 Logger::Logger(std::ostream& os) : _os(os), _color(RESET)
+{
+}
+
+Logger::Logger(const Logger& l) : _os(l._os), _color(l._color)
+{
+}
+
+Logger::~Logger()
 {
 }
 

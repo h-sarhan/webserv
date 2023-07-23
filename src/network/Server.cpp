@@ -162,9 +162,10 @@ void Server::readBody(size_t clientNo)
                       << std::endl;
             return;
         }
-        log(DBUG) << "Unchunking request: Old size = " << req.length();
+        log(DBUG) << "Unchunking request... " << std::endl;
+        log(DBUG) << "Old size = " << req.length() << std::endl;
         req.unchunk();
-        log(DBUG) << ", New size = " << req.length() << std::endl;
+        log(DBUG) << "New size = " << req.length() << std::endl;
     }
     log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd << ". Size = " << req.length() << std::endl;
     sockets[clientNo].events = POLLIN | POLLOUT;

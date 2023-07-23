@@ -26,12 +26,13 @@
 
 typedef std::vector<ServerBlock> &serverList;
 
-class Server
+class Server : Logger
 {
   private:
     static std::map<int, std::vector<ServerBlock *> > configBlocks;
     std::vector<pollfd> sockets;
     std::map<int, Connection> cons;   // maps a socket fd to its connection data
+    using Logger::log;
 
     bool portAlreadyInUse(unsigned int port);
     void initListener(unsigned int port, serverList virtualServers);
