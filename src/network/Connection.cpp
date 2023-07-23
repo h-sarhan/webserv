@@ -20,18 +20,18 @@
 #include "logger/Logger.hpp"
 
 Connection::Connection()
-    : listener(-1), request(), response(), keepAlive(false), timeOut(0), startTime(0)
+    : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0)
 {
 }
 
 Connection::Connection(int listener)
-    : listener(listener), request(listener), response(), keepAlive(false), timeOut(0), startTime(0)
+    : _listener(listener), _request(listener), _response(), _keepAlive(false), _timeOut(0), _startTime(0)
 {
 }
 
 Connection::Connection(const Connection &c)
-    : listener(c.listener), request(c.request), response(c.response), keepAlive(c.keepAlive),
-      timeOut(c.timeOut), startTime(c.startTime)
+    : _listener(c._listener), _request(c._request), _response(c._response), _keepAlive(c._keepAlive),
+      _timeOut(c._timeOut), _startTime(c._startTime)
 {
 }
 
@@ -39,180 +39,210 @@ Connection &Connection::operator=(const Connection &c)
 {
     if (this != &c)
     {
-        this->listener = c.listener;
-        this->request = c.request;
-        this->response = c.response;
-        this->keepAlive = c.keepAlive;
-        this->timeOut = c.timeOut;
-        this->startTime = c.startTime;
+        this->_listener = c._listener;
+        this->_request = c._request;
+        this->_response = c._response;
+        this->_keepAlive = c._keepAlive;
+        this->_timeOut = c._timeOut;
+        this->_startTime = c._startTime;
     }
     return (*this);
 }
 
+int& Connection::listener()
+{
+    return _listener;
+}
+
+Request& Connection::request()
+{
+    return _request;
+}
+
+Response& Connection::response()
+{
+    return _response;
+}
+
+bool& Connection::keepAlive()
+{
+    return _keepAlive;
+}
+
+time_t& Connection::timeOut()
+{
+    return _timeOut;
+}
+
+time_t& Connection::startTime()
+{
+    return _startTime;
+}
+
 void Connection::showResourceInfo(Resource &resource)
 {
-    log(DBUG) << "Method type: " << enumToStr(request.method()) << std::endl;
+    log(DBUG) << "Method type: " << enumToStr(_request.method()) << std::endl;
     log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
     // log(DBUG) << resource.originalRequest << " resource found at: <" << resource.path << ">" << std::endl;
 }
 
 void Connection::processGET()
 {
-    Resource resource = request.resource();
+    Resource resource = _request.resource();
     showResourceInfo(resource);
     switch (resource.type)
     {
     case EXISTING_FILE:
-        response.createGETResponse(resource.path, keepAlive);
+        _response.createGETResponse(resource.path, _keepAlive);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(resource.path, 302, keepAlive);
+        _response.createRedirectResponse(resource.path, 302, _keepAlive);
         break;
     case FORBIDDEN_METHOD:
-        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
         break;
     case DIRECTORY:
-        response.createHTMLResponse(200, directoryListing(resource), keepAlive);
+        _response.createHTMLResponse(200, directoryListing(resource), _keepAlive);
         break;
     case NOT_FOUND:
-        response.createHTMLResponse(404, errorPage(404), keepAlive);
+        _response.createHTMLResponse(404, errorPage(404), _keepAlive);
         break;
     case INVALID_REQUEST:
-        response.createHTMLResponse(400, errorPage(400), keepAlive);
+        _response.createHTMLResponse(400, errorPage(400), _keepAlive);
         break;
     case NO_MATCH:
-        response.createHTMLResponse(404, errorPage(404), keepAlive);
+        _response.createHTMLResponse(404, errorPage(404), _keepAlive);
         break;
     }
 }
 
 void Connection::processPOST()
 {
-    Resource resource = request.resource();
+    Resource resource = _request.resource();
     showResourceInfo(resource);
     switch (resource.type)
     {
     case EXISTING_FILE:
-        response.createHTMLResponse(409, errorPage(409), keepAlive);
+        _response.createHTMLResponse(409, errorPage(409), _keepAlive);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(resource.path, 307, keepAlive);
+        _response.createRedirectResponse(resource.path, 307, _keepAlive);
         break;
     case FORBIDDEN_METHOD:
-        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
         break;
     case DIRECTORY:
-        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
         break;
     case NOT_FOUND:
-        response.createFileResponse(resource.path, request, 201);
+        _response.createFileResponse(resource.path, _request, 201);
         break;
     case INVALID_REQUEST:
-        response.createHTMLResponse(400, errorPage(400), keepAlive);
+        _response.createHTMLResponse(400, errorPage(400), _keepAlive);
         break;
     case NO_MATCH:
-        response.createHTMLResponse(404, errorPage(404), keepAlive);
+        _response.createHTMLResponse(404, errorPage(404), _keepAlive);
         break;
     }
 }
 
 void Connection::processPUT()
 {
-    Resource resource = request.resource();
+    Resource resource = _request.resource();
     showResourceInfo(resource);
     switch (resource.type)
     {
     case EXISTING_FILE:
-        response.createFileResponse(resource.path, request, 204);
+        _response.createFileResponse(resource.path, _request, 204);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(resource.path, 307, keepAlive);
+        _response.createRedirectResponse(resource.path, 307, _keepAlive);
         break;
     case FORBIDDEN_METHOD:
-        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
         break;
     case DIRECTORY:
-        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
         break;
     case NOT_FOUND:
-        response.createFileResponse(resource.path, request, 201);
+        _response.createFileResponse(resource.path, _request, 201);
         break;
     case INVALID_REQUEST:
-        response.createHTMLResponse(400, errorPage(400), keepAlive);
+        _response.createHTMLResponse(400, errorPage(400), _keepAlive);
         break;
     case NO_MATCH:
-        response.createHTMLResponse(404, errorPage(404), keepAlive);
+        _response.createHTMLResponse(404, errorPage(404), _keepAlive);
         break;
     }
 }
 
 void Connection::processDELETE()
 {
-    Resource resource = request.resource();
+    Resource resource = _request.resource();
     showResourceInfo(resource);
     switch (resource.type)
     {
     case EXISTING_FILE:
-        response.createDELETEResponse(resource.path, request);
+        _response.createDELETEResponse(resource.path, _request);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(resource.path, 307, keepAlive);
+        _response.createRedirectResponse(resource.path, 307, _keepAlive);
         break;
     case FORBIDDEN_METHOD:
-        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
         break;
     case DIRECTORY:
-        response.createHTMLResponse(405, errorPage(405), keepAlive);
+        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
         break;
     case NOT_FOUND:
-        response.createHTMLResponse(404, errorPage(404), keepAlive);
+        _response.createHTMLResponse(404, errorPage(404), _keepAlive);
         break;
     case INVALID_REQUEST:
-        response.createHTMLResponse(400, errorPage(400), keepAlive);
+        _response.createHTMLResponse(400, errorPage(400), _keepAlive);
         break;
     case NO_MATCH:
-        response.createHTMLResponse(404, errorPage(404), keepAlive);
+        _response.createHTMLResponse(404, errorPage(404), _keepAlive);
         break;
     }
 }
 
 void Connection::processHEAD()
 {
-    Resource resource = request.resource();
+    Resource resource = _request.resource();
     showResourceInfo(resource);
     switch (resource.type)
     {
     case EXISTING_FILE:
-        response.createHEADFileResponse(resource.path, request);
+        _response.createHEADFileResponse(resource.path, _request);
         break;
     case REDIRECTION:
-        response.createRedirectResponse(resource.path, 302, keepAlive);
+        _response.createRedirectResponse(resource.path, 302, _keepAlive);
         break;
     case FORBIDDEN_METHOD:
-        response.createHEADResponse(405, NO_CONTENT, keepAlive);
+        _response.createHEADResponse(405, NO_CONTENT, _keepAlive);
         break;
     case DIRECTORY:
-        response.createHEADResponse(200, HTML, keepAlive);
+        _response.createHEADResponse(200, HTML, _keepAlive);
         break;
     case NOT_FOUND:
-        response.createHEADResponse(404, NO_CONTENT, keepAlive);
+        _response.createHEADResponse(404, NO_CONTENT, _keepAlive);
         break;
     case INVALID_REQUEST:
-        response.createHEADResponse(400, NO_CONTENT, keepAlive);
+        _response.createHEADResponse(400, NO_CONTENT, _keepAlive);
         break;
     case NO_MATCH:
-        response.createHEADResponse(404, NO_CONTENT, keepAlive);
+        _response.createHEADResponse(404, NO_CONTENT, _keepAlive);
         break;
     }
 }
 
 void Connection::processRequest()
 {
-    if (request.length() == 0)
+    if (_request.length() == 0)
         return;
-    keepAlive = request.keepAlive();
-    timeOut = request.keepAliveTimer();
-    switch (request.method())
+    _keepAlive = _request.keepAlive();
+    _timeOut = _request.keepAliveTimer();
+    switch (_request.method())
     {
     case GET:
         processGET();
@@ -230,18 +260,18 @@ void Connection::processRequest()
         processHEAD();
         break;
     case OTHER:
-        response.createHTMLResponse(400, errorPage(400), keepAlive);
+        _response.createHTMLResponse(400, errorPage(400), _keepAlive);
         break;
     }
-    request.clear();
+    _request.clear();
 }
 
 bool Connection::keepConnectionAlive()
 {
-    if (!keepAlive)
+    if (!_keepAlive)
         return false;
-    response.clear();
-    time(&startTime);   // reset timer
+    _response.clear();
+    time(&_startTime);   // reset timer
     return true;
 }
 
