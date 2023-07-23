@@ -65,8 +65,6 @@ template <> std::string enumToStr(const ResourceType &enumVal)
         return "INVALID_REQUEST";
     case NO_MATCH:
         return "NO_MATCH";
-    case BODY_TOO_BIG:
-        return "BODY_TOO_BIG";
     }
 }
 
@@ -144,7 +142,7 @@ template <> ResourceType strToEnum<ResourceType>(const std::string &str)
 {
     static const std::string resourceTypes[] = {"EXISTING_FILE", "REDIRECTION", "FORBIDDEN_METHOD",
                                                 "DIRECTORY",     "NOT_FOUND",   "INVALID_REQUEST",
-                                                "BODY_TOO_BIG",  "NO_MATCH"};
+                                                "NO_MATCH"};
 
     for (size_t i = 0; i < sizeOfArray(resourceTypes); i++)
         if (resourceTypes[i] == str)
