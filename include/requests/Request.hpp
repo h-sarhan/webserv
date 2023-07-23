@@ -37,9 +37,11 @@ class Request
     size_t _capacity;
     size_t _bodyStart;
     bool _valid;
+    int _listener;
 
   public:
     Request();
+    Request(int listener);
     Request(const Request &req);
     Request &operator=(const Request &req);
     ~Request();
@@ -70,7 +72,7 @@ class Request
 
     // !! Cache this
     // Returns a resource object associated with the request
-    const Resource resource(const std::vector<ServerBlock *> &config) const;
+    const Resource resource() const;
 
     // Clears the attributes of this request
     void clear();

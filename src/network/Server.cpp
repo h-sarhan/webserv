@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Server.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2023/07/22 20:51:26 by mfirdous          #+#    #+#             */
+/*   Updated: 2023/07/22 20:51:26 by mfirdous         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 /**
  * @file Server.cpp
  * @author Mehrin Firdousi (mehrinfirdousi@gmail.com)
@@ -16,9 +28,8 @@
 #include "responses/Response.hpp"
 
 bool quit = false;
+std::map<int, std::vector<ServerBlock *> > Server::configBlocks = std::map<int, std::vector<ServerBlock *> >();
 
-// Server::Server(serverList virtualServers = std::vector<ServerBlock>(1,
-// createDefaultServerBlock()))
 Server::Server(serverList virtualServers)
 {
     std::cout << "Virtual servers - " << std::endl;
@@ -70,6 +81,13 @@ void Server::initListener(unsigned int port, serverList virtualServers)
     configBlocks.insert(std::make_pair(listenerFd, config));
 }
 
+std::vector<ServerBlock *> &Server::getConfig(int listener)
+{
+    // if listener key doesnt exist in this map it should create a default vector but the caller
+    // should check for it
+    return configBlocks[listener];
+}
+
 void Server::closeConnection(int clientNo)
 {
     std::cout << "Closing connection " << sockets[clientNo].fd << std::endl;
@@ -83,7 +101,7 @@ void Server::respondToRequest(size_t clientNo)
     Connection &c = cons.at(sockets[clientNo].fd);
     int sendStatus;
 
-    c.processRequest(configBlocks.at(c.listener));
+    c.processRequest();
     sendStatus = c.response.sendResponse(sockets[clientNo].fd);
     if (sendStatus == IDLE_CONNECTION)
     {
@@ -132,11 +150,12 @@ void Server::readBody(size_t clientNo)
     else if (req.headers().count("transfer-encoding"))
     {
         char lastChunk[] = "0\r\n\r\n";
-        const char *found = std::search(req.buffer() + POS(READ_SIZE, req.length()), req.buffer() + req.length(), lastChunk, lastChunk + 5);
-        if (found == req.buffer() + req.length()) // not found 
+        const char *found = std::search(req.buffer() + POS(READ_SIZE, req.length()),
+                                        req.buffer() + req.length(), lastChunk, lastChunk + 5);
+        if (found == req.buffer() + req.length())   // not found
         {
-            std::cout << "Chunked transfer encoding in prog. " << req.length()
-                      << " bytes received." << std::endl;
+            std::cout << "Chunked transfer encoding in prog. " << req.length() << " bytes received."
+                      << std::endl;
             return;
         }
         std::cout << "Unchunking request: Old size = " << req.length();
@@ -183,7 +202,7 @@ void Server::recvData(size_t clientNo)
     req.appendToBuffer(buf, bytesRec);
     // std::cout << "------------------------- partial req -------------------------"  << std::endl;
     // std::cout << std::string(req.buffer(), req.buffer() + req.length()) << std::endl;
-    
+
     delete[] buf;
 }
 
