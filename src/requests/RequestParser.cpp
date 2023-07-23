@@ -13,6 +13,8 @@
 #include "enums/conversions.hpp"
 #include "requests/InvalidRequestError.hpp"
 #include "utils.hpp"
+#include <algorithm>
+#include <limits>
 
 #define DEFAULT_HOSTNAME        "localhost"
 #define DEFAULT_KEEP_ALIVE_TIME 5

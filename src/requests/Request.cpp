@@ -222,6 +222,45 @@ void Request::unchunk()
     _buffer = unchunkedRequest;
 }
 
+bool Request::usesContentLength()
+{
+    return headers().count("content-length");
+}
+
+bool Request::usesChunkedEncoding()
+{
+    return (headers().count("transfer-encoding") && headers().at("transfer-encoding") == "chunked");
+}
+
+bool Request::contentLenReached()
+{
+    std::istringstream iss(headers().at("content-length"));
+    size_t contentLen;
+    iss >> contentLen;
+    if (_length - bodyStart() == contentLen)
+        return true;
+    log(DBUG) << _length << " / " << contentLen << " bytes received" << std::endl;
+    return false;
+}
+
+bool Request::chunkedEncodingComplete()
+{
+    char lastChunk[] = "0\r\n\r\n";
+    const char *pos = std::search(_buffer + START_POS(_length, READ_SIZE), _buffer + _length,
+                                  lastChunk, lastChunk + 5);
+    if (pos == _buffer + _length)   // not found
+    {
+        log(DBUG) << "Chunked transfer encoding in prog. " << _length << " bytes received."
+                  << std::endl;
+        return false;
+    }
+    log(DBUG) << "Unchunking request... " << std::endl;
+    log(DBUG) << "Old size = " << _length << std::endl;
+    unchunk();
+    log(DBUG) << "New size = " << _length << std::endl;
+    return true;
+}
+
 /**
  * @brief Resize buffer to new capacity
  *

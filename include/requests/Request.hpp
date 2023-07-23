@@ -63,7 +63,11 @@ class Request
     void clear();
 
     // Unchunks the request if it is chunked, and updates the request and length
-    void unchunk();   // ? idk
+    void unchunk();
+    bool usesContentLength();
+    bool usesChunkedEncoding();
+    bool contentLenReached();
+    bool chunkedEncodingComplete();
 
   private:
     // Resizes the internal buffer
