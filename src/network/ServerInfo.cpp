@@ -57,7 +57,7 @@ int ServerInfo::bindSocketToPort()
     {
         listenerFd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
         if (listenerFd == -1)
-            std::cout << "socket: " << strerror(errno) << std::endl;
+            log(ERR) << "socket: " << strerror(errno) << std::endl;
         else
         {
             // Setting the socket to be non-blocking
@@ -67,7 +67,7 @@ int ServerInfo::bindSocketToPort()
                 setsockopt(listenerFd, SOL_SOCKET, SO_REUSEADDR, &reusePort, sizeof(reusePort)));
             if (bind(listenerFd, p->ai_addr, p->ai_addrlen) != -1)
                 break;
-            std::cout << "bind: " << strerror(errno) << std::endl;
+            log(WARN) << "bind: " << strerror(errno) << std::endl;
             close(listenerFd);
         }
     }

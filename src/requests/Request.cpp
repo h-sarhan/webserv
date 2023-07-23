@@ -234,9 +234,10 @@ bool Request::usesChunkedEncoding()
 
 bool Request::contentLenReached()
 {
-    std::istringstream iss(headers().at("content-length"));
-    size_t contentLen;
-    iss >> contentLen;
+    // std::istringstream iss(headers().at("content-length"));
+    size_t contentLen = fromStr<size_t>(headers().at("content-length"));
+    // iss >> contentLen;
+    
     if (_length - bodyStart() == contentLen)
         return true;
     log(DBUG) << _length << " / " << contentLen << " bytes received" << std::endl;

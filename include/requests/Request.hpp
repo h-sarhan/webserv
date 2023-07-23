@@ -59,11 +59,11 @@ class Request
     // Appends request data to the internal buffer
     void appendToBuffer(const char *data, const size_t n);
 
+    void unchunk();
     // Clears the attributes of this request
     void clear();
 
     // Unchunks the request if it is chunked, and updates the request and length
-    void unchunk();
     bool usesContentLength();
     bool usesChunkedEncoding();
     bool contentLenReached();
