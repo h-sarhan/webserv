@@ -17,6 +17,7 @@
 #include "requests/Request.hpp"
 #include "responses/DefaultPages.hpp"
 #include "responses/Response.hpp"
+#include "logger/Logger.hpp"
 
 Connection::Connection()
     : listener(-1), request(), response(), keepAlive(false), timeOut(0), startTime(0)
@@ -48,17 +49,17 @@ Connection &Connection::operator=(const Connection &c)
     return (*this);
 }
 
-static void showResourceInfo(Resource &resource, Request &request)
+void Connection::showResourceInfo(Resource &resource)
 {
-    std::cout << "method type: " << enumToStr(request.method()) << std::endl;
-    std::cout << resource.originalRequest << " resource found at: " << resource.path << std::endl;
-    std::cout << "request type: " << enumToStr(resource.type) << std::endl;
+    log(DBUG) << "Method type: " << enumToStr(request.method()) << std::endl;
+    log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
+    // log(DBUG) << resource.originalRequest << " resource found at: <" << resource.path << ">" << std::endl;
 }
 
 void Connection::processGET()
 {
     Resource resource = request.resource();
-    showResourceInfo(resource, request);
+    showResourceInfo(resource);
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -88,7 +89,7 @@ void Connection::processGET()
 void Connection::processPOST()
 {
     Resource resource = request.resource();
-    showResourceInfo(resource, request);
+    showResourceInfo(resource);
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -118,7 +119,7 @@ void Connection::processPOST()
 void Connection::processPUT()
 {
     Resource resource = request.resource();
-    showResourceInfo(resource, request);
+    showResourceInfo(resource);
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -148,7 +149,7 @@ void Connection::processPUT()
 void Connection::processDELETE()
 {
     Resource resource = request.resource();
-    showResourceInfo(resource, request);
+    showResourceInfo(resource);
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -178,7 +179,7 @@ void Connection::processDELETE()
 void Connection::processHEAD()
 {
     Resource resource = request.resource();
-    showResourceInfo(resource, request);
+    showResourceInfo(resource);
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -239,7 +240,6 @@ bool Connection::keepConnectionAlive()
 {
     if (!keepAlive)
         return false;
-    std::cout << "Connection is keep alive" << std::endl;
     response.clear();
     time(&startTime);   // reset timer
     return true;

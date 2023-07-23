@@ -13,7 +13,11 @@
 
 #include "SystemCallException.hpp"
 #include "network.hpp"
+#include "logger/Logger.hpp"
 
+#define BACKLOG  10
+
+using logger::log;
 class ServerInfo
 {
   private:

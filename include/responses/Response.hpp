@@ -16,6 +16,7 @@
 # include <iostream>
 # include <sstream>
 # include <fstream>
+# include "logger/Logger.hpp"
 # include "network/network.hpp"
 #include "HeaderData.hpp"
 #include "requests/Request.hpp"
@@ -48,8 +49,10 @@ struct Headers
     bool keepAlive;
 };
 
+using logger::log;
 class Response
 {
+    // using Logger::log;
     private:
         char *_buffer;
         size_t _length;
@@ -64,7 +67,6 @@ class Response
         size_t length();
         size_t totalBytesSent();
         int statusCode();
-        // void setResponse(char *newBuf, size_t bufLen);
         int sendResponse(int fd);
         void setResponse(std::stringstream& ss);
         void setResponseHeaders(std::stringstream& ss, Headers header);

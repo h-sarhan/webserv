@@ -15,11 +15,13 @@
 #include "requests/Request.hpp"
 #include "responses/Response.hpp"
 #include <iostream>
-// #include <ctime>
+#include "logger/Logger.hpp"
 
+using logger::log;
 class Connection
 {
     private:
+        void showResourceInfo(Resource &resource);
         void processGET();
         void processPOST();
         void processPUT();
@@ -33,6 +35,7 @@ class Connection
         bool keepAlive;
         time_t timeOut;
         time_t startTime;
+        // Logger& log;
 
         Connection();
         Connection(int listener);

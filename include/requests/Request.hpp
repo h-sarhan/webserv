@@ -14,6 +14,7 @@
 #include "config/ServerBlock.hpp"
 #include "enums/HTTPMethods.hpp"
 #include "requests/RequestParser.hpp"
+#include "logger/Logger.hpp"
 #include "requests/Resource.hpp"
 #include <map>
 
@@ -22,6 +23,8 @@
 /**
  * @brief This class is responsible for parsing an HTTP request
  */
+
+using logger::log;
 class Request
 {
   private:
@@ -56,11 +59,15 @@ class Request
     // Appends request data to the internal buffer
     void appendToBuffer(const char *data, const size_t n);
 
+    void unchunk();
     // Clears the attributes of this request
     void clear();
 
     // Unchunks the request if it is chunked, and updates the request and length
-    void unchunk();   // ? idk
+    bool usesContentLength();
+    bool usesChunkedEncoding();
+    bool contentLenReached();
+    bool chunkedEncodingComplete();
 
   private:
     // Resizes the internal buffer
