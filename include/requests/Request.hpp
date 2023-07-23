@@ -23,83 +23,87 @@
 #define MAX_RECONNECTIONS       20
 #define DEFAULT_RECONNECTIONS   20
 
+// ! Major refactoring needed.
+// ! Keep this class clean by having it only be responsible for storing data and maintaining the
+// ! buffer. If something needs to be parsed then it will be handed over to a RequestParser object
 /**
  * @brief This class is responsible for parsing an HTTP request
  */
 class Request
 {
   private:
-    HTTPMethod _httpMethod;
-    std::string _requestedURL;
-    std::map<std::string, const std::string> _headers;
-    char *_buffer;
-    size_t _length;
-    size_t _capacity;
-    size_t _bodyStart;
-    bool _valid;
-    int _listener;
+    char *_buffer;                                 // * keep
+    size_t _length;                                // * keep
+    size_t _capacity;                              // * keep
+    HTTPMethod _httpMethod;                        // ? put in reqParser
+    std::map<std::string, std::string> _headers;   // ? put in reqParser
+    size_t _bodyStart;                             // ? put in reqParser
+    std::string _requestedURL;                     // ? put in Resource
+    bool _valid;                                   // ? put in resource
+    int _listener;                                 // * use this for getting serverBlocks
+    // size_t _maxSize;                            // ? put in reqParser
+    // Resource _resource                          // ? put in reqParser
 
   public:
-    Request();
-    Request(int listener);
+    Request(int listener = -1);
     Request(const Request &req);
     Request &operator=(const Request &req);
     ~Request();
 
     // Parse the request method, resource, and headers
-    // Returns true when the request has been parsed
     // Returns false if the request does not include the full headers
-    bool parseRequest();
+    // ! ParseRequest should find the value of keepAlive, keepAliveTimer, maxSize, hostname, and
+    //                                                                                    ! resource
+    bool parseRequest();   // * keep in request but make this call reqParser
 
     // Getters for attributes that have been parsed from the HTTP request
-    const HTTPMethod &method() const;
-    const char *buffer() const;
-    size_t length() const;
-    size_t bodyStart() const;
-
+    const HTTPMethod &method() const;   // * keep these in request
+    const char *buffer() const;         // * keep these in request
+    size_t length() const;              // * keep these in request
+    size_t bodyStart() const;           // * keep these in request
+    size_t maxBodySize() const;         // * keep these in request
     // ! Make this const
-    std::map<std::string, const std::string> &headers();
+    std::map<std::string, std::string> &headers();   // keep these in request
 
-    // !! Cache these getters
-    const std::string hostname() const;      // might end up being private
-    bool keepAlive() const;                  // might not need this
-    unsigned int keepAliveTimer() const;     // might not need this
-    unsigned int maxReconnections() const;   // might not need this
-    size_t bodySize() const;
-    // std::string rawTarget();
-    // Appends request data to the internal buffer
-    void appendToBuffer(const char *data, const size_t n);
-
-    // !! Cache this
+    // ! Cache these getters
+    bool keepAlive() const;                // ? cache these in reqParser
+    unsigned int keepAliveTimer() const;   // ? cache these in reqParser
     // Returns a resource object associated with the request
-    const Resource resource() const;
+    const Resource resource() const;   // ? cache these in reqParser
+
+    // Appends request data to the internal buffer
+    void appendToBuffer(const char *data, const size_t n);   // * keep this in request
 
     // Clears the attributes of this request
-    void clear();
+    void clear();   // * keep this in request but make it call reqParser
 
     // Unchunks the request if it is chunked, and updates the request and length
-    void unchunk();
+    void unchunk();   // ? idk
 
   private:
+    const std::string hostname() const;   // ? cache this in reqParser
+
     // Parses the first line of an HTTP request e.g. GET /index.html HTTP/1.1
-    void parseStartLine(std::stringstream &reqStream);
+    void parseStartLine(std::stringstream &reqStream);   // ? put this in reqParser
 
     // Parses a request header. e.g. Host: webserv.com
-    void parseHeader(std::stringstream &reqStream);
+    void parseHeader(std::stringstream &reqStream);   // ? put this in reqParser
 
     // Checks if a line ends with \r\n. Throws an exception otherwise
-    void checkLineEnding(std::stringstream &reqStream) const;
+    void checkLineEnding(std::stringstream &reqStream) const;   // ? put this in reqParser
 
-    const std::map<std::string, Route>::const_iterator getMatchingRoute(
-        const std::map<std::string, Route> &routes) const;
+    // Make this accept the server block config from mehrin
+    const std::map<std::string, Route>::const_iterator getRequestedRoute(
+        const std::map<std::string, Route> &routes) const;   // ? put this in reqParser
 
-    const Resource getResourceFromConfig(const std::map<std::string, Route> &routes) const;
+    const Resource getResourceFromConfig(
+        const std::map<std::string, Route> &routes) const;   // ? put this in reqParser
 
     // Resizes the internal buffer
-    void resizeBuffer(size_t newCapacity);
+    void resizeBuffer(size_t newCapacity);   // * keep this in request
 
     // Assert that a condition is true, throw an exception otherwise
-    void assertThat(bool condition, const std::string &throwMsg) const;
+    void assertThat(bool condition, const std::string &throwMsg) const;   // ? put this in reqParser
 };
 
 #endif

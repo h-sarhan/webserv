@@ -11,32 +11,24 @@
 #include "requests/Request.hpp"
 #include "config/Validators.hpp"
 #include "enums/conversions.hpp"
+#include "network/Server.hpp"
 #include "requests/InvalidRequestError.hpp"
 #include "utils.hpp"
-#include "network/Server.hpp"
 #include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <sstream>
 
 /**
- * @brief Construct a new Request object
- */
-Request::Request()
-    : _httpMethod(), _requestedURL(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
-      _capacity(REQ_BUFFER_SIZE), _bodyStart(0), _valid(true), _listener(-1)
-{
-}
-
-/**
  * @brief Construct a new Request object with listener
- * 
- * @param listener 
+ *
+ * @param listener
  */
 Request::Request(int listener)
-    : _httpMethod(), _requestedURL(), _headers(), _buffer(new char[REQ_BUFFER_SIZE]), _length(0),
-      _capacity(REQ_BUFFER_SIZE), _bodyStart(0), _valid(true), _listener(listener)
+    : _buffer(new char[REQ_BUFFER_SIZE]), _length(0), _capacity(REQ_BUFFER_SIZE), _httpMethod(),
+      _headers(), _bodyStart(0), _requestedURL(), _valid(true), _listener(listener)
 {
 }
 
@@ -46,9 +38,9 @@ Request::Request(int listener)
  * @param req Request object to copy from
  */
 Request::Request(const Request &req)
-    : _httpMethod(req.method()), _requestedURL(req._requestedURL), _headers(req._headers),
-      _buffer(new char[req._capacity]), _length(req._length), _capacity(req._capacity),
-      _bodyStart(req._bodyStart), _valid(req._valid), _listener(req._listener)
+    : _buffer(new char[req._capacity]), _length(req._length), _capacity(req._capacity),
+      _httpMethod(req.method()), _headers(req._headers), _bodyStart(req._bodyStart),
+      _requestedURL(req._requestedURL), _valid(req._valid), _listener(req._listener)
 {
     std::copy(req._buffer, req._buffer + _length, _buffer);
 }
@@ -107,15 +99,34 @@ size_t Request::length() const
     return _length;
 }
 
+/**
+ * @brief Return an index to where the body starts
+ *
+ */
 size_t Request::bodyStart() const
 {
     return _bodyStart;
 }
 
-// std::string Request::rawTarget()
-// {
-//     return _requestedURL;
-// }
+size_t Request::maxBodySize() const
+{
+    const std::vector<ServerBlock *> &newConfig = Server::getConfig(_listener);
+
+    // Find server block with the correct hostname
+    std::vector<ServerBlock *>::const_iterator matchedServerBlock =
+        std::find_if(newConfig.begin(), newConfig.end(), HostNameMatcher(hostname()));
+
+    // If no server block matches the hostname then return a NOT_FOUND resource
+    if (matchedServerBlock == newConfig.end())
+        return std::numeric_limits<unsigned int>::max();
+    const std::map<std::string, Route> &routes = (*matchedServerBlock)->routes;
+    const std::map<std::string, Route>::const_iterator &routeIt = getRequestedRoute(routes);
+    if (routeIt == routes.end())
+        return std::numeric_limits<unsigned int>::max();
+
+    const Route &routeOptions = routeIt->second;
+    return routeOptions.bodySize;
+}
 
 /**
  * @brief Check that a condition is true, else throw an InvalidRequestError exception
@@ -280,12 +291,12 @@ const std::string Request::hostname() const
     if (numDigits == hostValue.length())
         return DEFAULT_HOSTNAME;
 
-    if (validateHostName(hostValue))
+    if (!validateHostName(hostValue))
     {
         // ! Log here that an invalid hostname is in the header
-        return hostValue;
+        return DEFAULT_HOSTNAME;
     }
-    return DEFAULT_HOSTNAME;
+    return hostValue;
 }
 
 /**
@@ -293,7 +304,7 @@ const std::string Request::hostname() const
  *
  * @return std::map<std::string, const std::string>& Reference to parsed headers
  */
-std::map<std::string, const std::string> &Request::headers()
+std::map<std::string, std::string> &Request::headers()
 {
     return _headers;
 }
@@ -333,42 +344,8 @@ unsigned int Request::keepAliveTimer() const
     return DEFAULT_KEEP_ALIVE_TIME;
 }
 
-/**
- * @brief Max reconnections requested by client
- *
- * @return unsigned int How many requests to recieve from client before dropping connection
- */
-unsigned int Request::maxReconnections() const
-{
-    if (!keepAlive())
-        return 1;
-
-    if (_headers.count("keep-alive") == 0)
-        return DEFAULT_RECONNECTIONS;
-    const std::string &keepAliveValue = _headers.at("keep-alive");
-
-    std::stringstream maxConnStream(keepAliveValue.substr(keepAliveValue.find("max=")));
-    getNext<std::string>(maxConnStream);
-    const unsigned int maxConnections = getNext<unsigned int>(maxConnStream);
-    if (maxConnStream.good() && maxConnections <= MAX_RECONNECTIONS)
-        return maxConnections;
-    return DEFAULT_RECONNECTIONS;
-}
-
-/**
- * @brief Returns the size of the body based on the Content-Length header
- *
- * @return size_t Size of body in bytes
- */
-size_t Request::bodySize() const
-{
-    if (_headers.count("content-length") == 0)
-        return -1;
-    return fromStr<size_t>(_headers.at("content-length"));
-}
-
 // ! This can be refactored into a function object that is passed to std::find()
-const std::map<std::string, Route>::const_iterator Request::getMatchingRoute(
+const std::map<std::string, Route>::const_iterator Request::getRequestedRoute(
     const std::map<std::string, Route> &routes) const
 {
     // std::map<std::string, Route>::const_iterator routeIt = routes.end();
@@ -400,7 +377,7 @@ static std::string formPathToResource(const std::string &servingDirectory,
 
 const Resource Request::getResourceFromConfig(const std::map<std::string, Route> &routes) const
 {
-    const std::map<std::string, Route>::const_iterator &routeIt = getMatchingRoute(routes);
+    const std::map<std::string, Route>::const_iterator &routeIt = getRequestedRoute(routes);
     if (routeIt == routes.end())
         return Resource(NO_MATCH, _requestedURL);
 
@@ -447,7 +424,7 @@ const Resource Request::getResourceFromConfig(const std::map<std::string, Route>
  */
 const Resource Request::resource() const
 {
-    std::vector<ServerBlock *>& newConfig = Server::getConfig(_listener);
+    const std::vector<ServerBlock *> &newConfig = Server::getConfig(_listener);
     if (!_valid)
         return Resource(INVALID_REQUEST);
     // Find server block with the correct hostname
