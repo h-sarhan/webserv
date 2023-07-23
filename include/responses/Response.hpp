@@ -49,9 +49,10 @@ struct Headers
     bool keepAlive;
 };
 
-class Response : Logger
+using logger::log;
+class Response
 {
-    using Logger::log;
+    // using Logger::log;
     private:
         char *_buffer;
         size_t _length;

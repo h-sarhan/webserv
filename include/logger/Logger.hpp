@@ -23,7 +23,6 @@
 #define SUCCESS GREEN
 
 typedef std::ostream &(*Manipulator)(std::ostream &);
-
 class Logger
 {
   private:
@@ -32,7 +31,6 @@ class Logger
     std::string getTimeStamp();
 
   public:
-    static Logger& log;
     Logger(std::ostream &os = std::cout);
     Logger(const Logger& log);
     Logger &operator()(const std::string &color);
@@ -48,6 +46,12 @@ template <class T> Logger &operator<<(Logger &log, const T &output)
     log.os() << log.color() << output << RESET;
     return log;
 }
+
+namespace logger
+{
+  static Logger& log = Logger::getLogger();
+}
+
 
 
 #endif

@@ -17,9 +17,9 @@
 #include <iostream>
 #include "logger/Logger.hpp"
 
-class Connection : Logger
+using logger::log;
+class Connection
 {
-    using Logger::log;
     private:
         void showResourceInfo(Resource &resource);
         void processGET();

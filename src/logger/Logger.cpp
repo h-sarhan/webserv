@@ -11,7 +11,7 @@
 #include "logger/Logger.hpp"
 #include <unistd.h>
 
-Logger& Logger::log = Logger::getLogger();
+// Logger& Logger::log = Logger::getLogger();
 
 Logger::Logger(std::ostream& os) : _os(os), _color(RESET)
 {
