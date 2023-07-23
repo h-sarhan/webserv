@@ -19,18 +19,18 @@
 #include "responses/Response.hpp"
 
 Connection::Connection()
-    : listener(-1), request(), response(), keepAlive(false), timeOut(0), startTime(0)
+    : listener(-1), request(), response(), keepAlive(false), timeOut(0), startTime(0), reqComplete(false)
 {
 }
 
 Connection::Connection(int listener)
-    : listener(listener), request(listener), response(), keepAlive(false), timeOut(0), startTime(0)
+    : listener(listener), request(listener), response(), keepAlive(false), timeOut(0), startTime(0), reqComplete(false)
 {
 }
 
 Connection::Connection(const Connection &c)
     : listener(c.listener), request(c.request), response(c.response), keepAlive(c.keepAlive),
-      timeOut(c.timeOut), startTime(c.startTime)
+      timeOut(c.timeOut), startTime(c.startTime), reqComplete(c.reqComplete)
 {
 }
 
@@ -44,6 +44,7 @@ Connection &Connection::operator=(const Connection &c)
         this->keepAlive = c.keepAlive;
         this->timeOut = c.timeOut;
         this->startTime = c.startTime;
+        this->reqComplete = c.reqComplete;
     }
     return (*this);
 }
@@ -211,6 +212,8 @@ void Connection::processRequest()
         return;
     keepAlive = request.keepAlive();
     timeOut = request.keepAliveTimer();
+    if (bodySizeExceeded())
+        return ;
     switch (request.method())
     {
     case GET:
@@ -242,6 +245,21 @@ bool Connection::keepConnectionAlive()
     std::cout << "Connection is keep alive" << std::endl;
     response.clear();
     time(&startTime);   // reset timer
+    return true;
+}
+
+bool Connection::bodySizeExceeded()
+{
+    size_t maxBodySize = request.maxBodySize();
+    if (request.length() <= maxBodySize)
+        return false;
+    // log(ERR) <<
+    std::cout << "Request body size exceeded limit! Size = " << request.length() << ", Limit = " << maxBodySize << std::endl;
+    if (request.method() == HEAD)
+        response.createHEADResponse(413, NO_CONTENT, keepAlive);
+    else
+        response.createHTMLResponse(413, errorPage(413), keepAlive);
+    request.clear();
     return true;
 }
 

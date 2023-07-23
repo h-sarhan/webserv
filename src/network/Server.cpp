@@ -28,7 +28,8 @@
 #include "responses/Response.hpp"
 
 bool quit = false;
-std::map<int, std::vector<ServerBlock *> > Server::configBlocks = std::map<int, std::vector<ServerBlock *> >();
+std::map<int, std::vector<ServerBlock *> > Server::configBlocks =
+    std::map<int, std::vector<ServerBlock *> >();
 
 Server::Server(serverList virtualServers)
 {
@@ -132,8 +133,8 @@ static void sigInthandler(int sigNo)
 // change this to use fd directly and close stuff in caller func
 void Server::readBody(size_t clientNo)
 {
-    Request &req = cons.at(sockets[clientNo].fd).request;
-
+    Connection &c = cons.at(sockets[clientNo].fd);
+    Request &req = c.request;
     if (req.headers().count("content-length"))
     {
         std::istringstream iss(req.headers()["content-length"]);
@@ -147,7 +148,8 @@ void Server::readBody(size_t clientNo)
             return;
         }
     }
-    else if (req.headers().count("transfer-encoding"))
+    else if (req.headers().count("transfer-encoding") &&
+             req.headers()["transfer-encoding"] == "chunked")
     {
         char lastChunk[] = "0\r\n\r\n";
         const char *found = std::search(req.buffer() + POS(READ_SIZE, req.length()),
@@ -163,6 +165,7 @@ void Server::readBody(size_t clientNo)
         std::cout << ", New size = " << req.length() << std::endl;
     }
     std::cout << "Full request size: " << req.length() << std::endl;
+    
     sockets[clientNo].events = POLLIN | POLLOUT;
 
     std::cout << "---------------------------------------------------------\n";
@@ -225,6 +228,7 @@ void Server::acceptNewConnection(size_t listenerNo)
     {
         cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd)));
         sockets.push_back(createPollFd(newFd, POLLIN));
+        // sockets.push_back(createPollFd(newFd, POLLIN | POLLOUT));
     }
     else
     {

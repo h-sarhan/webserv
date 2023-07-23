@@ -33,6 +33,7 @@ class Connection
         bool keepAlive;
         time_t timeOut;
         time_t startTime;
+        bool reqComplete;
 
         Connection();
         Connection(int listener);
@@ -40,6 +41,7 @@ class Connection
         Connection& operator=(const Connection &c);
         void processRequest();
         bool keepConnectionAlive();
+        bool bodySizeExceeded();
         ~Connection();
 
 };
