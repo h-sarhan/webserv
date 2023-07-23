@@ -137,36 +137,6 @@ static void sigInthandler(int sigNo)
 void Server::readBody(size_t clientNo)
 {
     Request &req = cons.at(sockets[clientNo].fd).request;
-
-    // if (req.headers().count("content-length"))
-    // {
-    //     std::istringstream iss(req.headers()["content-length"]);
-    //     size_t contentLen;
-    //     iss >> contentLen;
-    //     // return here so that we dont set the events to start responding
-    //     if (req.length() - req.bodyStart() != contentLen)
-    //     {
-    //         log(DBUG) << req.length() << " / " << contentLen << " bytes received"
-    //                   << std::endl;
-    //         return;
-    //     }
-    // }
-    // else if (req.headers().count("transfer-encoding"))
-    // {
-    //     char lastChunk[] = "0\r\n\r\n";
-    //     const char *found = std::search(req.buffer() + POS(READ_SIZE, req.length()),
-    //                                     req.buffer() + req.length(), lastChunk, lastChunk + 5);
-    //     if (found == req.buffer() + req.length())   // not found
-    //     {
-    //         log(DBUG) << "Chunked transfer encoding in prog. " << req.length() << " bytes received."
-    //                   << std::endl;
-    //         return;
-    //     }
-    //     log(DBUG) << "Unchunking request... " << std::endl;
-    //     log(DBUG) << "Old size = " << req.length() << std::endl;
-    //     req.unchunk();
-    //     log(DBUG) << "New size = " << req.length() << std::endl;
-    // }
     
     if (req.usesContentLength())
     {
