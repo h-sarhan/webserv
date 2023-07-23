@@ -35,7 +35,6 @@ RequestParser::RequestParser(const RequestParser &reqParser)
 {
 }
 
-// ! parse should set the value of keepAlive, keepAliveTimer, maxSize, hostname, and resource
 // returns true if the headers have been fully received
 bool RequestParser::parse(const char *buffer, size_t len, const std::vector<ServerBlock *> &config)
 {
@@ -355,16 +354,18 @@ Resource RequestParser::generateResource(const std::vector<ServerBlock *> &confi
     if (isFile(resourcePath))
         return Resource(EXISTING_FILE, _requestedURL, resourcePath, routeOptions);
 
-    // ! Only look at index file and autoindex if the method is GET or HEAD
-    const std::string &indexFile = sanitizeURL(resourcePath + "/" + routeOptions.indexFile);
-    if (isDir(resourcePath) && isFile(indexFile))
-        return Resource(EXISTING_FILE, _requestedURL, indexFile, routeOptions);
+    if (_httpMethod == GET || _httpMethod == HEAD)
+    {
+        const std::string &indexFile = sanitizeURL(resourcePath + "/" + routeOptions.indexFile);
+        if (isDir(resourcePath) && isFile(indexFile))
+            return Resource(EXISTING_FILE, _requestedURL, indexFile, routeOptions);
 
-    if (isDir(resourcePath) && routeOptions.autoIndex == true)
-        return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
+        if (isDir(resourcePath) && routeOptions.autoIndex == true)
+            return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
 
-    if (isDir(resourcePath) && !isFile(indexFile))
-        return Resource(NOT_FOUND, _requestedURL, indexFile, routeOptions);
-
-    return Resource(NOT_FOUND, _requestedURL, resourcePath, routeOptions);
+        if (isDir(resourcePath) && !isFile(indexFile))
+            return Resource(NOT_FOUND, _requestedURL, indexFile, routeOptions);
+        return Resource(NOT_FOUND, _requestedURL, resourcePath, routeOptions);
+    }
+    return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
 }
