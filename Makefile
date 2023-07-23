@@ -9,8 +9,8 @@ REQUEST_DIR = $(SRC_DIR)/requests
 RESPONSE_DIR = $(SRC_DIR)/responses
 
 CONFIG_SRC = Tokenizer.cpp Token.cpp Parser.cpp ParseError.cpp Validators.cpp ServerBlock.cpp
-NETWORK_SRC = Server.cpp ServerInfo.cpp Connection.cpp 
-REQUEST_SRC = Request.cpp InvalidRequestError.cpp Resource.cpp
+NETWORK_SRC = Server.cpp ServerInfo.cpp Connection.cpp
+REQUEST_SRC = Request.cpp InvalidRequestError.cpp RequestParser.cpp
 RESPONSE_SRC = DefaultPages.cpp Response.cpp HeaderData.cpp
 
 CONFIG_SRC := $(addprefix $(CONFIG_DIR)/, $(CONFIG_SRC))
@@ -18,7 +18,7 @@ NETWORK_SRC := $(addprefix $(NETWORK_DIR)/, $(NETWORK_SRC))
 REQUEST_SRC := $(addprefix $(REQUEST_DIR)/, $(REQUEST_SRC))
 RESPONSE_SRC := $(addprefix $(RESPONSE_DIR)/, $(RESPONSE_SRC))
 
-	
+
 SRC := $(SRC_DIR)/main.cpp  $(SRC_DIR)/utils.cpp $(SRC_DIR)/tests.cpp $(SRC_DIR)/enumConversions.cpp $(CONFIG_SRC) $(NETWORK_SRC) $(REQUEST_SRC) $(RESPONSE_SRC)
 
 # Release and debug object files
