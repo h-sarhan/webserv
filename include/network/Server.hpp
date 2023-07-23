@@ -18,6 +18,7 @@
 #include "network.hpp"
 #include "network/ServerInfo.hpp"
 #include "responses/DefaultPages.hpp"
+#include "logger/Logger.hpp"
 
 #define MAX_CLIENTS 10
 #define READ_SIZE 1000000
@@ -45,7 +46,6 @@ class Server
     void startListening();
     static std::vector<ServerBlock *>& getConfig(int listener);
     ~Server();
-
 };
 
 #endif

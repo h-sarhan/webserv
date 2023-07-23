@@ -8,14 +8,18 @@
  *
  */
 
+#ifndef LOGGER_HPP
+# define LOGGER_HPP
+
 #include <iostream>
 #include <sstream>
 #include <utility>
 #include "utils.hpp"
 
 #define ERR RED
+#define DBUG BLUE
 #define WARN YELLOW
-#define INFO BLUE
+#define INFO WHITE
 #define SUCCESS GREEN
 
 typedef std::ostream &(*Manipulator)(std::ostream &);
@@ -40,3 +44,7 @@ template <class T> Logger &operator<<(Logger &log, const T &output)
     log.os() << log.color() << output << RESET;
     return log;
 }
+
+static Logger& log = Logger::getLogger();
+
+#endif

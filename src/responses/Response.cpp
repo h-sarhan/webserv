@@ -10,7 +10,7 @@
 
 #include "responses/Response.hpp"
 #include "responses/DefaultPages.hpp"
-// #include <sys/_types/_ssize_t.h>
+#include "logger/Logger.hpp"
 
 Response::Response() : _buffer(NULL), _length(0), _totalBytesSent(0), _statusCode(0)
 {
@@ -82,11 +82,11 @@ int Response::sendResponse(int fd)
         // std::cout << "Connection is idle: " << fd << std::endl;
         return IDLE_CONNECTION;
     }
-    std::cout << "Sending a response... " << std::endl;
+    log(INFO) << "Sending a response... " << std::endl;
     bytesSent = send(fd, _buffer + _totalBytesSent, _length - _totalBytesSent, 0);
     if (bytesSent < 0)
     {
-        std::cout << "Sending response failed: " << strerror(errno) << std::endl;
+        log(ERR) << "Sending response failed: " << strerror(errno) << std::endl;
         return SEND_FAIL;
     }
     else
@@ -94,14 +94,13 @@ int Response::sendResponse(int fd)
         _totalBytesSent += bytesSent;
         if (_totalBytesSent < _length)   // partial send
         {
-            std::cout << "Response only sent partially: " << bytesSent
+            log(WARN) << "Response only sent partially: " << bytesSent
                       << ". Total: " << _totalBytesSent << std::endl;
             return SEND_PARTIAL;
         }
     }
-    std::cout << "Response sent successfully to fd " << fd
-              << ", total bytes sent = " << _totalBytesSent << std::endl;
-    std::cout << "---------------------------------------------------------\n";
+    log(SUCCESS) << "Response sent to connection " << fd
+              << ". Size = " << _totalBytesSent << std::endl;
     return SEND_SUCCESS;
 }
 
@@ -191,7 +190,7 @@ void Response::createFileResponse(std::string filename, Request &request, int st
     file.open(filename.c_str());
     if (!file.good())
     {
-        std::cout << "Cannot open file to write: " << filename << std::endl;
+        log(ERR) << "Cannot open file to write: " << filename << std::endl;
         return createHTMLResponse(500, errorPage(500), false);
     }
     file.write(request.buffer() + request.bodyStart(), request.length() - request.bodyStart());
@@ -212,7 +211,7 @@ void Response::createDELETEResponse(std::string filename, Request &request)
     status = std::remove(filename.c_str());
     if (status != 0)
     {
-        std::cout << "Cannot delete file " << filename << std::endl;
+        log(ERR) << "Cannot delete file " << filename << std::endl;
         return createHTMLResponse(500, errorPage(500), false);
     }
     responseBuffer << STATUS_LINE << getStatus(204) << CRLF;

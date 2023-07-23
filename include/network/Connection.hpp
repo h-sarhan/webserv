@@ -15,11 +15,12 @@
 #include "requests/Request.hpp"
 #include "responses/Response.hpp"
 #include <iostream>
-// #include <ctime>
+#include "logger/Logger.hpp"
 
 class Connection
 {
     private:
+        void showResourceInfo(Resource &resource);
         void processGET();
         void processPOST();
         void processPUT();
