@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/24 20:51:40 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/24 20:55:05 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -280,7 +280,7 @@ bool Connection::bodySizeExceeded()
     if (_request.method() == HEAD)
         _response.createHEADResponse(413, NO_CONTENT, _keepAlive);
     else
-        _response.createHTMLResponse(413, errorPage(413), _keepAlive);
+        _response.createHTMLResponse(413, errorPage(413, _request.resource()), _keepAlive);
     _request.clear();
     return true;
 }
