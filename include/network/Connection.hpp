@@ -28,7 +28,6 @@ class Connection
         time_t _timeOut;
         time_t _startTime;
 
-        void showResourceInfo(Resource &resource);
         void processGET();
         void processPOST();
         void processPUT();
