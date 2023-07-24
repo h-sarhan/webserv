@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/24 20:40:05 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/24 20:49:48 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,7 +83,7 @@ time_t &Connection::startTime()
 void Connection::processGET()
 {
     Resource resource = _request.resource();
-    log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
+    Log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -113,7 +113,7 @@ void Connection::processGET()
 void Connection::processPOST()
 {
     Resource resource = _request.resource();
-    log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
+    Log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -143,7 +143,7 @@ void Connection::processPOST()
 void Connection::processPUT()
 {
     Resource resource = _request.resource();
-    log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
+    Log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -173,7 +173,7 @@ void Connection::processPUT()
 void Connection::processDELETE()
 {
     Resource resource = _request.resource();
-    log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
+    Log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -203,7 +203,7 @@ void Connection::processDELETE()
 void Connection::processHEAD()
 {
     Resource resource = _request.resource();
-    log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
+    Log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
     switch (resource.type)
     {
     case EXISTING_FILE:

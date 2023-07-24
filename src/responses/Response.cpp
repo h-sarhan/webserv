@@ -82,11 +82,11 @@ int Response::sendResponse(int fd)
         // std::cout << "Connection is idle: " << fd << std::endl;
         return IDLE_CONNECTION;
     }
-    log(INFO) << "Sending a response... " << std::endl;
+    Log(INFO) << "Sending a response... " << std::endl;
     bytesSent = send(fd, _buffer + _totalBytesSent, _length - _totalBytesSent, 0);
     if (bytesSent < 0)
     {
-        log(ERR) << "Sending response failed: " << strerror(errno) << std::endl;
+        Log(ERR) << "Sending response failed: " << strerror(errno) << std::endl;
         return SEND_FAIL;
     }
     else
@@ -94,12 +94,12 @@ int Response::sendResponse(int fd)
         _totalBytesSent += bytesSent;
         if (_totalBytesSent < _length)   // partial send
         {
-            log(WARN) << "Response only sent partially: " << bytesSent
+            Log(WARN) << "Response only sent partially: " << bytesSent
                       << ". Total: " << _totalBytesSent << std::endl;
             return SEND_PARTIAL;
         }
     }
-    log(SUCCESS) << "Response sent to connection " << fd << ". Size = " << _totalBytesSent
+    Log(SUCCESS) << "Response sent to connection " << fd << ". Size = " << _totalBytesSent
                  << std::endl;
     return SEND_SUCCESS;
 }
@@ -126,7 +126,7 @@ void Response::createRedirectResponse(std::string &redirUrl, int statusCode, boo
     std::stringstream responseBuffer;
 
     responseBuffer << STATUS_LINE << getStatus(statusCode);
-    log(DBUG) << responseBuffer.str() << std::endl;
+    Log(DBUG) << responseBuffer.str() << std::endl;
     responseBuffer << CRLF;
     responseBuffer << LOCATION << redirUrl << CRLF;
     if (keepAlive)
@@ -143,7 +143,7 @@ void Response::createRedirectResponse(std::string &redirUrl, int statusCode, boo
 void Response::setResponseHeaders(std::stringstream &ss, Headers h)
 {
     ss << STATUS_LINE << getStatus(h.statusCode);
-    log(DBUG) << ss.str() << std::endl;
+    Log(DBUG) << ss.str() << std::endl;
     ss << CRLF;
     if (!h.contentType.empty())
         ss << CONTENT_TYPE << h.contentType << CRLF;
@@ -205,13 +205,13 @@ void Response::createFileResponse(std::string filename, Request &request, int st
     file.open(filename.c_str());
     if (!file.good())
     {
-        log(ERR) << "Cannot open file to write: " << filename << std::endl;
+        Log(ERR) << "Cannot open file to write: " << filename << std::endl;
         return createHTMLResponse(500, errorPage(500, request.resource()), false);
     }
     file.write(request.buffer() + request.bodyStart(), request.length() - request.bodyStart());
     file.close();
     responseBuffer << STATUS_LINE << getStatus(statusCode);
-    log(DBUG) << responseBuffer.str() << std::endl;
+    Log(DBUG) << responseBuffer.str() << std::endl;
     responseBuffer << CRLF;
     if (request.keepAlive())
         responseBuffer << KEEP_ALIVE << CRLF;
@@ -228,11 +228,11 @@ void Response::createDELETEResponse(std::string filename, Request &request)
     status = std::remove(filename.c_str());
     if (status != 0)
     {
-        log(ERR) << "Cannot delete file " << filename << std::endl;
+        Log(ERR) << "Cannot delete file " << filename << std::endl;
         return createHTMLResponse(500, errorPage(500, request.resource()), false);
     }
     responseBuffer << STATUS_LINE << getStatus(204);
-    log(DBUG) << responseBuffer.str() << std::endl;
+    Log(DBUG) << responseBuffer.str() << std::endl;
     responseBuffer << CRLF;
     if (request.keepAlive())
         responseBuffer << KEEP_ALIVE << CRLF;

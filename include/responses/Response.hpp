@@ -49,7 +49,7 @@ struct Headers
     bool keepAlive;
 };
 
-using logger::log;
+using logger::Log;
 class Response
 {
     // using Logger::log;

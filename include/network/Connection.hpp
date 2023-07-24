@@ -17,7 +17,7 @@
 #include <iostream>
 #include "logger/Logger.hpp"
 
-using logger::log;
+using logger::Log;
 class Connection
 {
     private:

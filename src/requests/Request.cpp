@@ -240,7 +240,7 @@ bool Request::contentLenReached()
 
     if (_length - bodyStart() == contentLen)
         return true;
-    log(DBUG) << _length << " / " << contentLen << " bytes received" << std::endl;
+    Log(DBUG) << _length << " / " << contentLen << " bytes received" << std::endl;
     return false;
 }
 
@@ -251,14 +251,14 @@ bool Request::chunkedEncodingComplete()
                                   lastChunk, lastChunk + 5);
     if (pos == _buffer + _length)   // not found
     {
-        log(DBUG) << "Chunked transfer encoding in prog. " << _length << " bytes received."
+        Log(DBUG) << "Chunked transfer encoding in prog. " << _length << " bytes received."
                   << std::endl;
         return false;
     }
-    log(DBUG) << "Unchunking request... " << std::endl;
-    log(DBUG) << "Old size = " << _length << std::endl;
+    Log(DBUG) << "Unchunking request... " << std::endl;
+    Log(DBUG) << "Old size = " << _length << std::endl;
     unchunk();
-    log(DBUG) << "New size = " << _length << std::endl;
+    Log(DBUG) << "New size = " << _length << std::endl;
     return true;
 }
 
