@@ -110,8 +110,8 @@ void Server::respondToRequest(size_t clientNo)
         time_t curTime;
         time(&curTime);
         if (!c.keepAlive())
-            closeConnection(clientNo);
-        if (curTime - c.startTime() >= c.timeOut())
+            return;
+        else if (curTime - c.startTime() >= c.timeOut())
         {
             Log(WARN) << "Connection " << sockets[clientNo].fd << " timed out! (idle for " << c.timeOut()
                       << "s): " << sockets[clientNo].fd << std::endl;
@@ -154,8 +154,8 @@ void Server::readBody(size_t clientNo)
     Log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd << ". Size = " << req.length() << std::endl;
     Log(DBUG) << enumToStr(req.method()) << " " << req.resource().originalRequest << std::endl;
 
-    sockets[clientNo].events = POLLIN | POLLOUT;
-
+    // sockets[clientNo].events = POLLIN | POLLOUT;
+    cons.at(sockets[clientNo].fd).recvComplete() = true;
     // Log(SUCCESS) << "---------------------------------------------------------\n";
     // Log(SUCCESS) << std::string(req.buffer(), req.buffer() + req.bodyStart() - 1);
     // Log(SUCCESS) << "---------------------------------------------------------\n";
@@ -206,17 +206,13 @@ void Server::acceptNewConnection(size_t listenerNo)
     }
     fcntl(newFd, F_SETFL, O_NONBLOCK);   // enable this when doing partial recv
     Log(SUCCESS) << "New connection! fd = " << newFd << std::endl;
-    if (sockets.size() < MAX_CLIENTS)
+    cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd)));
+    sockets.push_back(createPollFd(newFd, POLLIN | POLLOUT));
+    if (sockets.size() - configBlocks.size() > MAX_CLIENTS)
     {
-        cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd)));
-        sockets.push_back(createPollFd(newFd, POLLIN));
-        // sockets.push_back(createPollFd(newFd, POLLIN | POLLOUT));
-    }
-    else
-    {
+        cons.at(newFd).dropped() = true;
+        cons.at(newFd).response().createHTMLResponse(503, errorPage(503), false);
         Log(ERR) << "Maximum clients reached, dropping this connection" << std::endl;
-        // todo: send 503 error page
-        close(newFd);
     }
 }
 
@@ -226,14 +222,16 @@ void Server::startListening()
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sigInthandler);
-    while (true)
+    while (!quit)
     {
         SystemCallException::checkErr("poll", poll(&sockets[0], sockets.size(), -1));
         for (size_t i = 0; i < sockets.size(); i++)
         {
             eventFd = sockets[i].fd;
+            if ((sockets[i].revents & POLLOUT) && cons.at(eventFd).dropped())
+                respondToRequest(i);
             // if one of the fds got something new to read
-            if (sockets[i].revents & POLLIN)
+            else if (sockets[i].revents & POLLIN)
             {
                 if (configBlocks.count(eventFd))   // this fd is one of the server listeners
                     acceptNewConnection(i);
@@ -247,11 +245,11 @@ void Server::startListening()
                             readBody(i);   // this will only be run if the headers are parsed
                 }
             }
-            else if (sockets[i].revents & POLLOUT)
+            // else if ((sockets[i].revents & POLLOUT) && cons.at(eventFd).recvComplete())
+            else if ((sockets[i].revents & POLLOUT))
                 respondToRequest(i);
+
         }
-        if (quit)
-            break;
     }
 }
 

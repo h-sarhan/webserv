@@ -20,19 +20,19 @@
 #include "responses/Response.hpp"
 
 Connection::Connection()
-    : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0)
+    : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0), _dropped(false), _recvComplete(false)
 {
 }
 
 Connection::Connection(int listener)
     : _listener(listener), _request(listener), _response(), _keepAlive(false), _timeOut(0),
-      _startTime(0)
+      _startTime(0), _dropped(false), _recvComplete(false)
 {
 }
 
 Connection::Connection(const Connection &c)
     : _listener(c._listener), _request(c._request), _response(c._response),
-      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime)
+      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime), _dropped(c._dropped), _recvComplete(c._recvComplete)
 {
 }
 
@@ -46,6 +46,8 @@ Connection &Connection::operator=(const Connection &c)
         this->_keepAlive = c._keepAlive;
         this->_timeOut = c._timeOut;
         this->_startTime = c._startTime;
+        this->_dropped = c._dropped;
+        this->_recvComplete = c._recvComplete;
     }
     return (*this);
 }
@@ -78,6 +80,16 @@ time_t &Connection::timeOut()
 time_t &Connection::startTime()
 {
     return _startTime;
+}
+
+bool &Connection::dropped()
+{
+    return _dropped;
+}
+
+bool &Connection::recvComplete()
+{
+    return _recvComplete;
 }
 
 void Connection::processGET()
