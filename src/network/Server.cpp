@@ -152,6 +152,8 @@ void Server::readBody(size_t clientNo)
             return ;
     }
     Log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd << ". Size = " << req.length() << std::endl;
+    Log(DBUG) << enumToStr(req.method()) << " " << req.resource().originalRequest << std::endl;
+
     sockets[clientNo].events = POLLIN | POLLOUT;
 
     // Log(SUCCESS) << "---------------------------------------------------------\n";

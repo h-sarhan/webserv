@@ -41,19 +41,16 @@ const std::string directoryListing(const Resource &dir)
     return html + "\t\t</ul>\n\t\t<hr>\n\t</body>\n</html>\n";
 }
 
-const std::string errorPage(unsigned int responseCode)
+const std::string errorPage(unsigned int responseCode, const Resource &resource)
 {
-    const std::string &html = COMMON_HEAD "<title>" + toStr(responseCode) +
-                              "</title>\n"
-                              "\t</head>\n"
-                              "\t<body>\n"
-                              "\t\t<h1>ERROR " +
-                              toStr(responseCode) +
-                              " </h1>\n"
-                              "\t\t<hr>\n"
-                              "<img src=\"https://http.cat/" +
-                              toStr(responseCode) +
-                              ".jpg\" width=\"55%\" style=\"margin: auto; display: block\">"
-                              "\n\t</body>\n</html>\n";
-    return html;
+    const std::map<unsigned int, std::string> &errorPages = resource.config.first.errorPages;
+    if (errorPages.count(responseCode) == 0)
+        return DEFAULT_ERROR(responseCode);
+
+    std::ifstream errorFile(errorPages.at(responseCode).c_str());
+    if (!errorFile)
+        return DEFAULT_ERROR(responseCode);
+    std::stringstream errorFileStream;
+    errorFileStream << errorFile.rdbuf();
+    return errorFileStream.str();
 }

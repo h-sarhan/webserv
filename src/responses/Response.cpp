@@ -125,8 +125,10 @@ void Response::createRedirectResponse(std::string &redirUrl, int statusCode, boo
 {
     std::stringstream responseBuffer;
 
-    Log(DBUG) << "redirected to " << redirUrl << std::endl;
-    responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
+    Log(DBUG) << "Redirected to " << redirUrl << std::endl;
+    responseBuffer << STATUS_LINE << getStatus(statusCode);
+    Log(DBUG) << responseBuffer.str() << std::endl;
+    responseBuffer << CRLF;
     responseBuffer << LOCATION << redirUrl << CRLF;
     if (keepAlive)
         responseBuffer << KEEP_ALIVE << CRLF;
@@ -141,7 +143,9 @@ void Response::createRedirectResponse(std::string &redirUrl, int statusCode, boo
 
 void Response::setResponseHeaders(std::stringstream &ss, Headers h)
 {
-    ss << STATUS_LINE << getStatus(h.statusCode) << CRLF;
+    ss << STATUS_LINE << getStatus(h.statusCode);
+    Log(DBUG) << ss.str() << std::endl;
+    ss << CRLF;
     if (!h.contentType.empty())
         ss << CONTENT_TYPE << h.contentType << CRLF;
     ss << CONTENT_LEN << h.contentLen << CRLF;
@@ -172,7 +176,7 @@ void Response::setResponse(std::stringstream &ss)
     ss.read(_buffer, _length);
 }
 
-void Response::createGETResponse(std::string filename, bool keepAlive)
+void Response::createGETResponse(std::string filename, Request &request)
 {
     std::ifstream file;
     std::stringstream responseBuffer;
@@ -181,13 +185,13 @@ void Response::createGETResponse(std::string filename, bool keepAlive)
 
     file.open(filename.c_str(), std::ios::binary);
     if (!file.good())
-        return createHTMLResponse(404, errorPage(404), false);
+        return createHTMLResponse(404, errorPage(404, request.resource()), false);
     mimeType = getContentType(filename);
     if (isEmpty(file))
         fileSize = 0;
     else
         fileSize = getStreamLen(file);
-    setResponseHeaders(responseBuffer, createHeaders(200, mimeType, fileSize, keepAlive));
+    setResponseHeaders(responseBuffer, createHeaders(200, mimeType, fileSize, request.keepAlive()));
     if (fileSize > 0)
         responseBuffer << file.rdbuf();
     file.close();
@@ -203,12 +207,14 @@ void Response::createFileResponse(std::string filename, Request &request, int st
     if (!file.good())
     {
         Log(ERR) << "Cannot open file to write: " << filename << std::endl;
-        return createHTMLResponse(500, errorPage(500), false);
+        return createHTMLResponse(500, errorPage(500, request.resource()), false);
     }
     Log(DBUG) << "file being posted is " << filename << std::endl;
     file.write(request.buffer() + request.bodyStart(), request.length() - request.bodyStart());
     file.close();
-    responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
+    responseBuffer << STATUS_LINE << getStatus(statusCode);
+    Log(DBUG) << responseBuffer.str() << std::endl;
+    responseBuffer << CRLF;
     if (request.keepAlive())
         responseBuffer << KEEP_ALIVE << CRLF;
     // ! pass resource or restructure file responses
@@ -226,9 +232,11 @@ void Response::createDELETEResponse(std::string filename, Request &request)
     if (status != 0)
     {
         Log(ERR) << "Cannot delete file " << filename << std::endl;
-        return createHTMLResponse(500, errorPage(500), false);
+        return createHTMLResponse(500, errorPage(500, request.resource()), false);
     }
-    responseBuffer << STATUS_LINE << getStatus(204) << CRLF;
+    responseBuffer << STATUS_LINE << getStatus(204);
+    Log(DBUG) << responseBuffer.str() << std::endl;
+    responseBuffer << CRLF;
     if (request.keepAlive())
         responseBuffer << KEEP_ALIVE << CRLF;
     responseBuffer << CRLF;
@@ -253,7 +261,7 @@ void Response::createHEADFileResponse(std::string filename, Request &request)
 
     file.open(filename.c_str(), std::ios::binary);
     if (!file.good())
-        return createHTMLResponse(404, errorPage(404), false);
+        return createHTMLResponse(404, errorPage(404, request.resource()), false);
     mimeType = getContentType(filename);
     if (isEmpty(file))
         fileSize = 0;

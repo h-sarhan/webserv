@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/24 19:02:06 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/24 20:55:05 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,10 +14,10 @@
 #include "enums/HTTPMethods.hpp"
 #include "enums/ResourceTypes.hpp"
 #include "enums/conversions.hpp"
+#include "logger/Logger.hpp"
 #include "requests/Request.hpp"
 #include "responses/DefaultPages.hpp"
 #include "responses/Response.hpp"
-#include "logger/Logger.hpp"
 
 Connection::Connection()
     : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0)
@@ -25,13 +25,14 @@ Connection::Connection()
 }
 
 Connection::Connection(int listener)
-    : _listener(listener), _request(listener), _response(), _keepAlive(false), _timeOut(0), _startTime(0)
+    : _listener(listener), _request(listener), _response(), _keepAlive(false), _timeOut(0),
+      _startTime(0)
 {
 }
 
 Connection::Connection(const Connection &c)
-    : _listener(c._listener), _request(c._request), _response(c._response), _keepAlive(c._keepAlive),
-      _timeOut(c._timeOut), _startTime(c._startTime)
+    : _listener(c._listener), _request(c._request), _response(c._response),
+      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime)
 {
 }
 
@@ -49,69 +50,62 @@ Connection &Connection::operator=(const Connection &c)
     return (*this);
 }
 
-int& Connection::listener()
+int &Connection::listener()
 {
     return _listener;
 }
 
-Request& Connection::request()
+Request &Connection::request()
 {
     return _request;
 }
 
-Response& Connection::response()
+Response &Connection::response()
 {
     return _response;
 }
 
-bool& Connection::keepAlive()
+bool &Connection::keepAlive()
 {
     return _keepAlive;
 }
 
-time_t& Connection::timeOut()
+time_t &Connection::timeOut()
 {
     return _timeOut;
 }
 
-time_t& Connection::startTime()
+time_t &Connection::startTime()
 {
     return _startTime;
-}
-
-void Connection::showResourceInfo(Resource &resource)
-{
-    Log(DBUG) << "Method type: " << enumToStr(_request.method()) << std::endl;
-    Log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
-    // Log(DBUG) << resource.originalRequest << " resource found at: <" << resource.path << ">" << std::endl;
 }
 
 void Connection::processGET()
 {
     Resource resource = _request.resource();
-    showResourceInfo(resource);
+    Log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
     switch (resource.type)
     {
     case EXISTING_FILE:
-        _response.createGETResponse(resource.path, _keepAlive);
+        _response.createGETResponse(resource.path, _request);
         break;
     case REDIRECTION:
         _response.createRedirectResponse(resource.path, 302, _keepAlive);
         break;
     case FORBIDDEN_METHOD:
-        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
+        _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case DIRECTORY:
         _response.createHTMLResponse(200, directoryListing(resource), _keepAlive);
         break;
     case NOT_FOUND:
-        _response.createHTMLResponse(404, errorPage(404), _keepAlive);
+        _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     case INVALID_REQUEST:
-        _response.createHTMLResponse(400, errorPage(400), _keepAlive);
+        _response.createHTMLResponse(400, errorPage(400, resource), _keepAlive);
         break;
     case NO_MATCH:
-        _response.createHTMLResponse(404, errorPage(404), _keepAlive);
+        _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     }
 }
@@ -119,29 +113,29 @@ void Connection::processGET()
 void Connection::processPOST()
 {
     Resource resource = _request.resource();
-    showResourceInfo(resource);
+    Log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
     switch (resource.type)
     {
     case EXISTING_FILE:
-        _response.createHTMLResponse(409, errorPage(409), _keepAlive);
+        _response.createHTMLResponse(409, errorPage(409, resource), _keepAlive);
         break;
     case REDIRECTION:
         _response.createRedirectResponse(resource.path, 307, _keepAlive);
         break;
     case FORBIDDEN_METHOD:
-        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
+        _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case DIRECTORY:
-        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
+        _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case NOT_FOUND:
         _response.createFileResponse(resource.path, _request, 201);
         break;
     case INVALID_REQUEST:
-        _response.createHTMLResponse(400, errorPage(400), _keepAlive);
+        _response.createHTMLResponse(400, errorPage(400, resource), _keepAlive);
         break;
     case NO_MATCH:
-        _response.createHTMLResponse(404, errorPage(404), _keepAlive);
+        _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     }
 }
@@ -149,7 +143,7 @@ void Connection::processPOST()
 void Connection::processPUT()
 {
     Resource resource = _request.resource();
-    showResourceInfo(resource);
+    Log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -159,19 +153,19 @@ void Connection::processPUT()
         _response.createRedirectResponse(resource.path, 307, _keepAlive);
         break;
     case FORBIDDEN_METHOD:
-        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
+        _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case DIRECTORY:
-        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
+        _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case NOT_FOUND:
         _response.createFileResponse(resource.path, _request, 201);
         break;
     case INVALID_REQUEST:
-        _response.createHTMLResponse(400, errorPage(400), _keepAlive);
+        _response.createHTMLResponse(400, errorPage(400, resource), _keepAlive);
         break;
     case NO_MATCH:
-        _response.createHTMLResponse(404, errorPage(404), _keepAlive);
+        _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     }
 }
@@ -179,7 +173,7 @@ void Connection::processPUT()
 void Connection::processDELETE()
 {
     Resource resource = _request.resource();
-    showResourceInfo(resource);
+    Log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -189,19 +183,19 @@ void Connection::processDELETE()
         _response.createRedirectResponse(resource.path, 307, _keepAlive);
         break;
     case FORBIDDEN_METHOD:
-        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
+        _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case DIRECTORY:
-        _response.createHTMLResponse(405, errorPage(405), _keepAlive);
+        _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case NOT_FOUND:
-        _response.createHTMLResponse(404, errorPage(404), _keepAlive);
+        _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     case INVALID_REQUEST:
-        _response.createHTMLResponse(400, errorPage(400), _keepAlive);
+        _response.createHTMLResponse(400, errorPage(400, resource), _keepAlive);
         break;
     case NO_MATCH:
-        _response.createHTMLResponse(404, errorPage(404), _keepAlive);
+        _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     }
 }
@@ -209,7 +203,7 @@ void Connection::processDELETE()
 void Connection::processHEAD()
 {
     Resource resource = _request.resource();
-    showResourceInfo(resource);
+    Log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
     switch (resource.type)
     {
     case EXISTING_FILE:
@@ -262,7 +256,7 @@ void Connection::processRequest()
         processHEAD();
         break;
     case OTHER:
-        _response.createHTMLResponse(400, errorPage(400), _keepAlive);
+        _response.createHTMLResponse(400, errorPage(400, _request.resource()), _keepAlive);
         break;
     }
     _request.clear();
@@ -286,7 +280,7 @@ bool Connection::bodySizeExceeded()
     if (_request.method() == HEAD)
         _response.createHEADResponse(413, NO_CONTENT, _keepAlive);
     else
-        _response.createHTMLResponse(413, errorPage(413), _keepAlive);
+        _response.createHTMLResponse(413, errorPage(413, _request.resource()), _keepAlive);
     _request.clear();
     return true;
 }
