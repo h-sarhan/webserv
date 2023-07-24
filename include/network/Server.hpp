@@ -18,13 +18,16 @@
 #include "network.hpp"
 #include "network/ServerInfo.hpp"
 #include "responses/DefaultPages.hpp"
+#include "logger/Logger.hpp"
 
-#define MAX_CLIENTS 10
+#define MAX_CLIENTS 20
 #define READ_SIZE 1000000
-#define POS(x, y) (y <= x ? 0 : y - x)
+// #define START_POS(x, y) (y <= x ? 0 : y - x)
+#define START_POS(x, y) (x <= y ? 0 : x - y)
 
 typedef std::vector<ServerBlock> &serverList;
 
+using logger::Log;
 class Server
 {
   private:
@@ -45,7 +48,6 @@ class Server
     void startListening();
     static std::vector<ServerBlock *>& getConfig(int listener);
     ~Server();
-
 };
 
 #endif

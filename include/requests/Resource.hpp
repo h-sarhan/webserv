@@ -20,8 +20,7 @@
  */
 struct Resource
 {
-    // Create a resource object with a given type original requested URL, path, and route
-    Resource(const ResourceType &type, const std::string &originalRequest = "",
+    Resource(const ResourceType &type = NO_MATCH, const std::string &request = "",
              const std::string &path = "", const Route &route = Route());
 
     // Type of the resource
@@ -35,5 +34,7 @@ struct Resource
 
     // The route the resource came from
     Route route;
+
+    // Static resource generation functions
 };
 #endif

@@ -9,8 +9,8 @@
  */
 
 #include "responses/Response.hpp"
+#include "logger/Logger.hpp"
 #include "responses/DefaultPages.hpp"
-// #include <sys/_types/_ssize_t.h>
 
 Response::Response() : _buffer(NULL), _length(0), _totalBytesSent(0), _statusCode(0)
 {
@@ -82,11 +82,11 @@ int Response::sendResponse(int fd)
         // std::cout << "Connection is idle: " << fd << std::endl;
         return IDLE_CONNECTION;
     }
-    std::cout << "Sending a response... " << std::endl;
+    Log(INFO) << "Sending a response... " << std::endl;
     bytesSent = send(fd, _buffer + _totalBytesSent, _length - _totalBytesSent, 0);
     if (bytesSent < 0)
     {
-        std::cout << "Sending response failed: " << strerror(errno) << std::endl;
+        Log(ERR) << "Sending response failed: " << strerror(errno) << std::endl;
         return SEND_FAIL;
     }
     else
@@ -94,32 +94,38 @@ int Response::sendResponse(int fd)
         _totalBytesSent += bytesSent;
         if (_totalBytesSent < _length)   // partial send
         {
-            std::cout << "Response only sent partially: " << bytesSent
+            Log(WARN) << "Response only sent partially: " << bytesSent
                       << ". Total: " << _totalBytesSent << std::endl;
             return SEND_PARTIAL;
         }
     }
-    std::cout << "Response sent successfully to fd " << fd
-              << ", total bytes sent = " << _totalBytesSent << std::endl;
-    std::cout << "---------------------------------------------------------\n";
+    Log(SUCCESS) << "Response sent to connection " << fd << ". Size = " << _totalBytesSent
+                 << std::endl;
     return SEND_SUCCESS;
 }
 
 template <typename streamType> static size_t getStreamLen(streamType &s)
 {
-    size_t len;
+    ssize_t len;
 
     s.seekg(0, std::ios::end);
     len = s.tellg();
     s.seekg(0, std::ios::beg);
-
+    if (len == -1)   // tellg failed
+        return 0;
     return len;
+}
+
+static bool isEmpty(std::ifstream &file)
+{
+    return file.peek() == std::ifstream::traits_type::eof();
 }
 
 void Response::createRedirectResponse(std::string &redirUrl, int statusCode, bool keepAlive)
 {
     std::stringstream responseBuffer;
 
+    Log(DBUG) << "redirected to " << redirUrl << std::endl;
     responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
     responseBuffer << LOCATION << redirUrl << CRLF;
     if (keepAlive)
@@ -171,14 +177,19 @@ void Response::createGETResponse(std::string filename, bool keepAlive)
     std::ifstream file;
     std::stringstream responseBuffer;
     std::string mimeType;
+    size_t fileSize;
 
     file.open(filename.c_str(), std::ios::binary);
     if (!file.good())
         return createHTMLResponse(404, errorPage(404), false);
     mimeType = getContentType(filename);
-    setResponseHeaders(responseBuffer, createHeaders(200, mimeType, getStreamLen(file), keepAlive));
-
-    responseBuffer << file.rdbuf();
+    if (isEmpty(file))
+        fileSize = 0;
+    else
+        fileSize = getStreamLen(file);
+    setResponseHeaders(responseBuffer, createHeaders(200, mimeType, fileSize, keepAlive));
+    if (fileSize > 0)
+        responseBuffer << file.rdbuf();
     file.close();
 
     setResponse(responseBuffer);
@@ -191,15 +202,17 @@ void Response::createFileResponse(std::string filename, Request &request, int st
     file.open(filename.c_str());
     if (!file.good())
     {
-        std::cout << "Cannot open file to write: " << filename << std::endl;
+        Log(ERR) << "Cannot open file to write: " << filename << std::endl;
         return createHTMLResponse(500, errorPage(500), false);
     }
+    Log(DBUG) << "file being posted is " << filename << std::endl;
     file.write(request.buffer() + request.bodyStart(), request.length() - request.bodyStart());
     file.close();
     responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
     if (request.keepAlive())
         responseBuffer << KEEP_ALIVE << CRLF;
-    responseBuffer << LOCATION << filename << CRLF;
+    // ! pass resource or restructure file responses
+    responseBuffer << LOCATION << request.resource().originalRequest << CRLF;
     responseBuffer << CRLF;
     setResponse(responseBuffer);
 }
@@ -212,7 +225,7 @@ void Response::createDELETEResponse(std::string filename, Request &request)
     status = std::remove(filename.c_str());
     if (status != 0)
     {
-        std::cout << "Cannot delete file " << filename << std::endl;
+        Log(ERR) << "Cannot delete file " << filename << std::endl;
         return createHTMLResponse(500, errorPage(500), false);
     }
     responseBuffer << STATUS_LINE << getStatus(204) << CRLF;
@@ -236,13 +249,17 @@ void Response::createHEADFileResponse(std::string filename, Request &request)
     std::ifstream file;
     std::stringstream responseBuffer;
     std::string mimeType;
+    size_t fileSize;
 
     file.open(filename.c_str(), std::ios::binary);
     if (!file.good())
         return createHTMLResponse(404, errorPage(404), false);
     mimeType = getContentType(filename);
-    setResponseHeaders(responseBuffer,
-                       createHeaders(200, mimeType, getStreamLen(file), request.keepAlive()));
+    if (isEmpty(file))
+        fileSize = 0;
+    else
+        fileSize = getStreamLen(file);
+    setResponseHeaders(responseBuffer, createHeaders(200, mimeType, fileSize, request.keepAlive()));
     file.close();
     setResponse(responseBuffer);
 }

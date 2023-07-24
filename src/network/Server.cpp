@@ -28,19 +28,20 @@
 #include "responses/Response.hpp"
 
 bool quit = false;
+
 std::map<int, std::vector<ServerBlock *> > Server::configBlocks =
     std::map<int, std::vector<ServerBlock *> >();
 
 Server::Server(serverList virtualServers)
 {
-    std::cout << "Virtual servers - " << std::endl;
-    std::cout << virtualServers << std::endl;
+    // std::cout << "Virtual servers - " << std::endl;
+    // std::cout << virtualServers << std::endl;
     std::vector<ServerBlock>::iterator it;
     for (it = virtualServers.begin(); it != virtualServers.end(); it++)
     {
         if (portAlreadyInUse(it->port))
             continue;
-        std::cout << "Setting up listener on port " << it->port << std::endl;
+        Log(INFO) << "Setting up listener on port " << it->port << std::endl;
         initListener(it->port, virtualServers);
     }
 }
@@ -84,14 +85,14 @@ void Server::initListener(unsigned int port, serverList virtualServers)
 
 std::vector<ServerBlock *> &Server::getConfig(int listener)
 {
-    // if listener key doesnt exist in this map it should create a default vector but the caller
+    // if listener key doesnt exist in this map it will create a default vector but the caller
     // should check for it
     return configBlocks[listener];
 }
 
 void Server::closeConnection(int clientNo)
 {
-    std::cout << "Closing connection " << sockets[clientNo].fd << std::endl;
+    Log(INFO) << "Closing connection " << sockets[clientNo].fd << std::endl;
     close(sockets[clientNo].fd);
     cons.erase(sockets[clientNo].fd);
     sockets.erase(sockets.begin() + clientNo);
@@ -103,14 +104,16 @@ void Server::respondToRequest(size_t clientNo)
     int sendStatus;
 
     c.processRequest();
-    sendStatus = c.response.sendResponse(sockets[clientNo].fd);
+    sendStatus = c.response().sendResponse(sockets[clientNo].fd);
     if (sendStatus == IDLE_CONNECTION)
     {
         time_t curTime;
         time(&curTime);
-        if (curTime - c.startTime >= c.timeOut)
+        if (!c.keepAlive())
+            closeConnection(clientNo);
+        if (curTime - c.startTime() >= c.timeOut())
         {
-            std::cout << "Connection timed out! (idle for " << c.timeOut
+            Log(WARN) << "Connection " << sockets[clientNo].fd << " timed out! (idle for " << c.timeOut()
                       << "s): " << sockets[clientNo].fd << std::endl;
             closeConnection(clientNo);
         }
@@ -120,7 +123,10 @@ void Server::respondToRequest(size_t clientNo)
         return;
     if (sendStatus == SEND_SUCCESS)
         if (c.keepConnectionAlive())
+        {
+            Log(INFO) << "Connection " << sockets[clientNo].fd << " is keep alive" << std::endl;
             return;
+        }
     closeConnection(clientNo);
 }
 
@@ -133,69 +139,43 @@ static void sigInthandler(int sigNo)
 // change this to use fd directly and close stuff in caller func
 void Server::readBody(size_t clientNo)
 {
-    Connection &c = cons.at(sockets[clientNo].fd);
-    Request &req = c.request;
-    if (req.headers().count("content-length"))
-    {
-        std::istringstream iss(req.headers()["content-length"]);
-        size_t contentLen;
-        iss >> contentLen;
-        // return here so that we dont set the events to start responding
-        if (req.length() - req.bodyStart() != contentLen)
-        {
-            std::cout << "Only " << req.length() << " / " << contentLen << " bytes received"
-                      << std::endl;
-            return;
-        }
-    }
-    else if (req.headers().count("transfer-encoding") &&
-             req.headers()["transfer-encoding"] == "chunked")
-    {
-        char lastChunk[] = "0\r\n\r\n";
-        const char *found = std::search(req.buffer() + POS(READ_SIZE, req.length()),
-                                        req.buffer() + req.length(), lastChunk, lastChunk + 5);
-        if (found == req.buffer() + req.length())   // not found
-        {
-            std::cout << "Chunked transfer encoding in prog. " << req.length() << " bytes received."
-                      << std::endl;
-            return;
-        }
-        std::cout << "Unchunking request: Old size = " << req.length();
-        req.unchunk();
-        std::cout << ", New size = " << req.length() << std::endl;
-    }
-    std::cout << "Full request size: " << req.length() << std::endl;
+    Request &req = cons.at(sockets[clientNo].fd).request();
     
+    if (req.usesContentLength())
+    {
+        if (!req.contentLenReached())
+            return ;
+    }
+    else if (req.usesChunkedEncoding())
+    {
+        if (!req.chunkedEncodingComplete())
+            return ;
+    }
+    Log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd << ". Size = " << req.length() << std::endl;
     sockets[clientNo].events = POLLIN | POLLOUT;
 
-    std::cout << "---------------------------------------------------------\n";
-    std::cout << std::string(req.buffer(), req.buffer() + req.bodyStart() - 1);
-    std::cout << "---------------------------------------------------------\n";
+    // Log(SUCCESS) << "---------------------------------------------------------\n";
+    // Log(SUCCESS) << std::string(req.buffer(), req.buffer() + req.bodyStart() - 1);
+    // Log(SUCCESS) << "---------------------------------------------------------\n";
 }
 
 void Server::recvData(size_t clientNo)
 {
-    Request &req = cons.at(sockets[clientNo].fd).request;
+    Request &req = cons.at(sockets[clientNo].fd).request();
     char *buf;
     ssize_t bytesRec;
     size_t bufSize = READ_SIZE;
 
     if (!req.headers().empty() && req.headers().count("content-length"))
-    {
-        std::istringstream iss(req.headers()["content-length"]);
-        size_t contentLen;
-        iss >> contentLen;
-        bufSize = contentLen;
-    }
+        bufSize = fromStr<size_t>(req.headers().at("content-length"));
     buf = new char[bufSize];
 
-    // receiving request
-    std::cout << "Receiving request data: " << std::endl;
+    Log(INFO) << "Receiving request data from connection " << sockets[clientNo].fd << "... " << std::endl;
     bytesRec = recv(sockets[clientNo].fd, buf, bufSize, 0);
     if (bytesRec < 0)
-        std::cout << "Failed to receive request: " << strerror(errno) << std::endl;
+        Log(ERR) << "Failed to receive request from connection" << sockets[clientNo].fd << ": " << strerror(errno) << std::endl;
     else if (bytesRec == 0)
-        std::cout << "Connection closed by client" << std::endl;
+        Log(ERR) << "Connection " << sockets[clientNo].fd << " closed by client" << std::endl;
     if (bytesRec <= 0)
     {
         closeConnection(clientNo);
@@ -219,11 +199,11 @@ void Server::acceptNewConnection(size_t listenerNo)
     newFd = accept(sockets[listenerNo].fd, (sockaddr *) &theirAddr, &addrSize);
     if (newFd == -1)
     {
-        std::cout << "Accept failed" << std::endl;
+        Log(ERR) << "Accept failed" << std::endl;
         return;
     }
     fcntl(newFd, F_SETFL, O_NONBLOCK);   // enable this when doing partial recv
-    std::cout << "New connection! fd = " << newFd << std::endl;
+    Log(SUCCESS) << "New connection! fd = " << newFd << std::endl;
     if (sockets.size() < MAX_CLIENTS)
     {
         cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd)));
@@ -232,7 +212,7 @@ void Server::acceptNewConnection(size_t listenerNo)
     }
     else
     {
-        std::cout << "Maximum clients reached, dropping this connection" << std::endl;
+        Log(ERR) << "Maximum clients reached, dropping this connection" << std::endl;
         // todo: send 503 error page
         close(newFd);
     }
@@ -261,7 +241,7 @@ void Server::startListening()
                     // if this fd is still alive and no errors so far
                     if (cons.count(eventFd))
                         // check if the headers are ready, parse them if they are
-                        if (cons[eventFd].request.parseRequest())
+                        if (cons[eventFd].request().parseRequest())
                             readBody(i);   // this will only be run if the headers are parsed
                 }
             }
@@ -275,7 +255,7 @@ void Server::startListening()
 
 Server::~Server()
 {
-    std::cout << "Server destructor called" << std::endl;
+    Log(SUCCESS) << "Server destructor called" << std::endl;
     for (size_t i = 0; i < sockets.size(); i++)
         close(sockets[i].fd);
 }

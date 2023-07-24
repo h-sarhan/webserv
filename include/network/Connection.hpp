@@ -15,11 +15,20 @@
 #include "requests/Request.hpp"
 #include "responses/Response.hpp"
 #include <iostream>
-// #include <ctime>
+#include "logger/Logger.hpp"
 
+using logger::Log;
 class Connection
 {
     private:
+        int _listener; // this is the server socket through which this connection was created - not to be confused with the new client fd
+        Request _request; // this will be an object of its respective class later and not just str
+        Response _response; // this will be an object of its respective class later and not just str
+        bool _keepAlive;
+        time_t _timeOut;
+        time_t _startTime;
+
+        void showResourceInfo(Resource &resource);
         void processGET();
         void processPOST();
         void processPUT();
@@ -27,18 +36,16 @@ class Connection
         void processHEAD();
 
     public:
-        int listener; // this is the server socket through which this connection was created - not to be confused with the new client fd
-        Request request; // this will be an object of its respective class later and not just str
-        Response response; // this will be an object of its respective class later and not just str
-        bool keepAlive;
-        time_t timeOut;
-        time_t startTime;
-        // bool reqComplete;
-
         Connection();
         Connection(int listener);
         Connection(const Connection &c);
         Connection& operator=(const Connection &c);
+        int& listener();
+        Request& request();
+        Response& response();
+        bool& keepAlive();
+        time_t& timeOut();
+        time_t& startTime();
         void processRequest();
         bool keepConnectionAlive();
         bool bodySizeExceeded();
