@@ -49,7 +49,7 @@ template <class T> Logger &operator<<(Logger &log, const T &output)
 
 namespace logger
 {
-  static Logger& log = Logger::getLogger();
+  static Logger& Log = Logger::getLogger();
 }
 
 

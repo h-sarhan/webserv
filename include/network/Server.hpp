@@ -27,7 +27,7 @@
 
 typedef std::vector<ServerBlock> &serverList;
 
-using logger::log;
+using logger::Log;
 class Server
 {
   private:

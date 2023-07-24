@@ -40,7 +40,7 @@ Server::Server(serverList virtualServers)
     {
         if (portAlreadyInUse(it->port))
             continue;
-        log(INFO) << "Setting up listener on port " << it->port << std::endl;
+        Log(INFO) << "Setting up listener on port " << it->port << std::endl;
         initListener(it->port, virtualServers);
     }
 }
@@ -91,7 +91,7 @@ std::vector<ServerBlock *> &Server::getConfig(int listener)
 
 void Server::closeConnection(int clientNo)
 {
-    log(INFO) << "Closing connection " << sockets[clientNo].fd << std::endl;
+    Log(INFO) << "Closing connection " << sockets[clientNo].fd << std::endl;
     close(sockets[clientNo].fd);
     cons.erase(sockets[clientNo].fd);
     sockets.erase(sockets.begin() + clientNo);
@@ -112,7 +112,7 @@ void Server::respondToRequest(size_t clientNo)
             closeConnection(clientNo);
         if (curTime - c.startTime() >= c.timeOut())
         {
-            log(WARN) << "Connection " << sockets[clientNo].fd << " timed out! (idle for " << c.timeOut()
+            Log(WARN) << "Connection " << sockets[clientNo].fd << " timed out! (idle for " << c.timeOut()
                       << "s): " << sockets[clientNo].fd << std::endl;
             closeConnection(clientNo);
         }
@@ -123,7 +123,7 @@ void Server::respondToRequest(size_t clientNo)
     if (sendStatus == SEND_SUCCESS)
         if (c.keepConnectionAlive())
         {
-            log(INFO) << "Connection " << sockets[clientNo].fd << " is keep alive" << std::endl;
+            Log(INFO) << "Connection " << sockets[clientNo].fd << " is keep alive" << std::endl;
             return;
         }
     closeConnection(clientNo);
@@ -150,12 +150,12 @@ void Server::readBody(size_t clientNo)
         if (!req.chunkedEncodingComplete())
             return ;
     }
-    log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd << ". Size = " << req.length() << std::endl;
+    Log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd << ". Size = " << req.length() << std::endl;
     sockets[clientNo].events = POLLIN | POLLOUT;
 
-    // log(SUCCESS) << "---------------------------------------------------------\n";
-    // log(SUCCESS) << std::string(req.buffer(), req.buffer() + req.bodyStart() - 1);
-    // log(SUCCESS) << "---------------------------------------------------------\n";
+    // Log(SUCCESS) << "---------------------------------------------------------\n";
+    // Log(SUCCESS) << std::string(req.buffer(), req.buffer() + req.bodyStart() - 1);
+    // Log(SUCCESS) << "---------------------------------------------------------\n";
 }
 
 void Server::recvData(size_t clientNo)
@@ -169,12 +169,12 @@ void Server::recvData(size_t clientNo)
         bufSize = fromStr<size_t>(req.headers().at("content-length"));
     buf = new char[bufSize];
 
-    log(INFO) << "Receiving request data from connection " << sockets[clientNo].fd << "... " << std::endl;
+    Log(INFO) << "Receiving request data from connection " << sockets[clientNo].fd << "... " << std::endl;
     bytesRec = recv(sockets[clientNo].fd, buf, bufSize, 0);
     if (bytesRec < 0)
-        log(ERR) << "Failed to receive request from connection" << sockets[clientNo].fd << ": " << strerror(errno) << std::endl;
+        Log(ERR) << "Failed to receive request from connection" << sockets[clientNo].fd << ": " << strerror(errno) << std::endl;
     else if (bytesRec == 0)
-        log(ERR) << "Connection " << sockets[clientNo].fd << " closed by client" << std::endl;
+        Log(ERR) << "Connection " << sockets[clientNo].fd << " closed by client" << std::endl;
     if (bytesRec <= 0)
     {
         closeConnection(clientNo);
@@ -198,11 +198,11 @@ void Server::acceptNewConnection(size_t listenerNo)
     newFd = accept(sockets[listenerNo].fd, (sockaddr *) &theirAddr, &addrSize);
     if (newFd == -1)
     {
-        log(ERR) << "Accept failed" << std::endl;
+        Log(ERR) << "Accept failed" << std::endl;
         return;
     }
     fcntl(newFd, F_SETFL, O_NONBLOCK);   // enable this when doing partial recv
-    log(SUCCESS) << "New connection! fd = " << newFd << std::endl;
+    Log(SUCCESS) << "New connection! fd = " << newFd << std::endl;
     if (sockets.size() < MAX_CLIENTS)
     {
         cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd)));
@@ -210,7 +210,7 @@ void Server::acceptNewConnection(size_t listenerNo)
     }
     else
     {
-        log(ERR) << "Maximum clients reached, dropping this connection" << std::endl;
+        Log(ERR) << "Maximum clients reached, dropping this connection" << std::endl;
         // todo: send 503 error page
         close(newFd);
     }
@@ -253,7 +253,7 @@ void Server::startListening()
 
 Server::~Server()
 {
-    log(SUCCESS) << "Server destructor called" << std::endl;
+    Log(SUCCESS) << "Server destructor called" << std::endl;
     for (size_t i = 0; i < sockets.size(); i++)
         close(sockets[i].fd);
 }

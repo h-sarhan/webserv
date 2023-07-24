@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/22 20:44:53 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/24 13:04:28 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,9 +81,9 @@ time_t& Connection::startTime()
 
 void Connection::showResourceInfo(Resource &resource)
 {
-    log(DBUG) << "Method type: " << enumToStr(_request.method()) << std::endl;
-    log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
-    // log(DBUG) << resource.originalRequest << " resource found at: <" << resource.path << ">" << std::endl;
+    Log(DBUG) << "Method type: " << enumToStr(_request.method()) << std::endl;
+    Log(DBUG) << "Resource type: " << enumToStr(resource.type) << std::endl;
+    // Log(DBUG) << resource.originalRequest << " resource found at: <" << resource.path << ">" << std::endl;
 }
 
 void Connection::processGET()

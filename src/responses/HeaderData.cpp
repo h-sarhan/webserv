@@ -46,7 +46,7 @@ std::string getContentType(std::string filename)
     static const std::map<std::string, std::string> mimeTypes = parseKeyValueFile("mime_types.txt", ' ');
     if (mimeTypes.empty())
     {
-        logger::log(ERR) << "Could not open mime_types.txt" << std::endl;
+        logger::Log(ERR) << "Could not open mime_types.txt" << std::endl;
         return "application/octet-stream";
     }
     size_t extensionStart = filename.rfind(".");

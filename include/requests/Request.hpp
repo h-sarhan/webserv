@@ -24,7 +24,7 @@
  * @brief This class is responsible for parsing an HTTP request
  */
 
-using logger::log;
+using logger::Log;
 class Request
 {
   private:

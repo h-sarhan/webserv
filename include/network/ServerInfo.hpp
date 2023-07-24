@@ -17,7 +17,7 @@
 
 #define BACKLOG  10
 
-using logger::log;
+using logger::Log;
 class ServerInfo
 {
   private:
