@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/24 13:04:28 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/24 19:02:06 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -242,6 +242,8 @@ void Connection::processRequest()
         return;
     _keepAlive = _request.keepAlive();
     _timeOut = _request.keepAliveTimer();
+    if (bodySizeExceeded())
+        return ;
     switch (_request.method())
     {
     case GET:
@@ -272,6 +274,20 @@ bool Connection::keepConnectionAlive()
         return false;
     _response.clear();
     time(&_startTime);   // reset timer
+    return true;
+}
+
+bool Connection::bodySizeExceeded()
+{
+    size_t maxBodySize = _request.maxBodySize();
+    if (_request.length() - _request.bodyStart() <= maxBodySize)
+        return false;
+    Log(ERR) << "Request body size exceeded limit! Size = " << _request.length() << ", Limit = " << maxBodySize << std::endl;
+    if (_request.method() == HEAD)
+        _response.createHEADResponse(413, NO_CONTENT, _keepAlive);
+    else
+        _response.createHTMLResponse(413, errorPage(413), _keepAlive);
+    _request.clear();
     return true;
 }
 

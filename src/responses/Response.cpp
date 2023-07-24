@@ -125,6 +125,7 @@ void Response::createRedirectResponse(std::string &redirUrl, int statusCode, boo
 {
     std::stringstream responseBuffer;
 
+    Log(DBUG) << "redirected to " << redirUrl << std::endl;
     responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
     responseBuffer << LOCATION << redirUrl << CRLF;
     if (keepAlive)
@@ -204,12 +205,14 @@ void Response::createFileResponse(std::string filename, Request &request, int st
         Log(ERR) << "Cannot open file to write: " << filename << std::endl;
         return createHTMLResponse(500, errorPage(500), false);
     }
+    Log(DBUG) << "file being posted is " << filename << std::endl;
     file.write(request.buffer() + request.bodyStart(), request.length() - request.bodyStart());
     file.close();
     responseBuffer << STATUS_LINE << getStatus(statusCode) << CRLF;
     if (request.keepAlive())
         responseBuffer << KEEP_ALIVE << CRLF;
-    responseBuffer << LOCATION << filename << CRLF;
+    // ! pass resource or restructure file responses
+    responseBuffer << LOCATION << request.resource().originalRequest << CRLF;
     responseBuffer << CRLF;
     setResponse(responseBuffer);
 }

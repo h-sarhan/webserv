@@ -29,7 +29,8 @@
 
 bool quit = false;
 
-std::map<int, std::vector<ServerBlock *> > Server::configBlocks = std::map<int, std::vector<ServerBlock *> >();
+std::map<int, std::vector<ServerBlock *> > Server::configBlocks =
+    std::map<int, std::vector<ServerBlock *> >();
 
 Server::Server(serverList virtualServers)
 {
@@ -207,6 +208,7 @@ void Server::acceptNewConnection(size_t listenerNo)
     {
         cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd)));
         sockets.push_back(createPollFd(newFd, POLLIN));
+        // sockets.push_back(createPollFd(newFd, POLLIN | POLLOUT));
     }
     else
     {

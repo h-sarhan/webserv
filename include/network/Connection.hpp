@@ -48,6 +48,7 @@ class Connection
         time_t& startTime();
         void processRequest();
         bool keepConnectionAlive();
+        bool bodySizeExceeded();
         ~Connection();
 
 };
