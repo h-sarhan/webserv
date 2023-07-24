@@ -9,8 +9,8 @@
  */
 
 #include "responses/Response.hpp"
-#include "responses/DefaultPages.hpp"
 #include "logger/Logger.hpp"
+#include "responses/DefaultPages.hpp"
 
 Response::Response() : _buffer(NULL), _length(0), _totalBytesSent(0), _statusCode(0)
 {
@@ -99,20 +99,26 @@ int Response::sendResponse(int fd)
             return SEND_PARTIAL;
         }
     }
-    log(SUCCESS) << "Response sent to connection " << fd
-              << ". Size = " << _totalBytesSent << std::endl;
+    log(SUCCESS) << "Response sent to connection " << fd << ". Size = " << _totalBytesSent
+                 << std::endl;
     return SEND_SUCCESS;
 }
 
 template <typename streamType> static size_t getStreamLen(streamType &s)
 {
-    size_t len;
+    ssize_t len;
 
     s.seekg(0, std::ios::end);
     len = s.tellg();
     s.seekg(0, std::ios::beg);
-
+    if (len == -1)   // tellg failed
+        return 0;
     return len;
+}
+
+static bool isEmpty(std::ifstream &file)
+{
+    return file.peek() == std::ifstream::traits_type::eof();
 }
 
 void Response::createRedirectResponse(std::string &redirUrl, int statusCode, bool keepAlive)
@@ -170,14 +176,19 @@ void Response::createGETResponse(std::string filename, bool keepAlive)
     std::ifstream file;
     std::stringstream responseBuffer;
     std::string mimeType;
+    size_t fileSize;
 
     file.open(filename.c_str(), std::ios::binary);
     if (!file.good())
         return createHTMLResponse(404, errorPage(404), false);
     mimeType = getContentType(filename);
-    setResponseHeaders(responseBuffer, createHeaders(200, mimeType, getStreamLen(file), keepAlive));
-
-    responseBuffer << file.rdbuf();
+    if (isEmpty(file))
+        fileSize = 0;
+    else
+        fileSize = getStreamLen(file);
+    setResponseHeaders(responseBuffer, createHeaders(200, mimeType, fileSize, keepAlive));
+    if (fileSize > 0)
+        responseBuffer << file.rdbuf();
     file.close();
 
     setResponse(responseBuffer);
@@ -235,13 +246,17 @@ void Response::createHEADFileResponse(std::string filename, Request &request)
     std::ifstream file;
     std::stringstream responseBuffer;
     std::string mimeType;
+    size_t fileSize;
 
     file.open(filename.c_str(), std::ios::binary);
     if (!file.good())
         return createHTMLResponse(404, errorPage(404), false);
     mimeType = getContentType(filename);
-    setResponseHeaders(responseBuffer,
-                       createHeaders(200, mimeType, getStreamLen(file), request.keepAlive()));
+    if (isEmpty(file))
+        fileSize = 0;
+    else
+        fileSize = getStreamLen(file);
+    setResponseHeaders(responseBuffer, createHeaders(200, mimeType, fileSize, request.keepAlive()));
     file.close();
     setResponse(responseBuffer);
 }

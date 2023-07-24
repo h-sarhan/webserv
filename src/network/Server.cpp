@@ -103,14 +103,16 @@ void Server::respondToRequest(size_t clientNo)
     int sendStatus;
 
     c.processRequest();
-    sendStatus = c.response.sendResponse(sockets[clientNo].fd);
+    sendStatus = c.response().sendResponse(sockets[clientNo].fd);
     if (sendStatus == IDLE_CONNECTION)
     {
         time_t curTime;
         time(&curTime);
-        if (curTime - c.startTime >= c.timeOut)
+        if (!c.keepAlive())
+            closeConnection(clientNo);
+        if (curTime - c.startTime() >= c.timeOut())
         {
-            log(WARN) << "Connection " << sockets[clientNo].fd << " timed out! (idle for " << c.timeOut
+            log(WARN) << "Connection " << sockets[clientNo].fd << " timed out! (idle for " << c.timeOut()
                       << "s): " << sockets[clientNo].fd << std::endl;
             closeConnection(clientNo);
         }
@@ -136,7 +138,7 @@ static void sigInthandler(int sigNo)
 // change this to use fd directly and close stuff in caller func
 void Server::readBody(size_t clientNo)
 {
-    Request &req = cons.at(sockets[clientNo].fd).request;
+    Request &req = cons.at(sockets[clientNo].fd).request();
     
     if (req.usesContentLength())
     {
@@ -158,21 +160,15 @@ void Server::readBody(size_t clientNo)
 
 void Server::recvData(size_t clientNo)
 {
-    Request &req = cons.at(sockets[clientNo].fd).request;
+    Request &req = cons.at(sockets[clientNo].fd).request();
     char *buf;
     ssize_t bytesRec;
     size_t bufSize = READ_SIZE;
 
     if (!req.headers().empty() && req.headers().count("content-length"))
-    {
-        std::istringstream iss(req.headers()["content-length"]);
-        size_t contentLen;
-        iss >> contentLen;
-        bufSize = contentLen;
-    }
+        bufSize = fromStr<size_t>(req.headers().at("content-length"));
     buf = new char[bufSize];
 
-    // receiving request
     log(INFO) << "Receiving request data from connection " << sockets[clientNo].fd << "... " << std::endl;
     bytesRec = recv(sockets[clientNo].fd, buf, bufSize, 0);
     if (bytesRec < 0)
@@ -243,7 +239,7 @@ void Server::startListening()
                     // if this fd is still alive and no errors so far
                     if (cons.count(eventFd))
                         // check if the headers are ready, parse them if they are
-                        if (cons[eventFd].request.parseRequest())
+                        if (cons[eventFd].request().parseRequest())
                             readBody(i);   // this will only be run if the headers are parsed
                 }
             }
