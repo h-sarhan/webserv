@@ -329,13 +329,15 @@ Resource RequestParser::generateResource(const std::vector<ServerBlock *> &confi
 
     const std::map<std::string, Route> &routes = (*matchedServerBlock)->routes;
     const std::map<std::string, Route>::const_iterator &routeIt = getRequestedRoute(routes);
-
     if (routeIt == routes.end())
         return Resource(NO_MATCH, _requestedURL);
 
     const Route &routeOptions = routeIt->second;
+    const std::pair<ServerBlock, Route> &configPair =
+        std::make_pair(**matchedServerBlock, routeOptions);
+
     if (routeOptions.methodsAllowed.count(_httpMethod) == 0)
-        return Resource(FORBIDDEN_METHOD, _requestedURL, "", routeOptions);
+        return Resource(FORBIDDEN_METHOD, _requestedURL, "", configPair);
 
     if (routeOptions.redirectTo.length() > 0)
     {
@@ -344,30 +346,30 @@ Resource RequestParser::generateResource(const std::vector<ServerBlock *> &confi
         resourcePath.insert(resourcePath.begin(), routeOptions.redirectTo.begin(),
                             routeOptions.redirectTo.end());
         resourcePath = sanitizeURL(resourcePath);
-        return Resource(REDIRECTION, _requestedURL, resourcePath, routeOptions);
+        return Resource(REDIRECTION, _requestedURL, resourcePath, configPair);
     }
 
     const std::string &resourcePath =
         sanitizeURL(routeOptions.serveDir + "/" + _requestedURL.substr(routeIt->first.length()));
 
     if (!exists(resourcePath))
-        return Resource(NOT_FOUND, _requestedURL, resourcePath, routeOptions);
+        return Resource(NOT_FOUND, _requestedURL, resourcePath, configPair);
 
     if (isFile(resourcePath))
-        return Resource(EXISTING_FILE, _requestedURL, resourcePath, routeOptions);
+        return Resource(EXISTING_FILE, _requestedURL, resourcePath, configPair);
 
     if (_httpMethod == GET || _httpMethod == HEAD)
     {
         const std::string &indexFile = sanitizeURL(resourcePath + "/" + routeOptions.indexFile);
         if (isDir(resourcePath) && isFile(indexFile))
-            return Resource(EXISTING_FILE, _requestedURL, indexFile, routeOptions);
+            return Resource(EXISTING_FILE, _requestedURL, indexFile, configPair);
 
         if (isDir(resourcePath) && routeOptions.autoIndex == true)
-            return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
+            return Resource(DIRECTORY, _requestedURL, resourcePath, configPair);
 
         if (isDir(resourcePath) && !isFile(indexFile))
-            return Resource(NOT_FOUND, _requestedURL, indexFile, routeOptions);
-        return Resource(NOT_FOUND, _requestedURL, resourcePath, routeOptions);
+            return Resource(NOT_FOUND, _requestedURL, indexFile, configPair);
+        return Resource(NOT_FOUND, _requestedURL, resourcePath, configPair);
     }
-    return Resource(DIRECTORY, _requestedURL, resourcePath, routeOptions);
+    return Resource(DIRECTORY, _requestedURL, resourcePath, configPair);
 }

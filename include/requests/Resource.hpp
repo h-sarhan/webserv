@@ -21,7 +21,8 @@
 struct Resource
 {
     Resource(const ResourceType &type = NO_MATCH, const std::string &request = "",
-             const std::string &path = "", const Route &route = Route());
+             const std::string &path = "",
+             const std::pair<ServerBlock, Route> &config = std::pair<ServerBlock, Route>());
 
     // Type of the resource
     ResourceType type;
@@ -32,9 +33,7 @@ struct Resource
     // Path to resource
     std::string path;
 
-    // The route the resource came from
-    Route route;
-
-    // Static resource generation functions
+    // The route/server block the resource came from
+    std::pair<ServerBlock, Route> config;
 };
 #endif

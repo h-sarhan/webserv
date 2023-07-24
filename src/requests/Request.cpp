@@ -23,8 +23,8 @@
 
 // Implementing resource constructor here
 Resource::Resource(const ResourceType &type, const std::string &request, const std::string &path,
-                   const Route &route)
-    : type(type), originalRequest(request), path(path), route(route)
+                   const std::pair<ServerBlock, Route> &config)
+    : type(type), originalRequest(request), path(path), config(config)
 {
 }
 
@@ -237,7 +237,7 @@ bool Request::contentLenReached()
     // std::istringstream iss(headers().at("content-length"));
     size_t contentLen = fromStr<size_t>(headers().at("content-length"));
     // iss >> contentLen;
-    
+
     if (_length - bodyStart() == contentLen)
         return true;
     log(DBUG) << _length << " / " << contentLen << " bytes received" << std::endl;

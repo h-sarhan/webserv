@@ -22,6 +22,20 @@
     "\t\t\t}"                                                                                      \
     "\t\t</style>"
 
+#define DEFAULT_ERROR(code)                                                                        \
+    COMMON_HEAD "<title>" + toStr(code) +                                                          \
+        "</title>\n"                                                                               \
+        "\t</head>\n"                                                                              \
+        "\t<body>\n"                                                                               \
+        "\t\t<h1>ERROR " +                                                                         \
+        toStr(code) +                                                                              \
+        " </h1>\n"                                                                                 \
+        "\t\t<hr>\n"                                                                               \
+        "<img src=\"https://http.cat/" +                                                           \
+        toStr(code) +                                                                              \
+        ".jpg\" width=\"55%\" style=\"margin: auto; display: block\">"                             \
+        "\n\t</body>\n</html>\n"
+
 #include "requests/Resource.hpp"
 #include <string>
 
@@ -36,9 +50,10 @@ const std::string directoryListing(const Resource &dir);
 /**
  * @brief Generate an error page based on an HTTP status code
  *
- * @param responseCode
+ * @param responseCode Response code as an int
+ * @param resource Resource requested by client
  * @return const std::string The generated HTML page as a string
  */
-const std::string errorPage(unsigned int responseCode);
+const std::string errorPage(unsigned int responseCode, const Resource &resource = Resource());
 
 #endif
