@@ -77,6 +77,7 @@ class Response
         void createHEADFileResponse(Request &request);
         void createHEADResponse(int statusCode, std::string contentType, bool keepAlive);
         void createHTMLResponse(int statusCode, std::string page, bool keepAlive);
+        void createCGIResponse();
         void clear();
         ~Response();
 };

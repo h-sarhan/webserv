@@ -26,6 +26,8 @@
 #include "network/SystemCallException.hpp"
 #include "network/network.hpp"
 #include "responses/Response.hpp"
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 bool quit = false;
 
@@ -34,8 +36,8 @@ std::map<int, std::vector<ServerBlock *> > Server::configBlocks =
 
 Server::Server(serverList virtualServers)
 {
-    // std::cout << "Virtual servers - " << std::endl;
-    // std::cout << virtualServers << std::endl;
+    std::cout << "Virtual servers - " << std::endl;
+    std::cout << virtualServers << std::endl;
     std::vector<ServerBlock>::iterator it;
     for (it = virtualServers.begin(); it != virtualServers.end(); it++)
     {
@@ -196,9 +198,12 @@ void Server::acceptNewConnection(size_t listenerNo)
         return;
     }
     fcntl(newFd, F_SETFL, O_NONBLOCK);   // enable this when doing partial recv
-    Log(SUCCESS) << "New connection! fd = " << newFd << std::endl;
-    cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd)));
+    
+    char ipBuf[INET_ADDRSTRLEN];
+    std::string ip(inet_ntop(AF_INET, &theirAddr, ipBuf, INET_ADDRSTRLEN), INET_ADDRSTRLEN);
+    cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd, ip)));
     sockets.push_back(createPollFd(newFd, POLLIN | POLLOUT));
+    Log(SUCCESS) << "New connection! Socket: " << newFd << ", IP: " << ip << std::endl;
     if (sockets.size() - configBlocks.size() > MAX_CLIENTS)
     {
         cons.at(newFd).dropped() = true;

@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/25 13:50:40 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/25 20:57:17 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,21 +18,22 @@
 #include "requests/Request.hpp"
 #include "responses/DefaultPages.hpp"
 #include "responses/Response.hpp"
+#include "network/Server.hpp"
 
 Connection::Connection()
-    : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0), _dropped(false)
+    : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0), _dropped(false), _ip()
 {
 }
 
-Connection::Connection(int listener)
+Connection::Connection(int listener, std::string ip)
     : _listener(listener), _request(listener), _response(), _keepAlive(false), _timeOut(0),
-      _startTime(0), _dropped(false)
+      _startTime(0), _dropped(false), _ip(ip)
 {
 }
 
 Connection::Connection(const Connection &c)
     : _listener(c._listener), _request(c._request), _response(c._response),
-      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime), _dropped(c._dropped)
+      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime), _dropped(c._dropped), _ip(c._ip)
 {
 }
 
@@ -47,6 +48,7 @@ Connection &Connection::operator=(const Connection &c)
         this->_timeOut = c._timeOut;
         this->_startTime = c._startTime;
         this->_dropped = c._dropped;
+        this->_ip = c._ip;
     }
     return (*this);
 }
@@ -84,6 +86,11 @@ time_t &Connection::startTime()
 bool &Connection::dropped()
 {
     return _dropped;
+}
+
+std::string Connection::ip()
+{
+    return _ip;
 }
 
 void Connection::processGET()
@@ -289,6 +296,52 @@ bool Connection::bodySizeExceeded()
         _response.createHTMLResponse(413, errorPage(413, _request.resource()), _keepAlive);
     _request.clear();
     return true;
+}
+
+static const char *getQueryString(const std::string& originalRequest)
+{
+    size_t queryStart = originalRequest.find("?");
+    if (queryStart == std::string::npos)
+        return NULL;
+    return &originalRequest[queryStart];
+}
+
+static void addToEnv(std::vector<char *>& env, std::string var)
+{
+    env.push_back(strdup(var.c_str()));
+}
+
+std::vector<char *> Connection::setCGIEnvironment()
+{
+    std::vector<char *> env;
+    std::string var;
+
+    env.push_back(strdup("SERVER_SOFTWARE=Webserv/1.1"));
+    env.push_back(strdup("GATEWAY_INTERFACE=CGI/1.1"));
+    env.push_back(strdup("SERVER_PROTOCOL=HTTP/1.1"));
+    addToEnv(env, "SERVER_NAME=" + _request.hostname());    
+    addToEnv(env, "SERVER_PORT=" + toStr(Server::getConfig(_request.listener())[0]->port));
+    addToEnv(env, "REQUEST_METHOD=" + enumToStr(_request.method()));
+    addToEnv(env, "PATH_INFO=" + _request.resource().originalRequest);
+    addToEnv(env, "REMOTE_ADDR=" + _ip);
+                                                                    // ! wrong
+                                                                    // search for PATH_INFO value if its a file on the server and set this as its physical location on the server
+    addToEnv(env, "PATH_TRANSLATED=" + _request.resource().path);   // now this is just the physical path to the CGI, not the path of any file specified by PATH_INFO
+                                                                    // should search in resource().path, find the file and set the physical location of the actual file
+                                                                            // ! wrong
+    addToEnv(env, "SCRIPT_NAME=" + _request.resource().originalRequest);    // now this contains the entire original request (virtual path) and if PATH_INFO is present, it contains that too
+                                                                            // should be trimmed till everything before and including the cgi file name
+    const char *queryString = getQueryString(_request.resource().originalRequest);
+    if (queryString)
+        addToEnv(env, "QUERY_STRING=" + std::string(queryString));
+    if (_request.headers().count("content-type"))
+        addToEnv(env, "CONTENT_TYPE=" + _request.headers().at("content-type"));
+    if (_request.headers().count("content-length"))
+        addToEnv(env, "CONTENT_LENGTH=" + _request.headers().at("content-length"));
+    if (_request.headers().count("cookie"))
+        addToEnv(env, "HTTP_COOKIE=" + _request.headers().at("cookie"));
+    // loop through headers map for remaining headers 
+    return env;
 }
 
 Connection::~Connection()

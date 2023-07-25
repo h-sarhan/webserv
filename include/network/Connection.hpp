@@ -28,6 +28,7 @@ class Connection
         time_t _timeOut;
         time_t _startTime;
         bool _dropped;
+        std::string _ip;
 
         void processGET();
         void processPOST();
@@ -37,7 +38,7 @@ class Connection
 
     public:
         Connection();
-        Connection(int listener);
+        Connection(int listener, std::string ip);
         Connection(const Connection &c);
         Connection& operator=(const Connection &c);
         int& listener();
@@ -47,9 +48,12 @@ class Connection
         time_t& timeOut();
         time_t& startTime();
         bool& dropped();
+        std::string ip();
         void processRequest();
         bool keepConnectionAlive();
         bool bodySizeExceeded();
+        std::vector<char *> setCGIEnvironment();
+
         ~Connection();
 
 };

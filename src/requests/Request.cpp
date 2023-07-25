@@ -33,8 +33,8 @@ Resource::Resource(const ResourceType &type, const std::string &request, const s
  *
  * @param listener
  */
-Request::Request(int port)
-    : _buffer(new char[REQ_BUFFER_SIZE]), _length(0), _capacity(REQ_BUFFER_SIZE), _port(port)
+Request::Request(int listener)
+    : _buffer(new char[REQ_BUFFER_SIZE]), _length(0), _capacity(REQ_BUFFER_SIZE), _listener(listener)
 {
 }
 
@@ -45,7 +45,7 @@ Request::Request(int port)
  */
 Request::Request(const Request &req)
     : _buffer(new char[req._capacity]), _length(req._length), _capacity(req._capacity),
-      _port(req._port)
+      _listener(req._listener)
 {
     std::copy(req._buffer, req._buffer + _length, _buffer);
 }
@@ -62,7 +62,7 @@ Request &Request::operator=(const Request &req)
         return *this;
     _length = req._length;
     _capacity = req._capacity;
-    _port = req._port;
+    _listener = req._listener;
     delete[] _buffer;
     _buffer = new char[_capacity];
     std::copy(req._buffer, req._buffer + _length, _buffer);
@@ -125,7 +125,7 @@ bool Request::parseRequest()
     if (_length == 0)
         return false;
 
-    return _parser.parse(_buffer, _length, Server::getConfig(_port));
+    return _parser.parse(_buffer, _length, Server::getConfig(_listener));
 }
 
 /**
@@ -156,6 +156,16 @@ bool Request::keepAlive() const
 unsigned int Request::keepAliveTimer() const
 {
     return _parser.keepAlive().second;
+}
+
+const std::string Request::hostname() const
+{
+    return _parser.hostname();
+}
+
+int Request::listener() const
+{
+    return _listener;
 }
 
 /**

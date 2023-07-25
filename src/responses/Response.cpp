@@ -11,6 +11,8 @@
 #include "responses/Response.hpp"
 #include "logger/Logger.hpp"
 #include "responses/DefaultPages.hpp"
+#include "utils.hpp"
+#include <sys/poll.h>
 
 Response::Response() : _buffer(NULL), _length(0), _totalBytesSent(0), _statusCode(0)
 {
