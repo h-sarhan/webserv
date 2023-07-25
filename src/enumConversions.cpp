@@ -65,6 +65,8 @@ template <> std::string enumToStr(const ResourceType &enumVal)
         return "INVALID_REQUEST";
     case NO_MATCH:
         return "NO_MATCH";
+    case CGI:
+        return "CGI";
     }
 }
 
@@ -140,8 +142,13 @@ template <> HTTPMethod strToEnum<HTTPMethod>(const std::string &str)
  */
 template <> ResourceType strToEnum<ResourceType>(const std::string &str)
 {
-    static const std::string resourceTypes[] = {"EXISTING_FILE", "REDIRECTION", "FORBIDDEN_METHOD",
-                                                "DIRECTORY",     "NOT_FOUND",   "INVALID_REQUEST",
+    static const std::string resourceTypes[] = {"EXISTING_FILE",
+                                                "REDIRECTION",
+                                                "FORBIDDEN_METHOD",
+                                                "DIRECTORY",
+                                                "NOT_FOUND",
+                                                "INVALID_REQUEST",
+                                                "CGI"
                                                 "NO_MATCH"};
 
     for (size_t i = 0; i < sizeOfArray(resourceTypes); i++)

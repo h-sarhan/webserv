@@ -113,7 +113,7 @@ std::string RequestParser::parseHostname() const
 
     if (validateHostName(hostValue) == false)
     {
-        // ! Log here that an invalid hostname is in the header
+        Log(WARN) << "Invalid hostname" << std::endl;
         return DEFAULT_HOSTNAME;
     }
     return hostValue;
@@ -314,6 +314,46 @@ const std::map<std::string, Route>::const_iterator RequestParser::getRequestedRo
     return routeIt;
 }
 
+/**
+ * @brief Trims the query parameters out of a string
+ *
+ * Example: trimQuery("./dict?web=serv") -> "./dict"
+ *
+ * @param url URL to trim
+ * @return std::string Trimmed URL
+ */
+static std::string trimQuery(const std::string &url)
+{
+    std::string newURL(url);
+    // Trim query parameters
+    const size_t queryPos = newURL.find("?");
+    if (queryPos != std::string::npos)
+        newURL.erase(queryPos);
+    return newURL;
+}
+
+// ! Can be generalized
+/**
+ * @brief Checks if a file is a CGI that we need to execute
+ *
+ * @param resource The requested resource
+ * @param cgiExtensions The file extensions that we treat as CGIs
+ * @return true if the file is a CGI
+ */
+static bool isCGI(const std::string &resource, const std::set<std::string> &cgiExtensions)
+{
+    if (cgiExtensions.empty())
+        return false;
+    const size_t dotPos = resource.find_last_of(".");
+    if (dotPos == std::string::npos)
+        return false;
+    const std::string &extension = resource.substr(dotPos);
+    if (cgiExtensions.count(extension) == 0)
+        return false;
+    return true;
+}
+
+// ! Fat function
 Resource RequestParser::generateResource(const std::vector<ServerBlock *> &config) const
 {
     if (!_valid)
@@ -349,27 +389,31 @@ Resource RequestParser::generateResource(const std::vector<ServerBlock *> &confi
         return Resource(REDIRECTION, _requestedURL, resourcePath, configPair);
     }
 
-    const std::string &resourcePath =
-        sanitizeURL(routeOptions.serveDir + "/" + _requestedURL.substr(routeIt->first.length()));
+    const std::string &resourcePath = trimQuery(
+        sanitizeURL(routeOptions.serveDir + "/" + _requestedURL.substr(routeIt->first.length())));
 
+    const std::string &trimmedRequestURL = trimQuery(_requestedURL);
     if (!exists(resourcePath))
-        return Resource(NOT_FOUND, _requestedURL, resourcePath, configPair);
+        return Resource(NOT_FOUND, trimmedRequestURL, resourcePath, configPair);
+
+    if (isFile(resourcePath) && isCGI(resourcePath, routeOptions.cgiExtensions))
+        return Resource(CGI, _requestedURL, resourcePath, configPair);
 
     if (isFile(resourcePath))
-        return Resource(EXISTING_FILE, _requestedURL, resourcePath, configPair);
+        return Resource(EXISTING_FILE, trimmedRequestURL, resourcePath, configPair);
 
     if (_httpMethod == GET || _httpMethod == HEAD)
     {
         const std::string &indexFile = sanitizeURL(resourcePath + "/" + routeOptions.indexFile);
         if (isDir(resourcePath) && isFile(indexFile))
-            return Resource(EXISTING_FILE, _requestedURL, indexFile, configPair);
+            return Resource(EXISTING_FILE, trimmedRequestURL, indexFile, configPair);
 
         if (isDir(resourcePath) && routeOptions.autoIndex == true)
-            return Resource(DIRECTORY, _requestedURL, resourcePath, configPair);
+            return Resource(DIRECTORY, trimmedRequestURL, resourcePath, configPair);
 
         if (isDir(resourcePath) && !isFile(indexFile))
-            return Resource(NOT_FOUND, _requestedURL, indexFile, configPair);
-        return Resource(NOT_FOUND, _requestedURL, resourcePath, configPair);
+            return Resource(NOT_FOUND, trimmedRequestURL, indexFile, configPair);
+        return Resource(NOT_FOUND, trimmedRequestURL, resourcePath, configPair);
     }
-    return Resource(DIRECTORY, _requestedURL, resourcePath, configPair);
+    return Resource(DIRECTORY, trimmedRequestURL, resourcePath, configPair);
 }
