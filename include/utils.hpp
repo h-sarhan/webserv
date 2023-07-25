@@ -169,4 +169,28 @@ bool isFile(const std::string &path);
  */
 bool isDir(const std::string &path);
 
+/**
+ * @brief Function object to find a container type T (usually string) in a container of T extension
+ * For use with C++ standard library algorithms
+ */
+template <typename T> struct SearchFor
+{
+    SearchFor(const T &toSearch) : _toSearch(toSearch)
+    {
+    }
+    bool operator()(const T &element) const
+    {
+        if (std::distance(element.begin(), element.end()) >
+            std::distance(_toSearch.begin(), _toSearch.end()))
+            return false;
+        return std::search(_toSearch.begin(), _toSearch.end(), element.begin(), element.end()) !=
+               _toSearch.end();
+    }
+
+  private:
+    const T &_toSearch;
+};
+
+typedef SearchFor<std::string> SearchForStr;
+
 #endif

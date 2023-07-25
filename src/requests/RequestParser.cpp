@@ -332,25 +332,17 @@ static std::string trimQuery(const std::string &url)
     return newURL;
 }
 
-// ! Can be generalized
-/**
- * @brief Checks if a file is a CGI that we need to execute
- *
- * @param resource The requested resource
- * @param cgiExtensions The file extensions that we treat as CGIs
- * @return true if the file is a CGI
- */
+// /**
+//  * @brief Checks if a file is a CGI that we need to execute
+//  *
+//  * @param resource The requested resource
+//  * @param cgiExtensions The file extensions that we treat as CGIs
+//  * @return true if the file is a CGI
+//  */
 static bool isCGI(const std::string &resource, const std::set<std::string> &cgiExtensions)
 {
-    if (cgiExtensions.empty())
-        return false;
-    const size_t dotPos = resource.find_last_of(".");
-    if (dotPos == std::string::npos)
-        return false;
-    const std::string &extension = resource.substr(dotPos);
-    if (cgiExtensions.count(extension) == 0)
-        return false;
-    return true;
+    return std::find_if(cgiExtensions.begin(), cgiExtensions.end(), SearchForStr(resource)) !=
+           cgiExtensions.end();
 }
 
 // ! Fat function
@@ -393,11 +385,11 @@ Resource RequestParser::generateResource(const std::vector<ServerBlock *> &confi
         sanitizeURL(routeOptions.serveDir + "/" + _requestedURL.substr(routeIt->first.length())));
 
     const std::string &trimmedRequestURL = trimQuery(_requestedURL);
+    if (isCGI(resourcePath, routeOptions.cgiExtensions))
+        return Resource(CGI, _requestedURL, resourcePath, configPair);
+
     if (!exists(resourcePath))
         return Resource(NOT_FOUND, trimmedRequestURL, resourcePath, configPair);
-
-    if (isFile(resourcePath) && isCGI(resourcePath, routeOptions.cgiExtensions))
-        return Resource(CGI, _requestedURL, resourcePath, configPair);
 
     if (isFile(resourcePath))
         return Resource(EXISTING_FILE, trimmedRequestURL, resourcePath, configPair);
