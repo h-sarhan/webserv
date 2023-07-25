@@ -153,12 +153,6 @@ void Server::readBody(size_t clientNo)
     }
     Log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd << ". Size = " << req.length() << std::endl;
     Log(DBUG) << enumToStr(req.method()) << " " << req.resource().originalRequest << std::endl;
-
-    // sockets[clientNo].events = POLLIN | POLLOUT;
-    cons.at(sockets[clientNo].fd).recvComplete() = true;
-    // Log(SUCCESS) << "---------------------------------------------------------\n";
-    // Log(SUCCESS) << std::string(req.buffer(), req.buffer() + req.bodyStart() - 1);
-    // Log(SUCCESS) << "---------------------------------------------------------\n";
 }
 
 void Server::recvData(size_t clientNo)
@@ -185,9 +179,6 @@ void Server::recvData(size_t clientNo)
         return;
     }
     req.appendToBuffer(buf, bytesRec);
-    // std::cout << "------------------------- partial req -------------------------"  << std::endl;
-    // std::cout << std::string(req.buffer(), req.buffer() + req.length()) << std::endl;
-
     delete[] buf;
 }
 
@@ -245,7 +236,6 @@ void Server::startListening()
                             readBody(i);   // this will only be run if the headers are parsed
                 }
             }
-            // else if ((sockets[i].revents & POLLOUT) && cons.at(eventFd).recvComplete())
             else if ((sockets[i].revents & POLLOUT))
                 respondToRequest(i);
 

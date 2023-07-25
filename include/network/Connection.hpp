@@ -28,7 +28,6 @@ class Connection
         time_t _timeOut;
         time_t _startTime;
         bool _dropped;
-        bool _recvComplete;
 
         void processGET();
         void processPOST();
@@ -48,7 +47,6 @@ class Connection
         time_t& timeOut();
         time_t& startTime();
         bool& dropped();
-        bool& recvComplete();
         void processRequest();
         bool keepConnectionAlive();
         bool bodySizeExceeded();

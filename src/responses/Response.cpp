@@ -176,17 +176,17 @@ void Response::setResponse(std::stringstream &ss)
     ss.read(_buffer, _length);
 }
 
-void Response::createGETResponse(std::string filename, Request &request)
+void Response::createGETResponse(Request &request)
 {
     std::ifstream file;
     std::stringstream responseBuffer;
     std::string mimeType;
     size_t fileSize;
 
-    file.open(filename.c_str(), std::ios::binary);
+    file.open(request.resource().path.c_str(), std::ios::binary);
     if (!file.good())
         return createHTMLResponse(404, errorPage(404, request.resource()), false);
-    mimeType = getContentType(filename);
+    mimeType = getContentType(request.resource().path);
     if (isEmpty(file))
         fileSize = 0;
     else
@@ -199,17 +199,17 @@ void Response::createGETResponse(std::string filename, Request &request)
     setResponse(responseBuffer);
 }
 
-void Response::createFileResponse(std::string filename, Request &request, int statusCode)
+void Response::createFileResponse(Request &request, int statusCode)
 {
     std::stringstream responseBuffer;
     std::ofstream file;
-    file.open(filename.c_str());
+    file.open(request.resource().path.c_str());
     if (!file.good())
     {
-        Log(ERR) << "Cannot open file to write: " << filename << std::endl;
+        Log(ERR) << "Cannot open file to write: " << request.resource().path << std::endl;
         return createHTMLResponse(500, errorPage(500, request.resource()), false);
     }
-    Log(DBUG) << "file being posted is " << filename << std::endl;
+    Log(DBUG) << "file being posted is " << request.resource().path << std::endl;
     file.write(request.buffer() + request.bodyStart(), request.length() - request.bodyStart());
     file.close();
     responseBuffer << STATUS_LINE << getStatus(statusCode);
@@ -217,21 +217,20 @@ void Response::createFileResponse(std::string filename, Request &request, int st
     responseBuffer << CRLF;
     if (request.keepAlive())
         responseBuffer << KEEP_ALIVE << CRLF;
-    // ! pass resource or restructure file responses
     responseBuffer << LOCATION << request.resource().originalRequest << CRLF;
     responseBuffer << CRLF;
     setResponse(responseBuffer);
 }
 
-void Response::createDELETEResponse(std::string filename, Request &request)
+void Response::createDELETEResponse(Request &request)
 {
     std::stringstream responseBuffer;
     int status;
 
-    status = std::remove(filename.c_str());
+    status = std::remove(request.resource().path.c_str());
     if (status != 0)
     {
-        Log(ERR) << "Cannot delete file " << filename << std::endl;
+        Log(ERR) << "Cannot delete file " << request.resource().path << std::endl;
         return createHTMLResponse(500, errorPage(500, request.resource()), false);
     }
     responseBuffer << STATUS_LINE << getStatus(204);
@@ -252,17 +251,17 @@ void Response::createHTMLResponse(int statusCode, std::string page, bool keepAli
     setResponse(responseBuffer);
 }
 
-void Response::createHEADFileResponse(std::string filename, Request &request)
+void Response::createHEADFileResponse(Request &request)
 {
     std::ifstream file;
     std::stringstream responseBuffer;
     std::string mimeType;
     size_t fileSize;
 
-    file.open(filename.c_str(), std::ios::binary);
+    file.open(request.resource().path.c_str(), std::ios::binary);
     if (!file.good())
         return createHTMLResponse(404, errorPage(404, request.resource()), false);
-    mimeType = getContentType(filename);
+    mimeType = getContentType(request.resource().path);
     if (isEmpty(file))
         fileSize = 0;
     else
