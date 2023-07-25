@@ -47,11 +47,6 @@ std::string sanitizeURL(const std::string &url)
     // Remove duplicate slashes
     removeDuplicateChar(sanitizedUrl, '/');
 
-    // Trim query parameters
-    const size_t queryPos = sanitizedUrl.find("?");
-    if (queryPos != std::string::npos)
-        sanitizedUrl.erase(queryPos);
-
     // Replace '+' with ' '
     std::replace(sanitizedUrl.begin(), sanitizedUrl.end(), '+', ' ');
 

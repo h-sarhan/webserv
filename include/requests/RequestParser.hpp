@@ -12,10 +12,12 @@
 #define REQUEST_PARSER_HPP
 
 #include "enums/HTTPMethods.hpp"
+#include "logger/Logger.hpp"
 #include "requests/Resource.hpp"
 #include <map>
 #include <string>
 
+using logger::Log;
 /**
  * @brief This class is responsible for parsing the request buffer
  */

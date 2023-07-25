@@ -13,8 +13,8 @@
 
 #include "config/ServerBlock.hpp"
 #include "enums/HTTPMethods.hpp"
-#include "requests/RequestParser.hpp"
 #include "logger/Logger.hpp"
+#include "requests/RequestParser.hpp"
 #include "requests/Resource.hpp"
 #include <map>
 
@@ -31,7 +31,7 @@ class Request
     char *_buffer;
     size_t _length;
     size_t _capacity;
-    int _port;
+    int _listener;
     RequestParser _parser;
 
   public:
