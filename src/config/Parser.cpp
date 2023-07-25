@@ -33,7 +33,7 @@
 // METHODS := "limit_except" ("GET" | "POST" | "DELETE" | "PUT" | "HEAD")... ;
 // AUTO_INDEX := "autoindex" ("true" | "false") ;
 // INDEX := "index" filename ;
-// CGI := "cgi_extensions" ("php" | "python")... ;
+// CGI := "cgi_extensions" (.something)... ;
 
 /**
  * @brief Construct a new Parser object with the config file it will parse
@@ -476,10 +476,9 @@ void Parser::parseIndex()
     _parsedAttributes.insert(INDEX);
 }
 
-// ! This will need changing once we start working on CGI
 void Parser::parseCGI()
 {
-    // CGI := "cgi_extensions" ("php" | "python")... SEMICOLON
+    // CGI := "cgi_extensions" (.something)... SEMICOLON
     if (_parsedAttributes.count(CGI_EXTENSION) != 0)
         throwParseError(DUPLICATE("cgi_extensions"));
 
@@ -490,8 +489,8 @@ void Parser::parseCGI()
     while (!atEnd() && currentToken() == WORD)
     {
         const std::string cgi = _currToken->contents();
-        if (cgi != "php" && cgi != "python")
-            throwParseError("expected valid cgi");
+        if (cgi.length() < 2 || *cgi.begin() != '.')
+            throwParseError("expected valid cgi extension");
 
         if (cgis.count(cgi) != 0)
             throwParseError("duplicate cgi specified");
