@@ -71,10 +71,10 @@ class Response
         void setResponse(std::stringstream& ss);
         void setResponseHeaders(std::stringstream& ss, Headers header);
         void createRedirectResponse(std::string& redirUrl, int statusCode, bool keepAlive);
-        void createGETResponse(std::string filename, Request &request);
-        void createFileResponse(std::string filename, Request &request, int statusCode);
-        void createDELETEResponse(std::string filename, Request &request);
-        void createHEADFileResponse(std::string filename, Request &request);
+        void createGETResponse(Request &request);
+        void createFileResponse(Request &request, int statusCode);
+        void createDELETEResponse(Request &request);
+        void createHEADFileResponse(Request &request);
         void createHEADResponse(int statusCode, std::string contentType, bool keepAlive);
         void createHTMLResponse(int statusCode, std::string page, bool keepAlive);
         void clear();

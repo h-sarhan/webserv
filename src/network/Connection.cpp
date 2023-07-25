@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/24 20:55:05 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/25 13:50:40 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,19 +20,19 @@
 #include "responses/Response.hpp"
 
 Connection::Connection()
-    : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0)
+    : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0), _dropped(false)
 {
 }
 
 Connection::Connection(int listener)
     : _listener(listener), _request(listener), _response(), _keepAlive(false), _timeOut(0),
-      _startTime(0)
+      _startTime(0), _dropped(false)
 {
 }
 
 Connection::Connection(const Connection &c)
     : _listener(c._listener), _request(c._request), _response(c._response),
-      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime)
+      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime), _dropped(c._dropped)
 {
 }
 
@@ -46,6 +46,7 @@ Connection &Connection::operator=(const Connection &c)
         this->_keepAlive = c._keepAlive;
         this->_timeOut = c._timeOut;
         this->_startTime = c._startTime;
+        this->_dropped = c._dropped;
     }
     return (*this);
 }
@@ -80,6 +81,11 @@ time_t &Connection::startTime()
     return _startTime;
 }
 
+bool &Connection::dropped()
+{
+    return _dropped;
+}
+
 void Connection::processGET()
 {
     Resource resource = _request.resource();
@@ -87,7 +93,7 @@ void Connection::processGET()
     switch (resource.type)
     {
     case EXISTING_FILE:
-        _response.createGETResponse(resource.path, _request);
+        _response.createGETResponse(_request);
         break;
     case REDIRECTION:
         _response.createRedirectResponse(resource.path, 302, _keepAlive);
@@ -129,7 +135,7 @@ void Connection::processPOST()
         _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case NOT_FOUND:
-        _response.createFileResponse(resource.path, _request, 201);
+        _response.createFileResponse(_request, 201);
         break;
     case INVALID_REQUEST:
         _response.createHTMLResponse(400, errorPage(400, resource), _keepAlive);
@@ -147,7 +153,7 @@ void Connection::processPUT()
     switch (resource.type)
     {
     case EXISTING_FILE:
-        _response.createFileResponse(resource.path, _request, 204);
+        _response.createFileResponse(_request, 204);
         break;
     case REDIRECTION:
         _response.createRedirectResponse(resource.path, 307, _keepAlive);
@@ -159,7 +165,7 @@ void Connection::processPUT()
         _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case NOT_FOUND:
-        _response.createFileResponse(resource.path, _request, 201);
+        _response.createFileResponse(_request, 201);
         break;
     case INVALID_REQUEST:
         _response.createHTMLResponse(400, errorPage(400, resource), _keepAlive);
@@ -177,7 +183,7 @@ void Connection::processDELETE()
     switch (resource.type)
     {
     case EXISTING_FILE:
-        _response.createDELETEResponse(resource.path, _request);
+        _response.createDELETEResponse(_request);
         break;
     case REDIRECTION:
         _response.createRedirectResponse(resource.path, 307, _keepAlive);
@@ -207,7 +213,7 @@ void Connection::processHEAD()
     switch (resource.type)
     {
     case EXISTING_FILE:
-        _response.createHEADFileResponse(resource.path, _request);
+        _response.createHEADFileResponse(_request);
         break;
     case REDIRECTION:
         _response.createRedirectResponse(resource.path, 302, _keepAlive);
