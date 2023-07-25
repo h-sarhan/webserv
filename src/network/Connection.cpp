@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/25 20:57:17 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/25 21:01:47 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,8 @@
 #include "network/Server.hpp"
 
 Connection::Connection()
-    : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0), _dropped(false), _ip()
+    : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0),
+      _dropped(false), _ip()
 {
 }
 
@@ -120,6 +121,8 @@ void Connection::processGET()
     case NO_MATCH:
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
+    case CGI:
+        break;
     }
 }
 
@@ -149,6 +152,8 @@ void Connection::processPOST()
         break;
     case NO_MATCH:
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
+        break;
+    case CGI:
         break;
     }
 }
@@ -180,6 +185,8 @@ void Connection::processPUT()
     case NO_MATCH:
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
+    case CGI:
+        break;
     }
 }
 
@@ -209,6 +216,8 @@ void Connection::processDELETE()
         break;
     case NO_MATCH:
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
+        break;
+    case CGI:
         break;
     }
 }
@@ -240,6 +249,8 @@ void Connection::processHEAD()
     case NO_MATCH:
         _response.createHEADResponse(404, NO_CONTENT, _keepAlive);
         break;
+    case CGI:
+        break;
     }
 }
 
@@ -250,7 +261,7 @@ void Connection::processRequest()
     _keepAlive = _request.keepAlive();
     _timeOut = _request.keepAliveTimer();
     if (bodySizeExceeded())
-        return ;
+        return;
     switch (_request.method())
     {
     case GET:
@@ -289,7 +300,8 @@ bool Connection::bodySizeExceeded()
     size_t maxBodySize = _request.maxBodySize();
     if (_request.length() - _request.bodyStart() <= maxBodySize)
         return false;
-    Log(ERR) << "Request body size exceeded limit! Size = " << _request.length() << ", Limit = " << maxBodySize << std::endl;
+    Log(ERR) << "Request body size exceeded limit! Size = " << _request.length()
+             << ", Limit = " << maxBodySize << std::endl;
     if (_request.method() == HEAD)
         _response.createHEADResponse(413, NO_CONTENT, _keepAlive);
     else

@@ -13,8 +13,8 @@
 
 #include "config/ServerBlock.hpp"
 #include "enums/HTTPMethods.hpp"
-#include "requests/RequestParser.hpp"
 #include "logger/Logger.hpp"
+#include "requests/RequestParser.hpp"
 #include "requests/Resource.hpp"
 #include <map>
 

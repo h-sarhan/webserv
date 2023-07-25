@@ -22,6 +22,7 @@ typedef enum
     DIRECTORY,
     NOT_FOUND,
     INVALID_REQUEST,
+    CGI,
     NO_MATCH
 } ResourceType;
 
