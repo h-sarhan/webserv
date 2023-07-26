@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import cgi, html, os
+import sys
 commonHTML = """
 <!DOCTYPE html>
 <html lang="en">
@@ -59,8 +60,8 @@ form = cgi.FieldStorage() # instantiate only once!
 btn = form.getfirst('buttonType', 'empty')
 
 # Printing env variables
-for name, value in os.environ.items():
-    print("{0}: {1}".format(name, value), file=sys.stderr)
+# for name, value in os.environ.items():
+#     print("{0}: {1}".format(name, value), file=sys.stderr)
 
 # Avoid script injection escaping the user input
 btn = html.escape(btn)
@@ -68,7 +69,7 @@ btn = html.escape(btn)
 
 if "XP" in btn:
     print(f"""\
-    Content-Type: text/html\n
+    \r\nContent-Type: text/html\n
     {commonHTML}
     You have made a wise choice
             </div>
@@ -80,12 +81,12 @@ if "XP" in btn:
     {{
         location.assign("https://fakeupdate.net/xp/");
     }}
-    setTimeout(installWindowsXP, 1000);
+    //setTimeout(installWindowsXP, 1000);
     </script>
     """)
 elif "Vista" in btn:
     print(f"""\
-    Content-Type: text/html\n
+    \r\nContent-Type: text/html\n
     {commonHTML}
     You will regret this
             </div>
@@ -97,12 +98,12 @@ elif "Vista" in btn:
     {{
         location.assign("https://fakeupdate.net/vista/");
     }}
-    setTimeout(installWindowsVista, 1000);
+    //setTimeout(installWindowsVista, 1000);
     </script>
     """)
 else:
     print(f"""\
-    Content-Type: text/html\n
+    \r\nContent-Type: text/html\n
     {commonHTML}
     ERROR
             </div>

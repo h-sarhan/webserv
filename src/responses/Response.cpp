@@ -15,7 +15,7 @@
 #include <cstddef>
 #include <cstring>
 #include <sys/poll.h>
-#include <sys/syslimits.h>
+// #include <sys/syslimits.h>
 #include <unistd.h>
 #include "network/SystemCallException.hpp"
 
@@ -349,17 +349,24 @@ void Response::runCGI(Request &request, std::vector<char *> env)
                 return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
             totalBytes += bytesWritten;
         }
-        close(p[0][1]);
+        close(p[0][1]); // parent done writing to pipe
+        Log(DBUG) << "WAITING FOR CHILD" << std::endl;
         waitpid(pid, NULL, 0);
+        close(p[1][1]); // child done writing to pipe
+
         char buf[1024];
         std::string cgiOutput;
+        cgiOutput = STATUS_LINE + getStatus(200);
+        cgiOutput += CRLF;
         ssize_t bytesRead = read(p[1][0], buf, 1023);
         while (bytesRead > 0)
         {
             buf[bytesRead] = '\0';
             cgiOutput += buf;
+            std::cout << "buf = " << buf << std::endl;
             bytesRead = read(p[1][0], buf, 1023);
         }
+        close(p[1][0]);
         if (bytesRead == -1)
             return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
         _length = cgiOutput.length();
@@ -367,7 +374,6 @@ void Response::runCGI(Request &request, std::vector<char *> env)
             delete[] _buffer;
         _buffer = new char[_length];
         strcpy(_buffer, cgiOutput.c_str());
-        std::cout << "cgi output is - " << cgiOutput << std::endl;
     }
 
 }

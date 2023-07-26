@@ -20,6 +20,7 @@
 # include "network/network.hpp"
 #include "HeaderData.hpp"
 #include "requests/Request.hpp"
+#include <sys/wait.h>
 
 # define IDLE_CONNECTION 0
 # define SEND_FAIL 1
@@ -53,7 +54,6 @@ class Response
     private:
         char *_buffer;
         size_t _length;
-        size_t _capacity;
         size_t _totalBytesSent;
         int _statusCode;
 
