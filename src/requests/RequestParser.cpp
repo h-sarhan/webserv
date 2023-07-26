@@ -332,17 +332,31 @@ static std::string trimQuery(const std::string &url)
     return newURL;
 }
 
-// /**
-//  * @brief Checks if a file is a CGI that we need to execute
-//  *
-//  * @param resource The requested resource
-//  * @param cgiExtensions The file extensions that we treat as CGIs
-//  * @return true if the file is a CGI
-//  */
+/**
+ * @brief Checks if a file is a CGI that we need to execute
+ *
+ * @param resource The requested resource
+ * @param cgiExtensions The file extensions that we treat as CGIs
+ * @return true if the file is a CGI
+ */
 static bool isCGI(const std::string &resource, const std::set<std::string> &cgiExtensions)
 {
-    return std::find_if(cgiExtensions.begin(), cgiExtensions.end(), SearchForStr(resource)) !=
-           cgiExtensions.end();
+    for (std::set<std::string>::const_iterator it = cgiExtensions.begin();
+         it != cgiExtensions.end(); it++)
+    {
+        const size_t cgiPos = resource.find(*it);
+        if (cgiPos == std::string::npos)
+            continue;
+        const std::string &cgiExt = resource.substr(cgiPos, cgiPos + it->length());
+        if (cgiExt == *it)
+            return true;
+        if (cgiExt.length() <= it->length())
+            continue;
+        const char nextChar = *(cgiExt.begin() + it->length());
+        if (nextChar == '/')
+            return true;
+    }
+    return false;
 }
 
 // ! Fat function
@@ -381,13 +395,16 @@ Resource RequestParser::generateResource(const std::vector<ServerBlock *> &confi
         return Resource(REDIRECTION, _requestedURL, resourcePath, configPair);
     }
 
+    if (isCGI(_requestedURL, routeOptions.cgiExtensions))
+    {
+        // ! return correct path here
+        return Resource(CGI, _requestedURL, _requestedURL, configPair);
+    }
+
     const std::string &resourcePath = trimQuery(
         sanitizeURL(routeOptions.serveDir + "/" + _requestedURL.substr(routeIt->first.length())));
 
     const std::string &trimmedRequestURL = trimQuery(_requestedURL);
-    if (isCGI(resourcePath, routeOptions.cgiExtensions))
-        return Resource(CGI, _requestedURL, resourcePath, configPair);
-
     if (!exists(resourcePath))
         return Resource(NOT_FOUND, trimmedRequestURL, resourcePath, configPair);
 
