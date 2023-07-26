@@ -10,8 +10,10 @@
  */
 
 #include "config/Validators.hpp"
+#include "utils.hpp"
 #include <algorithm>
 #include <cassert>
+#include <cctype>
 #include <limits>
 #include <map>
 #include <sstream>
@@ -28,6 +30,45 @@
 static bool isValidLabelChar(const char &c)
 {
     return c == '-' || std::isalnum(c);
+}
+
+/**
+ * @brief Checks if the hostname is an IP Adress
+ *
+ * @param labels The hostname labels
+ * @return true if the hostname is an IP Address
+ */
+static bool isIPAddress(const std::vector<std::string> &labels)
+{
+    // Check for non-digits in a label
+    for (std::vector<std::string>::const_iterator it = labels.begin(); it != labels.end(); it++)
+    {
+        const size_t numDigits = std::count_if(it->begin(), it->end(), ::isdigit);
+        if (numDigits != it->length())
+            return false;
+    }
+    return true;
+}
+
+/**
+ * @brief Checks if the IP Adress is valid
+ *
+ * @param labels The IP Address labels
+ * @return true if the IP Address is valid
+ */
+static bool isValidIPAddress(const std::vector<std::string> &labels)
+{
+
+    // Convert labels to numbers
+    std::vector<int> nums(4, -1);
+    std::transform(labels.begin(), labels.end(), nums.begin(), fromStr<int>);
+    for (std::vector<int>::const_iterator it = nums.begin(); it != nums.end(); it++)
+    {
+        // Check if the number is in the valid IP range
+        if (*it == -1 || *it < 0 || *it > 255)
+            return false;
+    }
+    return true;
 }
 
 /**
@@ -80,6 +121,10 @@ bool validateHostName(const std::string &hostname)
 
     // Validate hostname labels
     const size_t numValidLabels = std::count_if(labels.begin(), labels.end(), validateLabel);
+
+    // Check if the hostname is an IP address
+    if (isIPAddress(labels))
+        return labels.size() == 4 && isValidIPAddress(labels);
 
     return numValidLabels == numLabels;
 }

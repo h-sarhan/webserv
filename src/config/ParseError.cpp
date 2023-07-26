@@ -24,7 +24,7 @@
 ParseError::ParseError(const std::string &errorMsg, const Token &token, const std::string &filename)
 
 {
-    _errorMsg = BOLD + filename + ":" + toStr(token.line()) + ":" + toStr(token.column()) +
+    _errorMsg = RESET BOLD + filename + ":" + toStr(token.line()) + ":" + toStr(token.column()) +
                 RED " error: " + RESET BOLD + errorMsg + RESET "\n\n" +
                 getLine(filename, token.line()) + "\n" + std::string(token.column() - 1, ' ') +
                 GREEN + std::string(token.contents().length(), '^') + RESET "\n";
