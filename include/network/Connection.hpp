@@ -52,8 +52,7 @@ class Connection
         void processRequest();
         bool keepConnectionAlive();
         bool bodySizeExceeded();
-        std::vector<char *> setCGIEnvironment();
-
+        std::vector<char *> prepCGIEnvironment();
         ~Connection();
 
 };

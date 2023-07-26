@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/25 21:01:47 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/26 20:05:51 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,7 @@
 #include "responses/DefaultPages.hpp"
 #include "responses/Response.hpp"
 #include "network/Server.hpp"
+#include <cstddef>
 
 Connection::Connection()
     : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0),
@@ -122,6 +123,7 @@ void Connection::processGET()
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     case CGI:
+        _response.runCGI(_request, prepCGIEnvironment());
         break;
     }
 }
@@ -323,7 +325,7 @@ static void addToEnv(std::vector<char *>& env, std::string var)
     env.push_back(strdup(var.c_str()));
 }
 
-std::vector<char *> Connection::setCGIEnvironment()
+std::vector<char *> Connection::prepCGIEnvironment()
 {
     std::vector<char *> env;
     std::string var;
@@ -352,6 +354,7 @@ std::vector<char *> Connection::setCGIEnvironment()
         addToEnv(env, "CONTENT_LENGTH=" + _request.headers().at("content-length"));
     if (_request.headers().count("cookie"))
         addToEnv(env, "HTTP_COOKIE=" + _request.headers().at("cookie"));
+    env.push_back(NULL);
     // loop through headers map for remaining headers 
     return env;
 }

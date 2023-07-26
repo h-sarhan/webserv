@@ -198,7 +198,6 @@ void Server::acceptNewConnection(size_t listenerNo)
         return;
     }
     fcntl(newFd, F_SETFL, O_NONBLOCK);   // enable this when doing partial recv
-    
     char ipBuf[INET_ADDRSTRLEN];
     std::string ip(inet_ntop(AF_INET, &theirAddr, ipBuf, INET_ADDRSTRLEN), INET_ADDRSTRLEN);
     cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd, ip)));

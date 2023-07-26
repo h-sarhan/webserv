@@ -38,9 +38,6 @@
 # define HTML "text/html; charset=UTF-8"
 # define NO_CONTENT ""
 
-#define IMG_HEADERS  "HTTP/1.1 200 OK\r\nContent-Type: image/jpg\r\nContent-Length: "
-#define HTTP_HEADERS "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n"
-
 struct Headers
 {
     int statusCode;
@@ -56,6 +53,7 @@ class Response
     private:
         char *_buffer;
         size_t _length;
+        size_t _capacity;
         size_t _totalBytesSent;
         int _statusCode;
 
@@ -77,7 +75,10 @@ class Response
         void createHEADFileResponse(Request &request);
         void createHEADResponse(int statusCode, std::string contentType, bool keepAlive);
         void createHTMLResponse(int statusCode, std::string page, bool keepAlive);
-        void createCGIResponse();
+        // void createCGIResponse(std::vector<char *> env);
+
+        void runCGI(Request &request, std::vector<char *> env);
+
         void clear();
         ~Response();
 };

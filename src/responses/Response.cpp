@@ -12,7 +12,15 @@
 #include "logger/Logger.hpp"
 #include "responses/DefaultPages.hpp"
 #include "utils.hpp"
+#include <cstddef>
+#include <cstring>
 #include <sys/poll.h>
+#include <sys/syslimits.h>
+#include <unistd.h>
+#include "network/SystemCallException.hpp"
+
+#define WRITE_MAX 65535
+#define WRITE_SIZE(x) (x <= WRITE_MAX ? x : WRITE_MAX)
 
 Response::Response() : _buffer(NULL), _length(0), _totalBytesSent(0), _statusCode(0)
 {
@@ -280,6 +288,100 @@ void Response::createHEADResponse(int statusCode, std::string contentType, bool 
     setResponseHeaders(responseBuffer, createHeaders(statusCode, contentType, 0, keepAlive));
     setResponse(responseBuffer);
 }
+
+static std::vector<char *>createExecArgs(std::string path)
+{
+    std::vector<char *> args;
+
+    size_t fileStart = path.rfind("/");
+    if (fileStart != std::string::npos)
+        args.push_back(&path[fileStart + 1]);
+    else
+        args.push_back(strdup(path.c_str()));
+    args.push_back(NULL);
+    return args;
+}
+
+void Response::runCGI(Request &request, std::vector<char *> env)
+{
+    int status;
+    int p[2][2];
+
+    status = pipe(p[0]);
+    if (status == -1)
+        return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
+    status = pipe(p[1]);
+    if (status == -1)
+        return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
+
+    pid_t pid = fork();
+    if (pid == -1)
+        return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
+    if (pid == 0)
+    {
+        // close(p[0][1]);
+        close(p[1][0]);
+        dup2(p[0][0], STDIN_FILENO);
+        close(p[0][0]);
+        dup2(p[1][1], STDOUT_FILENO);
+        close(p[1][1]);
+        std::vector<char *> args = createExecArgs(request.resource().path);
+        if (execve(request.resource().path.c_str(), &args[0], &env[0]) == -1)
+        {
+            // free everything, 500 error
+            Log(ERR) << "Execve failed" << std::endl;
+            createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
+            exit(EXIT_FAILURE);
+        }
+    }
+    else 
+    {
+        size_t totalBytes = 0;
+        ssize_t bytesWritten;
+        size_t bodySize = request.length() - request.bodyStart();
+        const char *body = request.buffer() + request.bodyStart();
+
+        while (totalBytes < bodySize)
+        {
+            // ? hopefully write will block here if the pipe fills up and wait until there is space in the buffer
+            bytesWritten =  write(p[0][1], body + totalBytes, WRITE_SIZE(bodySize));
+            if (bytesWritten == -1)
+                return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
+            totalBytes += bytesWritten;
+        }
+        close(p[0][1]);
+        waitpid(pid, NULL, 0);
+        char buf[1024];
+        std::string cgiOutput;
+        ssize_t bytesRead = read(p[1][0], buf, 1023);
+        while (bytesRead > 0)
+        {
+            buf[bytesRead] = '\0';
+            cgiOutput += buf;
+            bytesRead = read(p[1][0], buf, 1023);
+        }
+        if (bytesRead == -1)
+            return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
+        _length = cgiOutput.length();
+        if (_buffer != NULL)
+            delete[] _buffer;
+        _buffer = new char[_length];
+        strcpy(_buffer, cgiOutput.c_str());
+        std::cout << "cgi output is - " << cgiOutput << std::endl;
+    }
+
+}
+
+// void Response::createCGIResponse(std::vector<char *> env)
+// {
+//     pid_t pid = fork();
+//     SystemCallException::checkErr("fork", pid); // ! change this to set 500 error in the response
+//     if (pid == 0)
+//     {
+
+//     }
+
+// }
 
 Response::~Response()
 {
