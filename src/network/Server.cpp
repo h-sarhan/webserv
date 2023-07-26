@@ -34,8 +34,8 @@ std::map<int, std::vector<ServerBlock *> > Server::configBlocks =
 
 Server::Server(serverList virtualServers)
 {
-    // std::cout << "Virtual servers - " << std::endl;
-    // std::cout << virtualServers << std::endl;
+    std::cout << "Virtual servers - " << std::endl;
+    std::cout << virtualServers << std::endl;
     std::vector<ServerBlock>::iterator it;
     for (it = virtualServers.begin(); it != virtualServers.end(); it++)
     {
@@ -113,8 +113,8 @@ void Server::respondToRequest(size_t clientNo)
             return;
         else if (curTime - c.startTime() >= c.timeOut())
         {
-            Log(WARN) << "Connection " << sockets[clientNo].fd << " timed out! (idle for " << c.timeOut()
-                      << "s): " << sockets[clientNo].fd << std::endl;
+            Log(WARN) << "Connection " << sockets[clientNo].fd << " timed out! (idle for "
+                      << c.timeOut() << "s): " << sockets[clientNo].fd << std::endl;
             closeConnection(clientNo);
         }
         return;
@@ -140,18 +140,19 @@ static void sigInthandler(int sigNo)
 void Server::readBody(size_t clientNo)
 {
     Request &req = cons.at(sockets[clientNo].fd).request();
-    
+
     if (req.usesContentLength())
     {
         if (!req.contentLenReached())
-            return ;
+            return;
     }
     else if (req.usesChunkedEncoding())
     {
         if (!req.chunkedEncodingComplete())
-            return ;
+            return;
     }
-    Log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd << ". Size = " << req.length() << std::endl;
+    Log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd
+                 << ". Size = " << req.length() << std::endl;
     Log(DBUG) << enumToStr(req.method()) << " " << req.resource().originalRequest << std::endl;
 }
 
@@ -166,10 +167,12 @@ void Server::recvData(size_t clientNo)
         bufSize = fromStr<size_t>(req.headers().at("content-length"));
     buf = new char[bufSize];
 
-    Log(INFO) << "Receiving request data from connection " << sockets[clientNo].fd << "... " << std::endl;
+    Log(INFO) << "Receiving request data from connection " << sockets[clientNo].fd << "... "
+              << std::endl;
     bytesRec = recv(sockets[clientNo].fd, buf, bufSize, 0);
     if (bytesRec < 0)
-        Log(ERR) << "Failed to receive request from connection" << sockets[clientNo].fd << ": " << strerror(errno) << std::endl;
+        Log(ERR) << "Failed to receive request from connection" << sockets[clientNo].fd << ": "
+                 << strerror(errno) << std::endl;
     else if (bytesRec == 0)
         Log(ERR) << "Connection " << sockets[clientNo].fd << " closed by client" << std::endl;
     if (bytesRec <= 0)
@@ -238,7 +241,6 @@ void Server::startListening()
             }
             else if ((sockets[i].revents & POLLOUT))
                 respondToRequest(i);
-
         }
     }
 }
