@@ -141,3 +141,12 @@ bool isDir(const std::string &path)
         return false;
     return info.st_mode & S_IFDIR;
 }
+
+std::string headerToEnv(const std::string &header)
+{
+    std::string cgiEnv("HTTP_" + header);
+
+    std::transform(cgiEnv.begin(), cgiEnv.end(), cgiEnv.begin(), ::toupper);
+    std::replace(cgiEnv.begin(), cgiEnv.end(), '-', '_');
+    return cgiEnv;
+}
