@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/28 12:11:32 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/28 17:05:29 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,19 +23,19 @@
 
 Connection::Connection()
     : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0),
-      _dropped(false), _ip()
+      _dropped(false), _ip(), _reqReady(false)
 {
 }
 
 Connection::Connection(int listener, std::string ip)
     : _listener(listener), _request(listener), _response(), _keepAlive(false), _timeOut(0),
-      _startTime(0), _dropped(false), _ip(ip)
+      _startTime(0), _dropped(false), _ip(ip), _reqReady(false)
 {
 }
 
 Connection::Connection(const Connection &c)
     : _listener(c._listener), _request(c._request), _response(c._response),
-      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime), _dropped(c._dropped), _ip(c._ip)
+      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime), _dropped(c._dropped), _ip(c._ip), _reqReady(c._reqReady)
 {
 }
 
@@ -51,6 +51,7 @@ Connection &Connection::operator=(const Connection &c)
         this->_startTime = c._startTime;
         this->_dropped = c._dropped;
         this->_ip = c._ip;
+        this->_reqReady = c._reqReady;
     }
     return (*this);
 }
@@ -88,6 +89,11 @@ time_t &Connection::startTime()
 bool &Connection::dropped()
 {
     return _dropped;
+}
+
+bool &Connection::reqReady()
+{
+    return _reqReady;
 }
 
 std::string Connection::ip()
@@ -156,6 +162,7 @@ void Connection::processPOST()
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     case CGI:
+        _response.runCGI(_request, prepCGIEnvironment());
         break;
     }
 }
@@ -355,7 +362,7 @@ std::vector<char *> Connection::prepCGIEnvironment()
     if (_request.headers().count("cookie"))
         addToEnv(env, "HTTP_COOKIE=" + _request.headers().at("cookie"));
     env.push_back(NULL);
-    // loop through headers map for remaining headers 
+    // ! loop through headers map for remaining headers 
     return env;
 }
 

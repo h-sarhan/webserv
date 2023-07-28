@@ -124,11 +124,13 @@ void Server::respondToRequest(size_t clientNo)
     if (sendStatus == SEND_PARTIAL)
         return;
     if (sendStatus == SEND_SUCCESS)
+    {
         if (c.keepConnectionAlive())
         {
             Log(INFO) << "Connection " << sockets[clientNo].fd << " is keep alive" << std::endl;
             return;
         }
+    }
     closeConnection(clientNo);
 }
 
@@ -153,7 +155,9 @@ void Server::readBody(size_t clientNo)
         if (!req.chunkedEncodingComplete())
             return ;
     }
+    cons.at(sockets[clientNo].fd).reqReady() = true;
     Log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd << ". Size = " << req.length() << std::endl;
+    // Log(INFO) << "full request: " << std::string(req.buffer(), req.length()) << std::endl;
     Log(DBUG) << enumToStr(req.method()) << " " << req.resource().originalRequest << std::endl;
 }
 
@@ -168,6 +172,7 @@ void Server::recvData(size_t clientNo)
         bufSize = fromStr<size_t>(req.headers().at("content-length"));
     buf = new char[bufSize];
 
+    cons.at(sockets[clientNo].fd).reqReady() = false;
     Log(INFO) << "Receiving request data from connection " << sockets[clientNo].fd << "... " << std::endl;
     bytesRec = recv(sockets[clientNo].fd, buf, bufSize, 0);
     if (bytesRec < 0)
@@ -240,9 +245,8 @@ void Server::startListening()
                             readBody(i);   // this will only be run if the headers are parsed
                 }
             }
-            else if ((sockets[i].revents & POLLOUT))
+            else if ((sockets[i].revents & POLLOUT) && cons.at(eventFd).reqReady())
                 respondToRequest(i);
-
         }
     }
 }

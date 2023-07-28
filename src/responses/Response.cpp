@@ -18,6 +18,7 @@
 // #include <sys/syslimits.h>
 #include <unistd.h>
 #include "network/SystemCallException.hpp"
+#include <libgen.h>
 
 #define WRITE_MAX 65535
 #define READ_MAX 1024
@@ -320,6 +321,8 @@ void Response::runCGI(Request &request, std::vector<char *> env)
         return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
     if (pid == 0)
     {
+        chdir(dirname(strdup(request.resource().path.c_str())));
+        // chdir(request.resource().path.substr(0, request.resource().path.find_last_of("/")).c_str());
         // close(p[0][1]);
         close(p[1][0]);
         dup2(p[0][0], STDIN_FILENO);
@@ -327,7 +330,8 @@ void Response::runCGI(Request &request, std::vector<char *> env)
         dup2(p[1][1], STDOUT_FILENO);
         close(p[1][1]);
         std::vector<char *> args = createExecArgs(request.resource().path);
-        if (execve(request.resource().path.c_str(), &args[0], &env[0]) == -1)
+        if (execve(basename(strdup(request.resource().path.c_str())), &args[0], &env[0]) == -1)
+        // if (execve(request.resource().path.c_str(), &args[0], &env[0]) == -1)
         {
             // free everything, 500 error
             Log(ERR) << "Execve failed" << std::endl;
@@ -345,16 +349,18 @@ void Response::runCGI(Request &request, std::vector<char *> env)
         while (totalBytes < bodySize)
         {
             // ? hopefully write will block here if the pipe fills up and wait until there is space in the buffer
-            bytesWritten =  write(p[0][1], body + totalBytes, WRITE_SIZE(bodySize));
+            bytesWritten =  write(p[0][1], body + totalBytes, WRITE_SIZE(bodySize - totalBytes));
             if (bytesWritten == -1)
                 return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
             totalBytes += bytesWritten;
+            Log(DBUG) << "bytesWritten = " << bytesWritten << ", total = " << totalBytes << std::endl;
         }
         close(p[0][1]); // parent done writing to pipe
         Log(DBUG) << "WAITING FOR CHILD" << std::endl;
         waitpid(pid, NULL, 0);
         close(p[1][1]); // child done writing to pipe
 
+        // reading the cgi output
         char buf[READ_MAX];
         std::string cgiOutput;
         cgiOutput = STATUS_LINE + getStatus(200);
@@ -364,12 +370,12 @@ void Response::runCGI(Request &request, std::vector<char *> env)
         {
             buf[bytesRead] = '\0';
             cgiOutput += buf;
-            std::cout << "buf = " << buf << std::endl;
             bytesRead = read(p[1][0], buf, READ_MAX - 1);
         }
         close(p[1][0]);
         if (bytesRead == -1)
             return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
+        Log(DBUG) << "CGI output = " << cgiOutput << std::endl;
         _length = cgiOutput.length();
         Log(DBUG) << "cgi output length = " << _length << " " << cgiOutput.length() << std::endl ;
         if (_buffer != NULL)

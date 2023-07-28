@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>buttons</title>
+    <title>counter</title>
     <style>
         body {
             background-color: #ece9d8;
@@ -17,8 +17,8 @@
 
         .btns {
             display: flex;
-            justify-content: space-between;
-            padding: 2rem 8rem;
+            justify-content: center;
+            padding: 1rem;
             font-size: 20px;
         }
 
@@ -30,14 +30,14 @@
             min-height: 100vh;
         }
     </style>
-    <link rel="stylesheet" href="https://unpkg.com/98.css">
+    <link rel="stylesheet" href="https://unpkg.com/xp.css">
 </head>
 
 <body>
     <div class="demo">
         <div class="window" style="width: 700px">
             <div class="title-bar">
-                <div class="title-bar-text">Upgrade Windows</div>
+                <div class="title-bar-text">The friend zone 😳</div>
                 <div class="title-bar-controls">
                     <button aria-label="Minimize"></button>
                     <button aria-label="Maximize"></button>
@@ -45,12 +45,9 @@
                 </div>
             </div>
             <div class="window-body">
-                <form action="decision/cgi-bin/buttons.py" method="get">
-                <!-- <form action="cgi-bin/buttons.py" method="get"> -->
+                <form action="cgi-bin/friend_zone.py" method="get">
                     <div class="btns">
-                        <input type="submit" name="buttonType" value="Windows Vista"
-                            style="font-size:14px; padding: 0.5rem; " />
-                        <input type="submit" name="buttonType" value="Windows XP"
+                        <input type="submit" name="buttonType" value="Join us"
                             style="font-size:14px; padding: 0.5rem; " />
                     </div>
                 </form>
@@ -59,13 +56,5 @@
     </div>
 </body>
 
-<!-- <script>
-
-    function good() {
-        const cgiPath = "cgi-bin/buttons.py";
-
-    }
-
-</script> -->
 
 </html>

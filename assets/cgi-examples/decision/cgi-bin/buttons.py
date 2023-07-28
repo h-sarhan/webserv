@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-import cgi, html, os
-import sys
+import cgi, html, os, sys
 commonHTML = """
 <!DOCTYPE html>
 <html lang="en">
@@ -66,48 +65,45 @@ btn = form.getfirst('buttonType', 'empty')
 # Avoid script injection escaping the user input
 btn = html.escape(btn)
 
+wise_response = """
+    You have made a wise choice
+            </div>
+    </div>
+        </div>
+    </body>
+    <script>
+    function installWindowsXP()
+    {{
+    }}
+    setTimeout(installWindowsXP, 1000);
+    </script>
+"""
+
+unwise_response = """
+    You will regret this
+            </div>
+    </div>
+        </div>
+    </body>
+    <script>
+    function installWindowsVista()
+    {{
+    }}
+    setTimeout(installWindowsVista, 1000);
+    </script>
+"""
+
+error_response= """
+    ERROR
+            </div>
+    </div>
+        </div>
+    </body>
+"""
 
 if "XP" in btn:
-    print(f"""\
-Content-Type: text/html\r\n
-{commonHTML}
-You have made a wise choice
-        </div>
-</div>
-    </div>
-</body>
-<script>
-function installWindowsXP()
-{{
-    location.assign("https://fakeupdate.net/xp/");
-}}
-//setTimeout(installWindowsXP, 1000);
-</script>
-""")
+    print(f"Content-Type: text/html\r\nContent-Length: {len(commonHTML) + len(wise_response) + 1}\r\n\r\n{commonHTML}{wise_response}")
 elif "Vista" in btn:
-    print(f"""\
-Content-Type: text/html\r\n
-{commonHTML}
-You will regret this
-        </div>
-</div>
-    </div>
-</body>
-<script>
-function installWindowsVista()
-{{
-    location.assign("https://fakeupdate.net/vista/");
-}}
-//setTimeout(installWindowsVista, 1000);
-</script>
-""")
+    print(f"Content-Type: text/html\r\nContent-Length: {len(commonHTML) + len(unwise_response) + 1}\r\n\r\n{commonHTML}{unwise_response}")
 else:
-    print(f"""\
-Content-Type: text/html\r\n
-{commonHTML}
-ERROR
-        </div>
-</div>
-    </div>
-</body>
-""")
+    print(f"Content-Type: text/html\r\nContent-Length: {len(commonHTML) + len(error_response) + 1}\r\n\r\n{commonHTML}{error_response}")
