@@ -169,4 +169,28 @@ bool isFile(const std::string &path);
  */
 bool isDir(const std::string &path);
 
+/**
+ * @brief Converts an HTTP header key to a string for use with a CGI env variable
+ *
+ * @param header HTTP header to convert
+ * @return std::string Converted header
+ */
+std::string headerToEnv(const std::string &header);
+
+/**
+ * @brief Get the directory component from a pathname
+ *
+ * @param path Full path to a file
+ * @return std::string Directory component of a path
+ */
+std::string dirName(const std::string &path);
+
+/**
+ * @brief Get the file component from a pathname
+ *
+ * @param path Full path to a file
+ * @return std::string File component of a path
+ */
+std::string baseName(const std::string &path);
+
 #endif

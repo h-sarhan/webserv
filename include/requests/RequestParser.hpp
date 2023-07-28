@@ -74,6 +74,9 @@ class RequestParser
     std::string parseHostname() const;
     std::pair<bool, unsigned int> parseKeepAlive() const;
     unsigned int parseBodySize(const std::vector<ServerBlock *> &config) const;
+    Resource formCGIResource(const std::string &routeName,
+                             const std::set<std::string> &cgiExtensions,
+                             const std::pair<ServerBlock, Route> &configPair) const;
 
     // Assert that a condition is true, throw an exception otherwise
     void assertThat(bool condition, const std::string &throwMsg) const;

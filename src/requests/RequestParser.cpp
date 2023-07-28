@@ -332,25 +332,64 @@ static std::string trimQuery(const std::string &url)
     return newURL;
 }
 
-// ! Can be generalized
 /**
  * @brief Checks if a file is a CGI that we need to execute
  *
- * @param resource The requested resource
+ * @param url The requested url
  * @param cgiExtensions The file extensions that we treat as CGIs
  * @return true if the file is a CGI
  */
-static bool isCGI(const std::string &resource, const std::set<std::string> &cgiExtensions)
+static bool isCGI(const std::string &url, const std::set<std::string> &cgiExtensions)
 {
-    if (cgiExtensions.empty())
-        return false;
-    const size_t dotPos = resource.find_last_of(".");
-    if (dotPos == std::string::npos)
-        return false;
-    const std::string &extension = resource.substr(dotPos);
-    if (cgiExtensions.count(extension) == 0)
-        return false;
-    return true;
+    const std::string &sanitizedURL = sanitizeURL(url);
+    for (std::set<std::string>::const_iterator it = cgiExtensions.begin();
+         it != cgiExtensions.end(); it++)
+    {
+        const size_t cgiPos = sanitizedURL.find(*it);
+        if (cgiPos == std::string::npos)
+            continue;
+        const std::string &cgiExt = sanitizedURL.substr(cgiPos, cgiPos + it->length());
+        if (cgiExt == *it)
+            return true;
+        if (cgiExt.length() <= it->length())
+            continue;
+        const char nextChar = *(cgiExt.begin() + it->length());
+        if (nextChar == '/' || nextChar == '?')
+            return true;
+    }
+    return false;
+}
+
+/**
+ * @brief Forms a CGI Resource
+ *
+ * @param routeName
+ * @param cgiExtensions The file extensions that we treat as CGIs
+ * @param configPair The server block and route the request came from
+ * @return true if the file is a CGI
+ */
+Resource RequestParser::formCGIResource(const std ::string &routeName,
+                                        const std::set<std::string> &cgiExtensions,
+                                        const std::pair<ServerBlock, Route> &configPair) const
+{
+    size_t cgiPos;
+    std::set<std::string>::const_iterator extIt;
+    for (extIt = cgiExtensions.begin(); extIt != cgiExtensions.end(); extIt++)
+    {
+        cgiPos = _requestedURL.find(*extIt);
+        if (cgiPos != std::string::npos)
+            break;
+    }
+    if (extIt == cgiExtensions.end())
+        return Resource(NOT_FOUND, _requestedURL, _requestedURL, configPair);
+
+    std::string cgiPath = _requestedURL.substr(0, cgiPos + extIt->length());
+    cgiPath = sanitizeURL(configPair.second.serveDir + "/" + cgiPath.substr(routeName.length()));
+
+    if (!isFile(cgiPath))
+        return Resource(NOT_FOUND, _requestedURL, cgiPath, configPair);
+
+    return Resource(CGI, _requestedURL, cgiPath, configPair);
 }
 
 // ! Fat function
@@ -389,15 +428,19 @@ Resource RequestParser::generateResource(const std::vector<ServerBlock *> &confi
         return Resource(REDIRECTION, _requestedURL, resourcePath, configPair);
     }
 
+    if (isCGI(_requestedURL, routeOptions.cgiExtensions))
+        return formCGIResource(routeIt->first, routeOptions.cgiExtensions, configPair);
+
     const std::string &resourcePath = trimQuery(
         sanitizeURL(routeOptions.serveDir + "/" + _requestedURL.substr(routeIt->first.length())));
 
     const std::string &trimmedRequestURL = trimQuery(_requestedURL);
     if (!exists(resourcePath))
-        return Resource(NOT_FOUND, trimmedRequestURL, resourcePath, configPair);
-
-    if (isFile(resourcePath) && isCGI(resourcePath, routeOptions.cgiExtensions))
-        return Resource(CGI, _requestedURL, resourcePath, configPair);
+    {
+        if (isDir(dirName(resourcePath)))
+            return Resource(NOT_FOUND, trimmedRequestURL, resourcePath, configPair);
+        return Resource(NO_MATCH, trimmedRequestURL, resourcePath, configPair);
+    }
 
     if (isFile(resourcePath))
         return Resource(EXISTING_FILE, trimmedRequestURL, resourcePath, configPair);
@@ -413,7 +456,11 @@ Resource RequestParser::generateResource(const std::vector<ServerBlock *> &confi
 
         if (isDir(resourcePath) && !isFile(indexFile))
             return Resource(NOT_FOUND, trimmedRequestURL, indexFile, configPair);
-        return Resource(NOT_FOUND, trimmedRequestURL, resourcePath, configPair);
+
+        if (isDir(dirName(resourcePath)))
+            return Resource(NOT_FOUND, trimmedRequestURL, resourcePath, configPair);
+
+        return Resource(NO_MATCH, trimmedRequestURL, resourcePath, configPair);
     }
     return Resource(DIRECTORY, trimmedRequestURL, resourcePath, configPair);
 }

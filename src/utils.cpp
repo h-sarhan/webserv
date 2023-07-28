@@ -141,3 +141,36 @@ bool isDir(const std::string &path)
         return false;
     return info.st_mode & S_IFDIR;
 }
+
+std::string headerToEnv(const std::string &header)
+{
+    std::string cgiEnv("HTTP_" + header);
+
+    std::transform(cgiEnv.begin(), cgiEnv.end(), cgiEnv.begin(), ::toupper);
+    std::replace(cgiEnv.begin(), cgiEnv.end(), '-', '_');
+    return cgiEnv;
+}
+
+std::string dirName(const std::string &path)
+{
+    if (path.empty())
+        return ".";
+    if (path == "/")
+        return "/";
+    const size_t lastSlash = path.find_last_of("/");
+    if (lastSlash == std::string::npos)
+        return ".";
+    return path.substr(0, lastSlash);
+}
+
+std::string baseName(const std::string &path)
+{
+    if (path.empty())
+        return ".";
+    if (path == "/")
+        return "/";
+    const size_t lastSlash = path.find_last_of("/");
+    if (lastSlash == std::string::npos)
+        return path;
+    return path.substr(lastSlash + 1);
+}

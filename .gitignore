@@ -56,3 +56,5 @@ assets/web
 assets/cgi-examples/upload/cgi-binfiles
 cgi_tester
 posts/
+assets/cgi-examples/upload/cgi-bin/files
+assets/cgi-examples/upload/files

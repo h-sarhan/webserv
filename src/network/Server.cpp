@@ -27,6 +27,7 @@
 #include "network/network.hpp"
 #include "responses/Response.hpp"
 #include <netinet/in.h>
+#include <strings.h>
 #include <sys/socket.h>
 
 bool quit = false;
@@ -115,8 +116,8 @@ void Server::respondToRequest(size_t clientNo)
             return;
         else if (curTime - c.startTime() >= c.timeOut())
         {
-            Log(WARN) << "Connection " << sockets[clientNo].fd << " timed out! (idle for " << c.timeOut()
-                      << "s): " << sockets[clientNo].fd << std::endl;
+            Log(WARN) << "Connection " << sockets[clientNo].fd << " timed out! (idle for "
+                      << c.timeOut() << "s): " << sockets[clientNo].fd << std::endl;
             closeConnection(clientNo);
         }
         return;
@@ -144,19 +145,20 @@ static void sigInthandler(int sigNo)
 void Server::readBody(size_t clientNo)
 {
     Request &req = cons.at(sockets[clientNo].fd).request();
-    
+
     if (req.usesContentLength())
     {
         if (!req.contentLenReached())
-            return ;
+            return;
     }
     else if (req.usesChunkedEncoding())
     {
         if (!req.chunkedEncodingComplete())
-            return ;
+            return;
     }
     cons.at(sockets[clientNo].fd).reqReady() = true;
-    Log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd << ". Size = " << req.length() << std::endl;
+    Log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd
+                 << ". Size = " << req.length() << std::endl;
     // Log(INFO) << "full request: " << std::string(req.buffer(), req.length()) << std::endl;
     Log(DBUG) << enumToStr(req.method()) << " " << req.resource().originalRequest << std::endl;
 }
@@ -173,10 +175,12 @@ void Server::recvData(size_t clientNo)
     buf = new char[bufSize];
 
     cons.at(sockets[clientNo].fd).reqReady() = false;
-    Log(INFO) << "Receiving request data from connection " << sockets[clientNo].fd << "... " << std::endl;
+    Log(INFO) << "Receiving request data from connection " << sockets[clientNo].fd << "... "
+              << std::endl;
     bytesRec = recv(sockets[clientNo].fd, buf, bufSize, 0);
     if (bytesRec < 0)
-        Log(ERR) << "Failed to receive request from connection" << sockets[clientNo].fd << ": " << strerror(errno) << std::endl;
+        Log(ERR) << "Failed to receive request from connection" << sockets[clientNo].fd << ": "
+                 << strerror(errno) << std::endl;
     else if (bytesRec == 0)
         Log(ERR) << "Connection " << sockets[clientNo].fd << " closed by client" << std::endl;
     if (bytesRec <= 0)
@@ -204,6 +208,7 @@ void Server::acceptNewConnection(size_t listenerNo)
     }
     fcntl(newFd, F_SETFL, O_NONBLOCK);   // enable this when doing partial recv
     char ipBuf[INET_ADDRSTRLEN];
+    bzero(ipBuf, INET_ADDRSTRLEN);
     std::string ip(inet_ntop(AF_INET, &theirAddr, ipBuf, INET_ADDRSTRLEN), INET_ADDRSTRLEN);
     cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd, ip)));
     sockets.push_back(createPollFd(newFd, POLLIN | POLLOUT));
