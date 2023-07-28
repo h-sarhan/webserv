@@ -177,4 +177,20 @@ bool isDir(const std::string &path);
  */
 std::string headerToEnv(const std::string &header);
 
+/**
+ * @brief Get the directory component from a pathname
+ *
+ * @param path Full path to a file
+ * @return std::string Directory component of a path
+ */
+std::string dirName(const std::string &path);
+
+/**
+ * @brief Get the file component from a pathname
+ *
+ * @param path Full path to a file
+ * @return std::string File component of a path
+ */
+std::string baseName(const std::string &path);
+
 #endif

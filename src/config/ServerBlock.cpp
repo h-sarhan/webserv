@@ -11,6 +11,7 @@
 #include "config/ServerBlock.hpp"
 #include "enums/conversions.hpp"
 #include "utils.hpp"
+#include <algorithm>
 #include <limits>
 #include <sstream>
 
