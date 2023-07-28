@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import cgi, html, os
+import cgi, html, os, sys
 commonHTML = """
 <!DOCTYPE html>
 <html lang="en">
@@ -65,11 +65,7 @@ for name, value in os.environ.items():
 # Avoid script injection escaping the user input
 btn = html.escape(btn)
 
-
-if "XP" in btn:
-    print(f"""\
-    Content-Type: text/html\n
-    {commonHTML}
+wise_response = """
     You have made a wise choice
             </div>
     </div>
@@ -78,15 +74,12 @@ if "XP" in btn:
     <script>
     function installWindowsXP()
     {{
-        location.assign("https://fakeupdate.net/xp/");
     }}
     setTimeout(installWindowsXP, 1000);
     </script>
-    """)
-elif "Vista" in btn:
-    print(f"""\
-    Content-Type: text/html\n
-    {commonHTML}
+"""
+
+unwise_response = """
     You will regret this
             </div>
     </div>
@@ -95,18 +88,22 @@ elif "Vista" in btn:
     <script>
     function installWindowsVista()
     {{
-        location.assign("https://fakeupdate.net/vista/");
     }}
     setTimeout(installWindowsVista, 1000);
     </script>
-    """)
-else:
-    print(f"""\
-    Content-Type: text/html\n
-    {commonHTML}
+"""
+
+error_response= """
     ERROR
             </div>
     </div>
         </div>
     </body>
-    """)
+"""
+
+if "XP" in btn:
+    print(f"Content-Type: text/html\r\nContent-Length: {len(commonHTML) + len(wise_response) + 1}\r\n\r\n{commonHTML}{wise_response}")
+elif "Vista" in btn:
+    print(f"Content-Type: text/html\r\nContent-Length: {len(commonHTML) + len(unwise_response) + 1}\r\n\r\n{commonHTML}{unwise_response}")
+else:
+    print(f"Content-Type: text/html\r\nContent-Length: {len(commonHTML) + len(error_response) + 1}\r\n\r\n{commonHTML}{error_response}")

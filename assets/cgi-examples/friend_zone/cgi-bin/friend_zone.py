@@ -28,10 +28,4 @@ cookies["friends"] = str(friends)
 cookies["friends"]["max-age"] = 20  # Expire after 20 seconds
 
 
-print(
-    f"""\
-Content-Type: text/html
-{cookies}
-{friend_html}
-"""
-)
+print(f"Content-Type: text/html\r\nContent-Length: {len(friend_html) + 4}\r\n{cookies}\r\n\r\n{friend_html}")
