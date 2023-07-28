@@ -436,7 +436,11 @@ Resource RequestParser::generateResource(const std::vector<ServerBlock *> &confi
 
     const std::string &trimmedRequestURL = trimQuery(_requestedURL);
     if (!exists(resourcePath))
-        return Resource(NOT_FOUND, trimmedRequestURL, resourcePath, configPair);
+    {
+        if (isDir(dirName(resourcePath)))
+            return Resource(NOT_FOUND, trimmedRequestURL, resourcePath, configPair);
+        return Resource(NO_MATCH, trimmedRequestURL, resourcePath, configPair);
+    }
 
     if (isFile(resourcePath))
         return Resource(EXISTING_FILE, trimmedRequestURL, resourcePath, configPair);
@@ -452,7 +456,11 @@ Resource RequestParser::generateResource(const std::vector<ServerBlock *> &confi
 
         if (isDir(resourcePath) && !isFile(indexFile))
             return Resource(NOT_FOUND, trimmedRequestURL, indexFile, configPair);
-        return Resource(NOT_FOUND, trimmedRequestURL, resourcePath, configPair);
+
+        if (isDir(dirName(resourcePath)))
+            return Resource(NOT_FOUND, trimmedRequestURL, resourcePath, configPair);
+
+        return Resource(NO_MATCH, trimmedRequestURL, resourcePath, configPair);
     }
     return Resource(DIRECTORY, trimmedRequestURL, resourcePath, configPair);
 }
