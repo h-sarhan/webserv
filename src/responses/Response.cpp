@@ -20,6 +20,7 @@
 #include "network/SystemCallException.hpp"
 
 #define WRITE_MAX 65535
+#define READ_MAX 1024
 #define WRITE_SIZE(x) (x <= WRITE_MAX ? x : WRITE_MAX)
 
 Response::Response() : _buffer(NULL), _length(0), _totalBytesSent(0), _statusCode(0)
@@ -354,26 +355,27 @@ void Response::runCGI(Request &request, std::vector<char *> env)
         waitpid(pid, NULL, 0);
         close(p[1][1]); // child done writing to pipe
 
-        char buf[1024];
+        char buf[READ_MAX];
         std::string cgiOutput;
         cgiOutput = STATUS_LINE + getStatus(200);
         cgiOutput += CRLF;
-        ssize_t bytesRead = read(p[1][0], buf, 1023);
+        ssize_t bytesRead = read(p[1][0], buf, READ_MAX - 1);
         while (bytesRead > 0)
         {
             buf[bytesRead] = '\0';
             cgiOutput += buf;
             std::cout << "buf = " << buf << std::endl;
-            bytesRead = read(p[1][0], buf, 1023);
+            bytesRead = read(p[1][0], buf, READ_MAX - 1);
         }
         close(p[1][0]);
         if (bytesRead == -1)
             return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
         _length = cgiOutput.length();
+        Log(DBUG) << "cgi output length = " << _length << " " << cgiOutput.length() << std::endl ;
         if (_buffer != NULL)
             delete[] _buffer;
         _buffer = new char[_length];
-        strcpy(_buffer, cgiOutput.c_str());
+        std::copy(&cgiOutput[0], &cgiOutput[_length], _buffer);
     }
 
 }

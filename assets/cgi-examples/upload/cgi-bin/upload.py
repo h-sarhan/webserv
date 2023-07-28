@@ -18,8 +18,7 @@ if fileitem.filename:
 else:
     message = 'No file was uploaded'
 
-print("""
-Content-Type: text/html\n
+print("""Content-Type: text/html\r\n\r\n
 <!DOCTYPE html>
 <html>
 <body>

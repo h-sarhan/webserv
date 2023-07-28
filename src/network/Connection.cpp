@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/26 20:05:51 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/07/28 12:11:32 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -317,7 +317,7 @@ static const char *getQueryString(const std::string& originalRequest)
     size_t queryStart = originalRequest.find("?");
     if (queryStart == std::string::npos)
         return NULL;
-    return &originalRequest[queryStart];
+    return &originalRequest[queryStart + 1];
 }
 
 static void addToEnv(std::vector<char *>& env, std::string var)

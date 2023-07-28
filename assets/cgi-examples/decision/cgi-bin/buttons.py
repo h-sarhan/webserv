@@ -69,45 +69,45 @@ btn = html.escape(btn)
 
 if "XP" in btn:
     print(f"""\
-    \r\nContent-Type: text/html\n
-    {commonHTML}
-    You have made a wise choice
-            </div>
-    </div>
+Content-Type: text/html\r\n
+{commonHTML}
+You have made a wise choice
         </div>
-    </body>
-    <script>
-    function installWindowsXP()
-    {{
-        location.assign("https://fakeupdate.net/xp/");
-    }}
-    //setTimeout(installWindowsXP, 1000);
-    </script>
-    """)
+</div>
+    </div>
+</body>
+<script>
+function installWindowsXP()
+{{
+    location.assign("https://fakeupdate.net/xp/");
+}}
+//setTimeout(installWindowsXP, 1000);
+</script>
+""")
 elif "Vista" in btn:
     print(f"""\
-    \r\nContent-Type: text/html\n
-    {commonHTML}
-    You will regret this
-            </div>
-    </div>
+Content-Type: text/html\r\n
+{commonHTML}
+You will regret this
         </div>
-    </body>
-    <script>
-    function installWindowsVista()
-    {{
-        location.assign("https://fakeupdate.net/vista/");
-    }}
-    //setTimeout(installWindowsVista, 1000);
-    </script>
-    """)
+</div>
+    </div>
+</body>
+<script>
+function installWindowsVista()
+{{
+    location.assign("https://fakeupdate.net/vista/");
+}}
+//setTimeout(installWindowsVista, 1000);
+</script>
+""")
 else:
     print(f"""\
-    \r\nContent-Type: text/html\n
-    {commonHTML}
-    ERROR
-            </div>
-    </div>
+Content-Type: text/html\r\n
+{commonHTML}
+ERROR
         </div>
-    </body>
-    """)
+</div>
+    </div>
+</body>
+""")
