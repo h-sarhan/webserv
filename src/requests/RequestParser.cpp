@@ -305,6 +305,12 @@ const std::map<std::string, Route>::const_iterator RequestParser::getRequestedRo
         if (_requestedURL.length() >= it->first.length() &&
             std::equal(it->first.begin(), it->first.end(), _requestedURL.begin()))
         {
+            if (_requestedURL.length() > it->first.length())
+            {
+                const char nextChar = _requestedURL[it->first.length()];
+                if (nextChar != '/' && nextChar != '?')
+                    continue;
+            }
             if (routeIt == routes.end())
                 routeIt = it;
             else if (it->first.length() > routeIt->first.length())
