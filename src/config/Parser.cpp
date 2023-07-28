@@ -45,7 +45,8 @@ Parser::Parser(const std::string &configFile) : _filename(configFile)
     const Tokenizer tokenizer(configFile);
 
     const std::vector<Token> &tokens = tokenizer.tokens();
-    assertThat(!tokens.empty(), EMPTY_CONFIG);
+    if (tokens.empty())
+        throw ParseError(EMPTY_CONFIG, _filename);
 
     _currToken = tokens.begin();
     _lastToken = tokens.end();
