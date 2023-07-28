@@ -55,3 +55,5 @@ assets/inception
 assets/web
 cgi_tester
 posts/
+assets/upload/cgi-bin/files
+assets/upload/files
