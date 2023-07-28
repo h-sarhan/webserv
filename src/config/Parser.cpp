@@ -23,7 +23,7 @@
 // SERVER := "server" { [SRV_OPTION]... LISTEN  [SRV_OPTION]...}
 // LISTEN := "listen" valid_port ;
 // SRV_OPTION := SERVER_NAME | ERROR_PAGE
-// SERVER_NAME := "server_name" valid_hostname ;
+// SERVER_NAME := "server_name"... valid_hostname ;
 // ERROR_PAGE := "error_page" valid_error_response valid_HTML_path ;
 // LOCATION := "location" valid_URL { [LOC_OPTION]... (TRY_FILES | RETURN) [LOC_OPTION]...}
 // TRY_FILES := "try_files" valid_dir ;
@@ -115,9 +115,6 @@ void Parser::parseServerBlock()
     _serverConfig.push_back(ServerBlock());
     _currServerBlock = _serverConfig.end() - 1;
 
-    // Set default value for localhost
-    _currServerBlock->hostname = "localhost";
-
     matchToken(SERVER, EXPECTED_SERVER);
 
     advanceToken();
@@ -133,6 +130,10 @@ void Parser::parseServerBlock()
     }
 
     matchToken(RIGHT_BRACE, EXPECTED_BLOCK_END("server"));
+
+    // Set default value for localhost
+    if (_currServerBlock->hostnames.empty())
+        _currServerBlock->hostnames.push_back("localhost");
 
     assertThat(_parsedAttributes.count(LISTEN) != 0, SERVER_MISSING("listen"));
     assertThat(_parsedAttributes.count(LOCATION) != 0, SERVER_MISSING("location"));
@@ -189,18 +190,24 @@ void Parser::parseListenRule()
  */
 void Parser::parseServerName()
 {
-    // SERVER_NAME := "server_name" valid_hostname SEMICOLON
+    // SERVER_NAME := ("server_name")... valid_hostname SEMICOLON
 
     assertThat(_parsedAttributes.count(SERVER_NAME) == 0, DUPLICATE("server_name"));
     advanceToken();
 
+    // Match the first mandatory hostname
     matchToken(WORD, INVALID("hostname"));
-
     assertThat(validateHostName(_currToken->contents()), INVALID("hostname"));
-
-    _currServerBlock->hostname = _currToken->contents();
-
+    _currServerBlock->hostnames.push_back(_currToken->contents());
     advanceToken();
+
+    // Add extra hostnames if they are there
+    while (!atEnd() && currentToken() == WORD)
+    {
+        assertThat(validateHostName(_currToken->contents()), INVALID("hostname"));
+        _currServerBlock->hostnames.push_back(_currToken->contents());
+        advanceToken();
+    }
 
     matchToken(SEMICOLON, EXPECTED_SEMICOLON);
     _parsedAttributes.insert(SERVER_NAME);

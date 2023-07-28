@@ -37,7 +37,7 @@ struct Route
 struct ServerBlock
 {
     unsigned int port;                                // Required
-    std::string hostname;                             // Optional
+    std::vector<std::string> hostnames;               // Optional
     std::map<unsigned int, std::string> errorPages;   // Optional
     std::map<std::string, Route> routes;              // At least one route
     static std::vector<ServerBlock> createDefaultConfig();

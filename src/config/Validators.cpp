@@ -58,6 +58,8 @@ static bool isIPAddress(const std::vector<std::string> &labels)
  */
 static bool isValidIPAddress(const std::vector<std::string> &labels)
 {
+    if (labels.size() != 4)
+        return false;
 
     // Convert labels to numbers
     std::vector<int> nums(4, -1);
@@ -124,7 +126,7 @@ bool validateHostName(const std::string &hostname)
 
     // Check if the hostname is an IP address
     if (isIPAddress(labels))
-        return labels.size() == 4 && isValidIPAddress(labels);
+        return numValidLabels == 4 && isValidIPAddress(labels);
 
     return numValidLabels == numLabels;
 }

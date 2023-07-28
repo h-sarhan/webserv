@@ -51,7 +51,7 @@ std::vector<ServerBlock> ServerBlock::createDefaultConfig()
 
     // Listen on localhost:3000
     defaultServerBlock.port = 3000;
-    defaultServerBlock.hostname = "localhost";
+    defaultServerBlock.hostnames.push_back("localhost");
 
     // There is only one route on "/"
     defaultServerBlock.routes.insert(std::make_pair("/", createDefaultRoute()));
@@ -96,8 +96,13 @@ std::ostream &operator<<(std::ostream &os, const ServerBlock &block)
     std::string str;
     str += "Server config: \n\tListening on: " + toStr(block.port) + "\n";
 
-    if (block.hostname.length() > 0)
-        str += "\tHostname: " + block.hostname + "\n";
+    str += "\tHostname: ";
+    for (std::vector<std::string>::const_iterator it = block.hostnames.begin();
+         it != block.hostnames.end(); it++)
+    {
+        str += *it + " ";
+    }
+    str += "\n";
 
     for (std::map<unsigned int, std::string>::const_iterator it = block.errorPages.begin();
          it != block.errorPages.end(); it++)
@@ -123,10 +128,12 @@ HostNameMatcher::HostNameMatcher(const std::string &hostname) : _hostname(hostna
 
 bool HostNameMatcher::operator()(const ServerBlock *serverBlock) const
 {
-    return serverBlock && _hostname == serverBlock->hostname;
+    return serverBlock && std::find(serverBlock->hostnames.begin(), serverBlock->hostnames.end(),
+                                    _hostname) != serverBlock->hostnames.end();
 }
 
 bool HostNameMatcher::operator()(const ServerBlock &serverBlock) const
 {
-    return _hostname == serverBlock.hostname;
+    return std::find(serverBlock.hostnames.begin(), serverBlock.hostnames.end(), _hostname) !=
+           serverBlock.hostnames.end();
 }
