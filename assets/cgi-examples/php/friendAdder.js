@@ -27,11 +27,6 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
-// const numFriends = document.cookie
-//     .split("; ")
-//     .find((row) => row.startsWith("friends="))
-//     ?.split("=")[1];
-
 console.log("NUM FRINDS IS =", numFriends);
 const friendCounter = document.querySelector('.friend-count');
 friendCounter.innerHTML = `Friend count ${numFriends}`;

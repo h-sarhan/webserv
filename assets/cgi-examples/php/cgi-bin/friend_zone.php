@@ -63,11 +63,13 @@
             </div>
         </div>
     </div>
-    <?php 
-        if ($_GET["add"] === "Add friend")
-        $_SESSION["friends"] += 1;
-        ?>
+    <?php
+        if (!isset($_SESSION["friends"]))
+            $_SESSION["friends"] = 0;
 
+        if ($_GET["add"] === "Add friend")
+            $_SESSION["friends"] += 1;
+        ?>
     <script>
         let numFriends = <?php echo $_SESSION["friends"];?>;
     </script>
