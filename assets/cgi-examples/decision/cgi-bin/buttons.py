@@ -59,8 +59,8 @@ form = cgi.FieldStorage() # instantiate only once!
 btn = form.getfirst('buttonType', 'empty')
 
 # Printing env variables
-# for name, value in os.environ.items():
-#     print("{0}: {1}".format(name, value), file=sys.stderr)
+for name, value in os.environ.items():
+    print("{0}: {1}".format(name, value), file=sys.stderr)
 
 # Avoid script injection escaping the user input
 btn = html.escape(btn)
