@@ -1,4 +1,4 @@
-#!/usr/bin/env php
+#!/usr/bin/env php-cgi
 <?php session_start();?>
 
 <!DOCTYPE html>

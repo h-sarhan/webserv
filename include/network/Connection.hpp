@@ -18,6 +18,7 @@
 #include "logger/Logger.hpp"
 
 using logger::Log;
+
 class Connection
 {
     private:

@@ -19,6 +19,8 @@
 #include "responses/DefaultPages.hpp"
 #include "responses/Response.hpp"
 #include "network/Server.hpp"
+#include "envUtils.hpp"
+#include "utils.hpp"
 #include <cstddef>
 
 Connection::Connection()
@@ -319,19 +321,6 @@ bool Connection::bodySizeExceeded()
     return true;
 }
 
-static const char *getQueryString(const std::string& originalRequest)
-{
-    size_t queryStart = originalRequest.find("?");
-    if (queryStart == std::string::npos)
-        return NULL;
-    return &originalRequest[queryStart + 1];
-}
-
-static void addToEnv(std::vector<char *>& env, std::string var)
-{
-    env.push_back(strdup(var.c_str()));
-}
-
 std::vector<char *> Connection::prepCGIEnvironment()
 {
     std::vector<char *> env;
@@ -343,26 +332,9 @@ std::vector<char *> Connection::prepCGIEnvironment()
     addToEnv(env, "SERVER_NAME=" + _request.hostname());    
     addToEnv(env, "SERVER_PORT=" + toStr(Server::getConfig(_request.listener())[0]->port));
     addToEnv(env, "REQUEST_METHOD=" + enumToStr(_request.method()));
-    addToEnv(env, "PATH_INFO=" + _request.resource().originalRequest);
     addToEnv(env, "REMOTE_ADDR=" + _ip);
-                                                                    // ! wrong
-                                                                    // search for PATH_INFO value if its a file on the server and set this as its physical location on the server
-    addToEnv(env, "PATH_TRANSLATED=" + _request.resource().path);   // now this is just the physical path to the CGI, not the path of any file specified by PATH_INFO
-                                                                    // should search in resource().path, find the file and set the physical location of the actual file
-                                                                            // ! wrong
-    addToEnv(env, "SCRIPT_NAME=" + _request.resource().originalRequest);    // now this contains the entire original request (virtual path) and if PATH_INFO is present, it contains that too
-                                                                            // should be trimmed till everything before and including the cgi file name
-    const char *queryString = getQueryString(_request.resource().originalRequest);
-    if (queryString)
-        addToEnv(env, "QUERY_STRING=" + std::string(queryString));
-    if (_request.headers().count("content-type"))
-        addToEnv(env, "CONTENT_TYPE=" + _request.headers().at("content-type"));
-    if (_request.headers().count("content-length"))
-        addToEnv(env, "CONTENT_LENGTH=" + _request.headers().at("content-length"));
-    if (_request.headers().count("cookie"))
-        addToEnv(env, "HTTP_COOKIE=" + _request.headers().at("cookie"));
-    env.push_back(NULL);
-    // ! loop through headers map for remaining headers 
+    addPathEnv(env, _request.resource());
+    addHeadersToEnv(env, _request.headers());
     return env;
 }
 

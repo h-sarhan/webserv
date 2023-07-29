@@ -315,7 +315,6 @@ static pid_t startCGIProcess(int p[2][2])
 void Response::runCGI(int p[2][2], Request &req, std::vector<char *> env)
 {
     chdir(dirName(req.resource().path).c_str());
-    // Log(DBUG) << "cwd = " << getcwd(NULL, 0) << std::endl;
     close(p[1][0]);
     dup2(p[0][0], STDIN_FILENO);
     close(p[0][0]);
@@ -386,7 +385,7 @@ void Response::readCGIResponse(int pipeFd, Request &req)
     }
     _length = cgiOutput.length();
     Log(DBUG) << "Cgi output length = " << _length << " " << cgiOutput.length() << std::endl ;
-    // Log(DBUG) << cgiOutput << std::endl;
+    Log(DBUG) << cgiOutput << std::endl;
     if (_buffer != NULL)
         delete[] _buffer;
     _buffer = new char[_length];
