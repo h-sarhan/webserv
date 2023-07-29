@@ -385,7 +385,7 @@ void Response::readCGIResponse(int pipeFd, Request &req)
     }
     _length = cgiOutput.length();
     Log(DBUG) << "Cgi output length = " << _length << " " << cgiOutput.length() << std::endl ;
-    Log(DBUG) << cgiOutput << std::endl;
+    // Log(DBUG) << cgiOutput << std::endl;
     if (_buffer != NULL)
         delete[] _buffer;
     _buffer = new char[_length];
