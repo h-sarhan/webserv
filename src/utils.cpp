@@ -42,16 +42,26 @@ unsigned int getHex(const std::string &str)
 
 std::string sanitizeURL(const std::string &url)
 {
-    std::string sanitizedUrl(url);
+    std::string sanitizedURL;
+    std::string queryStr;
+    const size_t queryPos = url.find("?");
+    if (queryPos != std::string::npos)
+    {
+        if (queryPos > 0)
+            sanitizedURL = url.substr(0, queryPos);
+        queryStr = url.substr(queryPos);
+    }
+    else
+        sanitizedURL = url;
 
     // Remove duplicate slashes
-    removeDuplicateChar(sanitizedUrl, '/');
+    removeDuplicateChar(sanitizedURL, '/');
 
     // Replace '+' with ' '
-    std::replace(sanitizedUrl.begin(), sanitizedUrl.end(), '+', ' ');
+    std::replace(sanitizedURL.begin(), sanitizedURL.end(), '+', ' ');
 
     // Decode % hexadecimal characters
-    for (std::string::iterator it = sanitizedUrl.begin(); it < sanitizedUrl.end() - 2; it++)
+    for (std::string::iterator it = sanitizedURL.begin(); it < sanitizedURL.end() - 2; it++)
     {
         if (*it != '%')
             continue;
@@ -64,9 +74,9 @@ std::string sanitizeURL(const std::string &url)
         *it = getHex(hexStr);
 
         // Erase the next two characters and get a valid iterator
-        it = sanitizedUrl.erase(it + 1, it + 3) - 1;
+        it = sanitizedURL.erase(it + 1, it + 3) - 1;
     }
-    return sanitizedUrl;
+    return sanitizedURL + queryStr;
 }
 
 const std::string getLine(const std::string &filename, const unsigned int lineNum)
