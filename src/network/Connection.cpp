@@ -129,7 +129,7 @@ void Connection::processGET()
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     case CGI:
-        _response.runCGI(_request, prepCGIEnvironment());
+        _response.createCGIResponse(_request, prepCGIEnvironment());
         break;
     }
 }
@@ -162,7 +162,7 @@ void Connection::processPOST()
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     case CGI:
-        _response.runCGI(_request, prepCGIEnvironment());
+        _response.createCGIResponse(_request, prepCGIEnvironment());
         break;
     }
 }

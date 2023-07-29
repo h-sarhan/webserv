@@ -75,9 +75,10 @@ class Response
         void createHEADFileResponse(Request &request);
         void createHEADResponse(int statusCode, std::string contentType, bool keepAlive);
         void createHTMLResponse(int statusCode, std::string page, bool keepAlive);
-        // void createCGIResponse(std::vector<char *> env);
-
-        void runCGI(Request &request, std::vector<char *> env);
+        void sendCGIRequestBody(int pipeFd, Request &req);
+        void readCGIResponse(int pipeFd, Request &req);
+        void runCGI(int p[2][2], Request &req, std::vector<char *> env);
+        void createCGIResponse(Request &request, std::vector<char *> env);
 
         void clear();
         ~Response();

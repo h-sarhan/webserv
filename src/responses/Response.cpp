@@ -300,107 +300,119 @@ static std::vector<char *>createExecArgs(std::string path)
     return args;
 }
 
-void Response::runCGI(Request &request, std::vector<char *> env)
+static pid_t startCGIProcess(int p[2][2])
 {
-    int status;
-    int p[2][2];
-
-    status = pipe(p[0]);
-    if (status == -1)
-        return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
-    status = pipe(p[1]);
-    if (status == -1)
-        return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
-
+    if (pipe(p[0]) == -1)
+        return -1;
+    if (pipe(p[1]) == -1)
+        return -1;
     pid_t pid = fork();
     if (pid == -1)
-        return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
-    if (pid == 0)
-    {
-        chdir(dirName(request.resource().path).c_str());
-        Log(DBUG) << "cwd = " << getcwd(NULL, 0) << std::endl;
-        close(p[1][0]);
-        dup2(p[0][0], STDIN_FILENO);
-        close(p[0][0]);
-        dup2(p[1][1], STDOUT_FILENO);
-        close(p[1][1]);
-        // std::string filename = "cgi_tester";
-        std::string filename = "./";
-        filename += baseName(request.resource().path);
-        std::vector<char *> args = createExecArgs(filename);
+        return -1;
+    return pid;
+}
 
-        if (execve(filename.c_str(), &args[0], &env[0]) == -1)
-        {
-            // free everything, 500 error
-            std::for_each(env.begin(), env.end(), free);
-            std::for_each(args.begin(), args.end(), free);
-            close(p[0][1]);
-            Log(ERR) << "Execve failed" << std::endl;
-            createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
-            throw SystemCallException(std::string("execve failed! ") + strerror(errno) + filename);
-            // exit(EXIT_FAILURE);
-        }
+void Response::runCGI(int p[2][2], Request &req, std::vector<char *> env)
+{
+    chdir(dirName(req.resource().path).c_str());
+    // Log(DBUG) << "cwd = " << getcwd(NULL, 0) << std::endl;
+    close(p[1][0]);
+    dup2(p[0][0], STDIN_FILENO);
+    close(p[0][0]);
+    dup2(p[1][1], STDOUT_FILENO);
+    close(p[1][1]);
+    // std::string filename = "cgi_tester";
+    // std::string filename = "./";
+    std::string filename = baseName(req.resource().path);
+    std::vector<char *> args = createExecArgs(filename);
+
+    if (execve(filename.c_str(), &args[0], &env[0]) == -1)
+    {
+        std::for_each(env.begin(), env.end(), free);
+        std::for_each(args.begin(), args.end(), free);
+        close(p[0][1]);
+        Log(ERR) << "Execve failed" << std::endl;
+        createHTMLResponse(500, errorPage(500, req.resource()), req.keepAlive());
+        // check if this actually returns shows a 500 error to the client
+        throw SystemCallException(std::string("execve failed! ") + strerror(errno) + filename);
+        // ! maybe check wifexited or something
     }
+}
+
+void Response::sendCGIRequestBody(int pipeFd, Request &req)
+{
+    size_t totalBytes = 0;
+    ssize_t bytesWritten;
+    size_t bodySize = req.length() - req.bodyStart();
+    const char *body = req.buffer() + req.bodyStart();
+
+    while (totalBytes < bodySize)
+    {
+        // check if child proc is still alive before writing
+        // * write will block here if the pipe fills up and wait until there is space in the buffer
+        bytesWritten =  write(pipeFd, body + totalBytes, WRITE_SIZE(bodySize - totalBytes));
+        if (bytesWritten == -1)
+        {
+            Log(ERR) << "Could not write to CGI pipe" << std::endl;
+            return createHTMLResponse(500, errorPage(500, req.resource()), req.keepAlive());
+        }
+        totalBytes += bytesWritten;
+        Log(DBUG) << "bytesWritten = " << bytesWritten << ", total = " << totalBytes << std::endl;
+    }
+    close(pipeFd); // parent done writing to input pipe
+}
+
+void Response::readCGIResponse(int pipeFd, Request &req)
+{
+    char buf[READ_MAX];
+    std::string cgiOutput;
+    ssize_t bytesRead;
+
+    cgiOutput = STATUS_LINE + getStatus(200) + CRLF;
+    // cgiOutput += CRLF;
+    bytesRead = read(pipeFd, buf, READ_MAX - 1);
+    while (bytesRead > 0)
+    {
+        buf[bytesRead] = '\0';
+        // cgiOutput += buf;
+        cgiOutput += std::string(buf, bytesRead);
+        bytesRead = read(pipeFd, buf, READ_MAX - 1);
+    }
+    close(pipeFd); // parent done reading from output pipe
+    if (bytesRead == -1)
+    {
+        Log(ERR) << "Could not read CGI output from pipe" << std::endl;
+        return createHTMLResponse(500, errorPage(500, req.resource()), req.keepAlive());
+    }
+    _length = cgiOutput.length();
+    Log(DBUG) << "Cgi output length = " << _length << " " << cgiOutput.length() << std::endl ;
+    Log(DBUG) << cgiOutput << std::endl;
+    if (_buffer != NULL)
+        delete[] _buffer;
+    _buffer = new char[_length];
+    std::copy(&cgiOutput[0], &cgiOutput[_length], _buffer);
+}
+
+void Response::createCGIResponse(Request &req, std::vector<char *> env)
+{
+    int p[2][2];
+    
+    pid_t pid = startCGIProcess(p);
+    if (pid == -1)
+        return createHTMLResponse(500, errorPage(500, req.resource()), req.keepAlive());
+    if (pid == 0)
+        runCGI(p, req, env);
     else 
     {
-        size_t totalBytes = 0;
-        ssize_t bytesWritten;
-        size_t bodySize = request.length() - request.bodyStart();
-        const char *body = request.buffer() + request.bodyStart();
-
-        while (totalBytes < bodySize)
-        {
-            // check if child proc is still alive before writing
-            // * write will block here if the pipe fills up and wait until there is space in the buffer
-            bytesWritten =  write(p[0][1], body + totalBytes, WRITE_SIZE(bodySize - totalBytes));
-            if (bytesWritten == -1)
-                return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
-            totalBytes += bytesWritten;
-            Log(DBUG) << "bytesWritten = " << bytesWritten << ", total = " << totalBytes << std::endl;
-        }
-        close(p[0][1]); // parent done writing to input pipe
+        sendCGIRequestBody(p[0][1], req);
         Log(DBUG) << "WAITING FOR CHILD" << std::endl;
         waitpid(pid, NULL, 0);
         close(p[0][0]); // child done reading from input pipe
         close(p[1][1]); // child done writing to output pipe
-        // for (std::vector<char *>::iterator it = env.begin(); it != env.end(); it++)
-        //     free(*it);
         std::for_each(env.begin(), env.end(), free);
-        // reading the cgi output
-        char buf[READ_MAX];
-        std::string cgiOutput;
-        cgiOutput = STATUS_LINE + getStatus(200);
-        cgiOutput += CRLF;
-        ssize_t bytesRead = read(p[1][0], buf, READ_MAX - 1);
-        while (bytesRead > 0)
-        {
-            buf[bytesRead] = '\0';
-            cgiOutput += buf;
-            bytesRead = read(p[1][0], buf, READ_MAX - 1);
-        }
-        close(p[1][0]); // parent done reading from output pipe
-        if (bytesRead == -1)
-            return createHTMLResponse(500, errorPage(500, request.resource()), request.keepAlive());
-        _length = cgiOutput.length();
-        Log(DBUG) << "Cgi output length = " << _length << " " << cgiOutput.length() << std::endl ;
-        if (_buffer != NULL)
-            delete[] _buffer;
-        _buffer = new char[_length];
-        std::copy(&cgiOutput[0], &cgiOutput[_length], _buffer);
+        readCGIResponse(p[1][0], req);
     }
-
 }
-
-// void Response::createCGIResponse(std::vector<char *> env)
-// {
-//     pid_t pid = fork();
-//     SystemCallException::checkErr("fork", pid); // ! change this to set 500 error in the response
-//     if (pid == 0)
-//     {
-
-//     }
-
-// }
 
 Response::~Response()
 {
