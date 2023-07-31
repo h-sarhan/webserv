@@ -75,6 +75,7 @@ class Response
         void createHEADFileResponse(Request &request);
         void createHEADResponse(int statusCode, std::string contentType, bool keepAlive);
         void createHTMLResponse(int statusCode, std::string page, bool keepAlive);
+        void trimBody();
         int sendCGIRequestBody(int pipeFd, Request &req);
         void readCGIResponse(int pipeFd, Request &req);
         void runCGI(int p[2][2], Request &req, std::vector<char *> env);

@@ -124,6 +124,6 @@ re: fclean
 valgrind: $(DBG_BUILD)
 #	valgrind --gen-suppressions=all --log-file=error.log --leak-check=full --track-fds=yes --trace-children=yes --track-origins=yes --show-leak-kinds=all ./webserv example.conf
 #	valgrind --leak-check=full --track-fds=yes --track-origins=yes --trace-children=yes --show-leak-kinds=all ./webserv example.conf
-	valgrind --track-fds=yes --track-origins=yes --trace-children=yes ./webserv example.conf
+	valgrind --suppressions=/home/mfirdous/webserv/valgrind_cgi.supp --track-fds=yes --track-origins=yes --trace-children=yes ./webserv example.conf
 
 .PHONY: all re fclean clean run dbg db docs build $(COMPILE_DB) valgrind

@@ -197,6 +197,7 @@ void Connection::processPUT()
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     case CGI:
+        _response.createFileResponse(_request, 204);
         break;
     }
 }
@@ -229,6 +230,7 @@ void Connection::processDELETE()
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     case CGI:
+        _response.createDELETEResponse(_request);
         break;
     }
 }
@@ -261,6 +263,8 @@ void Connection::processHEAD()
         _response.createHEADResponse(404, NO_CONTENT, _keepAlive);
         break;
     case CGI:
+        _response.createCGIResponse(_request, prepCGIEnvironment());
+        _response.trimBody();
         break;
     }
 }
