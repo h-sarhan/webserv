@@ -291,29 +291,6 @@ void RequestParser::parseHeader(std::stringstream &reqStream)
     _headers.insert(std::make_pair(key, value));
 }
 
-// ! This can be refactored into a function object that is passed to std::find()
-const std::map<std::string, Route>::const_iterator RequestParser::getRequestedRoute(
-    const std::map<std::string, Route> &routes) const
-{
-    // const std::string &requestedURL = _resource.originalRequest;
-    std::map<std::string, Route>::const_iterator routeIt = routes.end();
-    for (std::map<std::string, Route>::const_iterator it = routes.begin(); it != routes.end(); it++)
-    {
-        // Two conditions need to be true in order for matchedLocation to equal it->first
-        // 1. _requestedURL has to start with it->first
-        // 2. it->first has to be greater than matchedLocation.length()
-        if (_requestedURL.length() >= it->first.length() &&
-            std::equal(it->first.begin(), it->first.end(), _requestedURL.begin()))
-        {
-            if (routeIt == routes.end())
-                routeIt = it;
-            else if (it->first.length() > routeIt->first.length())
-                routeIt = it;
-        }
-    }
-    return routeIt;
-}
-
 /**
  * @brief Trims the query parameters out of a string
  *
@@ -330,6 +307,45 @@ static std::string trimQuery(const std::string &url)
     if (queryPos != std::string::npos)
         newURL.erase(queryPos);
     return newURL;
+}
+
+// ! This can be refactored into a function object that is passed to std::find()
+const std::map<std::string, Route>::const_iterator RequestParser::getRequestedRoute(
+    const std::map<std::string, Route> &routes) const
+{
+    // const std::string &requestedURL = _resource.originalRequest;
+    std::string trimmedURL = trimQuery(_requestedURL);
+    std::map<std::string, Route>::const_iterator routeIt = routes.end();
+    for (std::map<std::string, Route>::const_iterator it = routes.begin(); it != routes.end(); it++)
+    {
+        // All routes end in / or they are /
+
+        // Handle exact match
+        if (sanitizeURL(it->first) == sanitizeURL(trimmedURL))
+        {
+            routeIt = it;
+            break;
+        }
+        // Match /route on /route/
+        if (trimmedURL.length() == it->first.length() - 1)
+        {
+            if (std::equal(trimmedURL.begin(), trimmedURL.end(), it->first.begin()))
+            {
+                if (routeIt == routes.end() || it->first.length() > routeIt->first.length())
+                    routeIt = it;
+            }
+        }
+        // Match /route/resource.lvfdin on /route/
+        else if (trimmedURL.length() > it->first.length())
+        {
+            if (std::equal(it->first.begin(), it->first.end(), trimmedURL.begin()))
+            {
+                if (routeIt == routes.end() || it->first.length() > routeIt->first.length())
+                    routeIt = it;
+            }
+        }
+    }
+    return routeIt;
 }
 
 /**
@@ -431,8 +447,14 @@ Resource RequestParser::generateResource(const std::vector<ServerBlock *> &confi
     if (isCGI(_requestedURL, routeOptions.cgiExtensions))
         return formCGIResource(routeIt->first, routeOptions.cgiExtensions, configPair);
 
-    const std::string &resourcePath = trimQuery(
-        sanitizeURL(routeOptions.serveDir + "/" + _requestedURL.substr(routeIt->first.length())));
+    // const std::string &resourcePath = trimQuery(sanitizeURL(routeOptions.serveDir + "/" +
+    // _requestedURL.substr(routeIt->first.length())));
+    std::string resourcePath = routeOptions.serveDir + "/";
+    if (routeIt->first.length() < _requestedURL.length())
+        resourcePath += _requestedURL.substr(routeIt->first.length());
+    // else
+    //     resourcePath += _requestedURL;
+    resourcePath = trimQuery(sanitizeURL(resourcePath));
 
     const std::string &trimmedRequestURL = trimQuery(_requestedURL);
     if (!exists(resourcePath))
