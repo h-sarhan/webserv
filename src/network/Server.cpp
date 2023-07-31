@@ -28,6 +28,7 @@
 #include "responses/Response.hpp"
 #include <netinet/in.h>
 #include <strings.h>
+#include <sys/fcntl.h>
 #include <sys/socket.h>
 
 bool quit = false;
@@ -159,7 +160,6 @@ void Server::readBody(size_t clientNo)
     cons.at(sockets[clientNo].fd).reqReady() = true;
     Log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd
                  << ". Size = " << req.length() << std::endl;
-    // Log(INFO) << "full request: " << std::string(req.buffer(), req.length()) << std::endl;
     Log(DBUG) << enumToStr(req.method()) << " " << req.resource().originalRequest << std::endl;
 }
 
@@ -206,7 +206,8 @@ void Server::acceptNewConnection(size_t listenerNo)
         Log(ERR) << "Accept failed" << std::endl;
         return;
     }
-    fcntl(newFd, F_SETFL, O_NONBLOCK);   // enable this when doing partial recv
+    SystemCallException::checkErr("fcntl", fcntl(newFd, F_SETFL, O_NONBLOCK));   // enable this when doing partial recv
+    SystemCallException::checkErr("fcntl", fcntl(newFd, F_SETFD, FD_CLOEXEC));   // enable this when doing partial recv
     char ipBuf[INET_ADDRSTRLEN];
     bzero(ipBuf, INET_ADDRSTRLEN);
     std::string ip(inet_ntop(AF_INET, &theirAddr, ipBuf, INET_ADDRSTRLEN), INET_ADDRSTRLEN);

@@ -14,14 +14,17 @@
 #include "utils.hpp"
 #include <algorithm>
 #include <cstddef>
+#include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <sys/poll.h>
 // #include <sys/syslimits.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include "network/SystemCallException.hpp"
 #include <libgen.h>
 
-#define WRITE_MAX 65535
+#define WRITE_MAX 65536
 #define READ_MAX 1024
 #define WRITE_SIZE(x) (x <= WRITE_MAX ? x : WRITE_MAX)
 
@@ -91,10 +94,7 @@ int Response::sendResponse(int fd)
     ssize_t bytesSent;
 
     if (_length == 0)
-    {
-        // std::cout << "Connection is idle: " << fd << std::endl;
         return IDLE_CONNECTION;
-    }
     Log(INFO) << "Sending a response... " << std::endl;
     bytesSent = send(fd, _buffer + _totalBytesSent, _length - _totalBytesSent, 0);
     if (bytesSent < 0)
@@ -315,14 +315,15 @@ static pid_t startCGIProcess(int p[2][2])
 void Response::runCGI(int p[2][2], Request &req, std::vector<char *> env)
 {
     chdir(dirName(req.resource().path).c_str());
+    close(p[0][1]);
     close(p[1][0]);
     dup2(p[0][0], STDIN_FILENO);
     close(p[0][0]);
     dup2(p[1][1], STDOUT_FILENO);
     close(p[1][1]);
     // std::string filename = "cgi_tester";
-    // std::string filename = "./";
-    std::string filename = baseName(req.resource().path);
+    std::string filename = "./";
+    filename += baseName(req.resource().path);
     std::vector<char *> args = createExecArgs(filename);
 
     if (execve(filename.c_str(), &args[0], &env[0]) == -1)
@@ -336,29 +337,6 @@ void Response::runCGI(int p[2][2], Request &req, std::vector<char *> env)
         throw SystemCallException(std::string("execve failed! ") + strerror(errno) + filename);
         // ! maybe check wifexited or something
     }
-}
-
-void Response::sendCGIRequestBody(int pipeFd, Request &req)
-{
-    size_t totalBytes = 0;
-    ssize_t bytesWritten;
-    size_t bodySize = req.length() - req.bodyStart();
-    const char *body = req.buffer() + req.bodyStart();
-
-    while (totalBytes < bodySize)
-    {
-        // check if child proc is still alive before writing
-        // * write will block here if the pipe fills up and wait until there is space in the buffer
-        bytesWritten =  write(pipeFd, body + totalBytes, WRITE_SIZE(bodySize - totalBytes));
-        if (bytesWritten == -1)
-        {
-            Log(ERR) << "Could not write to CGI pipe" << std::endl;
-            return createHTMLResponse(500, errorPage(500, req.resource()), req.keepAlive());
-        }
-        totalBytes += bytesWritten;
-        Log(DBUG) << "bytesWritten = " << bytesWritten << ", total = " << totalBytes << std::endl;
-    }
-    close(pipeFd); // parent done writing to input pipe
 }
 
 void Response::readCGIResponse(int pipeFd, Request &req)
@@ -392,23 +370,92 @@ void Response::readCGIResponse(int pipeFd, Request &req)
     std::copy(&cgiOutput[0], &cgiOutput[_length], _buffer);
 }
 
+int Response::sendCGIRequestBody(int pipeFd, Request &req)
+{
+    size_t totalBytes = 0;
+    ssize_t bytesWritten;
+    time_t startTime;
+    time_t curTime;
+    time_t gatewayTimeOut = 8;
+    size_t bodySize = req.length() - req.bodyStart();
+    const char *body = req.buffer() + req.bodyStart();
+
+    if (fcntl(pipeFd, F_SETFL, O_NONBLOCK) == -1)
+        return 500;
+    time(&startTime);
+    while (totalBytes < bodySize)
+    {
+        bytesWritten =  write(pipeFd, body + totalBytes, WRITE_SIZE(bodySize - totalBytes));
+        if (bytesWritten == -1)
+        {
+            time(&curTime);
+            if (curTime - startTime > gatewayTimeOut) // gateway timed out because cgi must be idle and caused our pipe buffer to fill up
+            {
+                close(pipeFd);
+                return 504;
+            }
+        }
+        else if (bytesWritten > 0)
+        {
+            time(&startTime); // reset start timer
+            totalBytes += bytesWritten;
+            Log(DBUG) << "bytesWritten = " << bytesWritten << ", total = " << totalBytes << std::endl;
+        }
+    }
+    close(pipeFd); // parent done writing to input pipe
+    return 0;
+}
+
+
 void Response::createCGIResponse(Request &req, std::vector<char *> env)
 {
     int p[2][2];
-    
     pid_t pid = startCGIProcess(p);
+    int status;
+    int sendErrCode;
+    time_t startTime;
+    time_t curTime;
+    time_t gatewayTimeOut = 8;
+
     if (pid == -1)
         return createHTMLResponse(500, errorPage(500, req.resource()), req.keepAlive());
     if (pid == 0)
         runCGI(p, req, env);
     else 
     {
-        sendCGIRequestBody(p[0][1], req);
+        sendErrCode = sendCGIRequestBody(p[0][1], req);
         Log(DBUG) << "WAITING FOR CHILD" << std::endl;
-        waitpid(pid, NULL, 0);
+        pid_t waitStatus = waitpid(pid, &status, 0);
+        // pid_t waitStatus = waitpid(pid, &status, WNOHANG);
+        // time(&startTime); 
+        // while (waitStatus == 0 |)
+        // {
+        //     waitStatus = waitpid(pid, &status, WNOHANG);
+        //     time(&curTime);
+        //     if (curTime - startTime > gatewayTimeOut) // gateway timed out because cgi must be idle and caused our pipe buffer to fill up
+        //     {
+        //         close(pipeFd);
+        //         return 504;
+        //     }
+        // }
         close(p[0][0]); // child done reading from input pipe
         close(p[1][1]); // child done writing to output pipe
         std::for_each(env.begin(), env.end(), free);
+        if (sendErrCode != 0)
+        {
+            close(p[1][0]);
+            return createHTMLResponse(sendErrCode, errorPage(sendErrCode, req.resource()), req.keepAlive());
+        }
+        if (waitStatus == -1)
+        {
+            close(p[1][0]);
+            return createHTMLResponse(502, errorPage(502, req.resource()), req.keepAlive()); // bad gateway
+        }
+        if (waitStatus == pid && WIFEXITED(status) && WEXITSTATUS(status) == EXIT_FAILURE)
+        {
+            close(p[1][0]);
+            return createHTMLResponse(500, errorPage(500, req.resource()), req.keepAlive());
+        }
         readCGIResponse(p[1][0], req);
     }
 }
