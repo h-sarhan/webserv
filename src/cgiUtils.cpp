@@ -8,9 +8,12 @@
  * 
  */
 
-#include "envUtils.hpp"
+#include "cgiUtils.hpp"
 #include "utils.hpp"
+#include <algorithm>
 #include <cstring>
+#include <stdlib.h>
+#include <unistd.h>
 
 void addToEnv(std::vector<char *>& env, std::string var)
 {
@@ -66,4 +69,73 @@ void addPathEnv(std::vector<char *>& env, const Resource& res)
         }
     }
     addToEnv(env, "URL=" + scriptName + pathInfo);
+}
+
+pid_t waitCGI(pid_t pid, int& status, int& sendErrCode)
+{
+    time_t startTime;
+    time_t curTime;
+    pid_t waitStatus;
+    
+    waitStatus = waitpid(pid, &status, WNOHANG);
+    time(&startTime); 
+    while (waitStatus == 0)
+    {
+        waitStatus = waitpid(pid, &status, WNOHANG);
+        time(&curTime);
+        if (curTime - startTime > GATEWAY_TIMEOUT) // gateway timed out, we waited for the cgi for too long;
+        {
+            sendErrCode = 504;
+            kill(pid, SIGTERM); // terminating the cgi process explicitly to prevent it from becoming a zombie
+            break;
+        }
+    }
+    return waitStatus;
+}
+
+int checkCGIError(pid_t pid, int sendErrCode, int waitStatus, int status)
+{
+    if (sendErrCode != 0)
+    {
+        Log(ERR) << "CGI error " << sendErrCode << std::endl;
+        return sendErrCode;
+    }
+    if (waitStatus == -1)
+    {
+        Log(ERR) << "CGI error 502: waitpid returned error" << std::endl;
+        return 502; // bad gateway
+    }
+    if (waitStatus == pid && WIFEXITED(status) && WEXITSTATUS(status) == EXIT_FAILURE)
+    {
+        Log(ERR) << "CGI error 502: process " << pid << " exited with error" << std::endl;
+        return 502;
+    }
+    return EXIT_SUCCESS;
+}
+
+std::vector<char *>createExecArgs(std::string path)
+{
+    std::vector<char *> args;
+    args.push_back(strdup(path.c_str()));
+    args.push_back(NULL);
+    return args;
+}
+
+pid_t startCGIProcess(int p[2][2], std::vector<char *> env)
+{
+    if (pipe(p[0]) == -1)
+        return -1;
+    if (pipe(p[1]) == -1)
+        return -1;
+    pid_t pid = fork();
+    if (pid == -1)
+    {
+        close(p[0][0]);
+        close(p[0][1]);
+        close(p[1][0]);
+        close(p[1][1]);
+        std::for_each(env.begin(), env.end(), free);
+        return -1;
+    }
+    return pid;
 }

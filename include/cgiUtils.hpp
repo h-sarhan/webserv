@@ -8,16 +8,25 @@
  *
  */
 
-#ifndef ENV_UTILS_HPP
-#define ENV_UTILS_HPP
+#ifndef CGI_UTILS_HPP
+#define CGI_UTILS_HPP
+
+#define GATEWAY_TIMEOUT 10
 
 #include <requests/Resource.hpp>
+#include "logger/Logger.hpp"
+#include <sys/wait.h>
 
 typedef std::map<std::string, std::string> headMap;
+using logger::Log;
 
 void addToEnv(std::vector<char *> &env, std::string var);
 std::string getCGIVirtualPath(const Resource &res);
 void addHeadersToEnv(std::vector<char *> &env, headMap map);
 void addPathEnv(std::vector<char *> &env, const Resource &res);
+pid_t waitCGI(pid_t pid, int& status, int& sendErrCode);
+int checkCGIError(pid_t pid, int sendErrCode, int waitStatus, int status);
+std::vector<char *>createExecArgs(std::string path);
+pid_t startCGIProcess(int p[2][2], std::vector<char *> env);
 
 #endif

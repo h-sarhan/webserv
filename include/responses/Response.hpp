@@ -65,6 +65,7 @@ class Response
         size_t length();
         size_t totalBytesSent();
         int statusCode();
+        
         int sendResponse(int fd);
         void setResponse(std::stringstream& ss);
         void setResponseHeaders(std::stringstream& ss, Headers header);
@@ -76,6 +77,8 @@ class Response
         void createHEADResponse(int statusCode, std::string contentType, bool keepAlive);
         void createHTMLResponse(int statusCode, std::string page, bool keepAlive);
         void trimBody();
+
+        // CGI
         int sendCGIRequestBody(int pipeFd, Request &req);
         void readCGIResponse(int pipeFd, Request &req);
         void runCGI(int p[2][2], Request &req, std::vector<char *> env);

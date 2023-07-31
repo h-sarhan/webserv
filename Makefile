@@ -21,7 +21,7 @@ REQUEST_SRC := $(addprefix $(REQUEST_DIR)/, $(REQUEST_SRC))
 RESPONSE_SRC := $(addprefix $(RESPONSE_DIR)/, $(RESPONSE_SRC))
 LOGGER_SRC := $(addprefix $(LOGGER_DIR)/, $(LOGGER_SRC))
 
-SRC := $(SRC_DIR)/main.cpp  $(SRC_DIR)/utils.cpp $(SRC_DIR)/tests.cpp $(SRC_DIR)/enumConversions.cpp $(SRC_DIR)/envUtils.cpp $(CONFIG_SRC) $(NETWORK_SRC) $(REQUEST_SRC) $(RESPONSE_SRC) $(LOGGER_SRC)
+SRC := $(SRC_DIR)/main.cpp  $(SRC_DIR)/utils.cpp $(SRC_DIR)/tests.cpp $(SRC_DIR)/enumConversions.cpp $(SRC_DIR)/cgiUtils.cpp $(CONFIG_SRC) $(NETWORK_SRC) $(REQUEST_SRC) $(RESPONSE_SRC) $(LOGGER_SRC)
 
 # Release and debug object files
 OBJ_DIR = .build

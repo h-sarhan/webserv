@@ -19,7 +19,7 @@
 #include "responses/DefaultPages.hpp"
 #include "responses/Response.hpp"
 #include "network/Server.hpp"
-#include "envUtils.hpp"
+#include "cgiUtils.hpp"
 #include "utils.hpp"
 #include <cstddef>
 

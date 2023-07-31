@@ -12,6 +12,7 @@
 #include "logger/Logger.hpp"
 #include "responses/DefaultPages.hpp"
 #include "utils.hpp"
+#include "cgiUtils.hpp"
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
@@ -25,7 +26,6 @@
 
 #define WRITE_MAX 65536
 #define READ_MAX 1024
-#define GATEWAY_TIMEOUT 10
 #define WRITE_SIZE(x) (x <= WRITE_MAX ? x : WRITE_MAX)
 
 Response::Response() : _buffer(NULL), _length(0), _totalBytesSent(0), _statusCode(0)
@@ -301,26 +301,6 @@ void Response::trimBody()
         _length = bodyStart - _buffer + 4;
 }
 
-static std::vector<char *>createExecArgs(std::string path)
-{
-    std::vector<char *> args;
-    args.push_back(strdup(path.c_str()));
-    args.push_back(NULL);
-    return args;
-}
-
-static pid_t startCGIProcess(int p[2][2])
-{
-    if (pipe(p[0]) == -1)
-        return -1;
-    if (pipe(p[1]) == -1)
-        return -1;
-    pid_t pid = fork();
-    if (pid == -1)
-        return -1;
-    return pid;
-}
-
 void Response::runCGI(int p[2][2], Request &req, std::vector<char *> env)
 {
     chdir(dirName(req.resource().path).c_str());
@@ -412,58 +392,30 @@ int Response::sendCGIRequestBody(int pipeFd, Request &req)
     return 0;
 }
 
-
 void Response::createCGIResponse(Request &req, std::vector<char *> env)
 {
     int p[2][2];
-    pid_t pid = startCGIProcess(p);
     int status;
-    int sendErrCode;
-    time_t startTime;
-    time_t curTime;
+    int errCode;
 
+    pid_t pid = startCGIProcess(p, env);
     if (pid == -1)
         return createHTMLResponse(500, errorPage(500, req.resource()), req.keepAlive());
     if (pid == 0)
         runCGI(p, req, env);
     else 
     {
-        sendErrCode = sendCGIRequestBody(p[0][1], req);
+        errCode = sendCGIRequestBody(p[0][1], req);
         Log(DBUG) << "WAITING FOR CHILD" << std::endl;
-        // pid_t waitStatus = waitpid(pid, &status, 0);
-        pid_t waitStatus = waitpid(pid, &status, WNOHANG);
-        time(&startTime); 
-        while (waitStatus == 0)
-        {
-            waitStatus = waitpid(pid, &status, WNOHANG);
-            time(&curTime);
-            if (curTime - startTime > GATEWAY_TIMEOUT) // gateway timed out, we waited for the cgi for too long;
-            {
-                sendErrCode = 504;
-                kill(pid, SIGTERM); // terminating the cgi process explicitly to prevent it from becoming a zombie
-                break;
-            }
-        }
+        pid_t waitStatus = waitCGI(pid, status, errCode);
         close(p[0][0]); // child done reading from input pipe
         close(p[1][1]); // child done writing to output pipe
         std::for_each(env.begin(), env.end(), free);
-        if (sendErrCode != 0)
+        errCode = checkCGIError(pid, errCode, waitStatus, status);
+        if (errCode != EXIT_SUCCESS)
         {
             close(p[1][0]);
-            Log(ERR) << "CGI error: " << sendErrCode << std::endl;
-            return createHTMLResponse(sendErrCode, errorPage(sendErrCode, req.resource()), req.keepAlive());
-        }
-        if (waitStatus == -1)
-        {
-            close(p[1][0]);
-            Log(ERR) << "CGI error: " << pid << "Bad gateway (502)" << std::endl;
-            return createHTMLResponse(502, errorPage(502, req.resource()), req.keepAlive()); // bad gateway
-        }
-        if (waitStatus == pid && WIFEXITED(status) && WEXITSTATUS(status) == EXIT_FAILURE)
-        {
-            close(p[1][0]);
-            Log(ERR) << "CGI error: process " << pid << " exited with error" << std::endl;
-            return createHTMLResponse(500, errorPage(500, req.resource()), req.keepAlive());
+            return createHTMLResponse(errCode, errorPage(errCode, req.resource()), req.keepAlive());
         }
         readCGIResponse(p[1][0], req);
     }
