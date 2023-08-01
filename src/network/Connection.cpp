@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/28 18:10:53 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/08/01 15:55:33 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -153,7 +153,8 @@ void Connection::processPOST()
         _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case DIRECTORY:
-        _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
+        _response.createFileResponse(_request, 201);
+        // _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case NOT_FOUND:
         _response.createFileResponse(_request, 201);
@@ -186,7 +187,8 @@ void Connection::processPUT()
         _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case DIRECTORY:
-        _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
+        _response.createFileResponse(_request, 201);
+        // _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case NOT_FOUND:
         _response.createFileResponse(_request, 201);
@@ -334,7 +336,6 @@ std::vector<char *> Connection::prepCGIEnvironment()
     env.push_back(strdup("SERVER_SOFTWARE=Webserv/1.1"));
     env.push_back(strdup("GATEWAY_INTERFACE=CGI/1.1"));
     env.push_back(strdup("SERVER_PROTOCOL=HTTP/1.1"));
-    env.push_back(strdup("REQUEST_URI=/directory/youpi.bla"));
     addToEnv(env, "SERVER_NAME=" + _request.hostname());
     addToEnv(env, "SERVER_PORT=" + toStr(Server::getConfig(_request.listener())[0]->port));
     addToEnv(env, "REQUEST_METHOD=" + enumToStr(_request.method()));

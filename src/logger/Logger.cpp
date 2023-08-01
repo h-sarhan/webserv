@@ -10,6 +10,7 @@
 
 #include "logger/Logger.hpp"
 #include <unistd.h>
+#include <fstream>
 
 // Logger& Logger::log = Logger::getLogger();
 
@@ -29,6 +30,8 @@ Logger &Logger::operator()(const std::string &color)
 {
     this->_color = color;
 	_os << color << getTimeStamp();
+	// _os << getTimeStamp();
+    // (void)color;
     return *this;
 }
 
@@ -40,6 +43,8 @@ Logger &Logger::operator<<(Manipulator pf)
 
 Logger& Logger::getLogger()
 {
+    // static std::ofstream out("logs", std::ios::out);
+	// static Logger log(out);
 	static Logger log;
 	return log;
 }

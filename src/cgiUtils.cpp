@@ -14,6 +14,7 @@
 #include <cstring>
 #include <signal.h>
 #include <stdlib.h>
+#include <sys/fcntl.h>
 #include <unistd.h>
 
 void addToEnv(std::vector<char *> &env, std::string var)
@@ -55,6 +56,7 @@ void addPathEnv(std::vector<char *> &env, const Resource &res)
     std::string scriptName = getCGIVirtualPath(res);
     addToEnv(env, "SCRIPT_NAME=" + scriptName);
     addToEnv(env, "SCRIPT_FILENAME=" + baseName(res.path));
+    // std::string pathInfo = res.originalRequest.substr(scriptName.length());
     std::string pathInfo = res.originalRequest;
     if (pathInfo.length() != 0)
     {
@@ -70,6 +72,7 @@ void addPathEnv(std::vector<char *> &env, const Resource &res)
             addToEnv(env, "PATH_TRANSLATED=." + pathInfo);
         }
     }
+    addToEnv(env, "REQUEST_URI=" + pathInfo);
     addToEnv(env, "URL=" + scriptName + pathInfo);
 }
 
@@ -85,8 +88,8 @@ pid_t waitCGI(pid_t pid, int &status, int &sendErrCode)
     {
         waitStatus = waitpid(pid, &status, WNOHANG);
         time(&curTime);
-        if (curTime - startTime >
-            GATEWAY_TIMEOUT)   // gateway timed out, we waited for the cgi for too long;
+        // gateway timed out, we waited for the cgi for too long;
+        if (curTime - startTime > GATEWAY_TIMEOUT)
         {
             Log(ERR) << "CGI Error (504): WAITPID timed out" << std::endl;
             sendErrCode = 504;
@@ -94,7 +97,6 @@ pid_t waitCGI(pid_t pid, int &status, int &sendErrCode)
                                   // becoming a zombie
             break;
         }
-        std::cerr << "waiting!!!" << std::endl;
     }
     return waitStatus;
 }
@@ -127,19 +129,25 @@ std::vector<char *> createExecArgs(std::string path)
     return args;
 }
 
-pid_t startCGIProcess(int p[2][2], std::vector<char *> env)
+pid_t startCGIProcess(std::vector<char *> env, int p[2], int &outFd)
 {
-    if (pipe(p[0]) == -1)
+    if (pipe(p) == -1)
         return -1;
-    if (pipe(p[1]) == -1)
+    outFd = open(CGI_OUTFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+    if (outFd == -1)
+    {
+        Log(ERR) << "Could not open " << CGI_OUTFILE << " to write" << std::endl;
+        close(p[0]);
+        close(p[1]);
         return -1;
+    }
     pid_t pid = fork();
     if (pid == -1)
     {
-        close(p[0][0]);
-        close(p[0][1]);
-        close(p[1][0]);
-        close(p[1][1]);
+        close(p[0]);
+        close(p[1]);
+        close(outFd);
+        std::remove(CGI_OUTFILE);
         std::for_each(env.begin(), env.end(), free);
         return -1;
     }

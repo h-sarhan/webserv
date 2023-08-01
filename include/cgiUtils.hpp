@@ -12,7 +12,7 @@
 #define CGI_UTILS_HPP
 
 #define GATEWAY_TIMEOUT 10
-
+#define CGI_OUTFILE "cgiOutFile"
 #include <requests/Resource.hpp>
 #include "logger/Logger.hpp"
 #include <sys/wait.h>
@@ -27,6 +27,6 @@ void addPathEnv(std::vector<char *> &env, const Resource &res);
 pid_t waitCGI(pid_t pid, int& status, int& sendErrCode);
 int checkCGIError(pid_t pid, int sendErrCode, int waitStatus, int status);
 std::vector<char *>createExecArgs(std::string path);
-pid_t startCGIProcess(int p[2][2], std::vector<char *> env);
+pid_t startCGIProcess(std::vector<char *> env, int p[2], int &outFd);
 
 #endif

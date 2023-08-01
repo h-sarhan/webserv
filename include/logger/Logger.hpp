@@ -44,6 +44,8 @@ class Logger
 template <class T> Logger &operator<<(Logger &log, const T &output)
 {
     log.os() << log.color() << output << RESET;
+    // log.os() << output;
+    // (void)output;
     return log;
 }
 

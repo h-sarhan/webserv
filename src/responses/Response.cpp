@@ -20,6 +20,7 @@
 #include <cstring>
 #include <exception>
 #include <libgen.h>
+#include <sys/fcntl.h>
 #include <sys/poll.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -216,10 +217,14 @@ void Response::createFileResponse(Request &request, int statusCode)
 {
     std::stringstream responseBuffer;
     std::ofstream file;
-    file.open(request.resource().path.c_str());
+    std::string filename = request.resource().path;
+
+    if (isDir(request.resource().path))
+        filename += "/dirfile";
+    file.open(filename);
     if (!file.good())
     {
-        Log(ERR) << "Cannot open file to write: " << request.resource().path << std::endl;
+        Log(ERR) << "Cannot open file to write: " << filename << std::endl;
         return createHTMLResponse(500, errorPage(500, request.resource()), false);
     }
     Log(DBUG) << "file being posted is " << request.resource().path << std::endl;
@@ -306,16 +311,15 @@ static void printstderr(const char *str)
     fprintf(stderr, "%s\n", str);
 }
 
-void Response::runCGI(int p[2][2], Request &req, std::vector<char *> env)
+void Response::runCGI(int p[2], int outFd, Request &req, std::vector<char *> env)
 {
     chdir(dirName(req.resource().path).c_str());
-    close(p[0][1]);
-    close(p[1][0]);
-    dup2(p[0][0], STDIN_FILENO);
-    close(p[0][0]);
-    dup2(p[1][1], STDOUT_FILENO);
-    close(p[1][1]);
-    std::string filename = "/Users/hsarhan/webserv/cgi_tester";
+    close(p[1]);
+    dup2(p[0], STDIN_FILENO);
+    close(p[0]);
+    dup2(outFd, STDOUT_FILENO);
+    close(outFd);
+    std::string filename = "/Users/mfirdous/Desktop/Cursus/webserv/cgi_tester";
 
     std::for_each(env.begin(), env.end(), printstderr);
 
@@ -332,34 +336,27 @@ void Response::runCGI(int p[2][2], Request &req, std::vector<char *> env)
     }
 }
 
-void Response::readCGIResponse(int pipeFd, Request &req)
+void Response::readCGIResponse(Request &req)
 {
-    char buf[READ_MAX];
-    std::string cgiOutput;
-    ssize_t bytesRead;
-
     Log(DBUG) << "Reading CGI response... " << std::endl;
-    cgiOutput = STATUS_LINE + getStatus(200) + CRLF;
-    bytesRead = read(pipeFd, buf, READ_MAX - 1);
-    while (bytesRead > 0)
-    {
-        buf[bytesRead] = '\0';
-        cgiOutput += std::string(buf, bytesRead);
-        bytesRead = read(pipeFd, buf, READ_MAX - 1);
-    }
-    close(pipeFd);   // parent done reading from output pipe
-    if (bytesRead == -1)
-    {
-        Log(ERR) << "Could not read CGI output from pipe" << std::endl;
+    std::ifstream file;
+    std::stringstream responseBuffer;
+    size_t fileSize;
+
+    responseBuffer << STATUS_LINE << getStatus(200) << CRLF;
+    file.open(CGI_OUTFILE, std::ios::binary);
+    if (!file.good())
         return createHTMLResponse(500, errorPage(500, req.resource()), req.keepAlive());
-    }
-    _length = cgiOutput.length();
-    Log(DBUG) << "Cgi output length = " << _length << " " << cgiOutput.length() << std::endl;
-    // Log(DBUG) << cgiOutput << std::endl;
-    if (_buffer != NULL)
-        delete[] _buffer;
-    _buffer = new char[_length];
-    std::copy(&cgiOutput[0], &cgiOutput[_length], _buffer);
+    if (isEmpty(file))
+        fileSize = 0;
+    else
+        fileSize = getStreamLen(file);
+    if (fileSize > 0)
+        responseBuffer << file.rdbuf();
+    file.close();
+    std::remove(CGI_OUTFILE);
+    setResponse(responseBuffer);
+    Log(DBUG) << "Cgi output length = " << _length << std::endl;
 }
 
 int Response::sendCGIRequestBody(int pipeFd, Request &req)
@@ -371,22 +368,21 @@ int Response::sendCGIRequestBody(int pipeFd, Request &req)
     size_t bodySize = req.length() - req.bodyStart();
     const char *body = req.buffer() + req.bodyStart();
 
-    // if (fcntl(pipeFd, F_SETFL, O_NONBLOCK) == -1)
-    // {
-    //     close(pipeFd);
-    //     return 500;
-    // }
+    if (fcntl(pipeFd, F_SETFL, O_NONBLOCK) == -1)
+    {
+        close(pipeFd);
+        return 500;
+    }
     time(&startTime);
     while (totalBytes < bodySize)
     {
-        bytesWritten = write(pipeFd, body + totalBytes, bodySize);
-        // bytesWritten = write(pipeFd, body + totalBytes, WRITE_SIZE(bodySize - totalBytes));
+        // bytesWritten = write(pipeFd, body + totalBytes, bodySize);
+        bytesWritten = write(pipeFd, body + totalBytes, WRITE_SIZE(bodySize - totalBytes));
         if (bytesWritten == -1)
         {
             time(&curTime);
-            if (curTime - startTime >
-                GATEWAY_TIMEOUT)   // gateway timed out because cgi must be idle and caused our pipe
-                                   // buffer to fill up
+            // gateway timed out because cgi must be idle and caused our pipe buffer to fill up
+            if (curTime - startTime > GATEWAY_TIMEOUT)
             {
                 Log(ERR) << "CGI Error (504): Pipe buf full for too long" << std::endl;
                 close(pipeFd);
@@ -407,30 +403,33 @@ int Response::sendCGIRequestBody(int pipeFd, Request &req)
 
 void Response::createCGIResponse(Request &req, std::vector<char *> env)
 {
-    int p[2][2];
+    int p[2];
     int status;
     int errCode;
+    int outFd;
 
-    pid_t pid = startCGIProcess(p, env);
+    pid_t pid = startCGIProcess(env, p, outFd);
     if (pid == -1)
         return createHTMLResponse(500, errorPage(500, req.resource()), req.keepAlive());
     if (pid == 0)
-        runCGI(p, req, env);
+        runCGI(p, outFd, req, env);
     else
     {
-        errCode = sendCGIRequestBody(p[0][1], req);
-        close(p[0][0]);   // child done reading from input pipe
-        close(p[1][1]);   // child done writing to output pipe
-        readCGIResponse(p[1][0], req);
+        errCode = sendCGIRequestBody(p[1], req);
         Log(DBUG) << "WAITING FOR CHILD" << std::endl;
         pid_t waitStatus = waitCGI(pid, status, errCode);
+        close(p[0]);   // child done reading from input pipe
+        // close(p[1][1]);   // child done writing to output pipe
+        close(outFd); // child done writing to output pipe
         std::for_each(env.begin(), env.end(), free);
         errCode = checkCGIError(pid, errCode, waitStatus, status);
         if (errCode != EXIT_SUCCESS)
         {
-            close(p[1][0]);
+            // close(p[1][0]);
+            std::remove(CGI_OUTFILE);
             return createHTMLResponse(errCode, errorPage(errCode, req.resource()), req.keepAlive());
         }
+        readCGIResponse(req);
     }
 }
 

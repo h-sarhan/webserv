@@ -80,8 +80,8 @@ class Response
 
         // CGI
         int sendCGIRequestBody(int pipeFd, Request &req);
-        void readCGIResponse(int pipeFd, Request &req);
-        void runCGI(int p[2][2], Request &req, std::vector<char *> env);
+        void readCGIResponse(Request &req);
+        void runCGI(int p[2], int outFd, Request &req, std::vector<char *> env);
         void createCGIResponse(Request &request, std::vector<char *> env);
 
         void clear();
