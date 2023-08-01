@@ -11,15 +11,15 @@
 /* ************************************************************************** */
 
 #include "network/Connection.hpp"
+#include "cgiUtils.hpp"
 #include "enums/HTTPMethods.hpp"
 #include "enums/ResourceTypes.hpp"
 #include "enums/conversions.hpp"
 #include "logger/Logger.hpp"
+#include "network/Server.hpp"
 #include "requests/Request.hpp"
 #include "responses/DefaultPages.hpp"
 #include "responses/Response.hpp"
-#include "network/Server.hpp"
-#include "cgiUtils.hpp"
 #include "utils.hpp"
 #include <cstddef>
 
@@ -37,7 +37,8 @@ Connection::Connection(int listener, std::string ip)
 
 Connection::Connection(const Connection &c)
     : _listener(c._listener), _request(c._request), _response(c._response),
-      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime), _dropped(c._dropped), _ip(c._ip), _reqReady(c._reqReady)
+      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime),
+      _dropped(c._dropped), _ip(c._ip), _reqReady(c._reqReady)
 {
 }
 
@@ -333,7 +334,8 @@ std::vector<char *> Connection::prepCGIEnvironment()
     env.push_back(strdup("SERVER_SOFTWARE=Webserv/1.1"));
     env.push_back(strdup("GATEWAY_INTERFACE=CGI/1.1"));
     env.push_back(strdup("SERVER_PROTOCOL=HTTP/1.1"));
-    addToEnv(env, "SERVER_NAME=" + _request.hostname());    
+    env.push_back(strdup("REQUEST_URI=/directory/youpi.bla"));
+    addToEnv(env, "SERVER_NAME=" + _request.hostname());
     addToEnv(env, "SERVER_PORT=" + toStr(Server::getConfig(_request.listener())[0]->port));
     addToEnv(env, "REQUEST_METHOD=" + enumToStr(_request.method()));
     addToEnv(env, "REMOTE_ADDR=" + _ip);
