@@ -122,6 +122,6 @@ re: fclean
 	make db
 
 valgrind: $(DBG_BUILD)
-	valgrind --leak-check=full --track-fds=yes --track-origins=yes --trace-children=yes --show-leak-kinds=all ./webserv example.conf
+	valgrind --track-fds=yes --track-origins=yes --trace-children=yes ./webserv example.conf
 
 .PHONY: all re fclean clean run dbg db docs build $(COMPILE_DB) valgrind

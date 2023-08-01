@@ -17,7 +17,7 @@
 #include <limits>
 
 #define DEFAULT_HOSTNAME        "localhost"
-#define DEFAULT_KEEP_ALIVE_TIME 60
+#define DEFAULT_KEEP_ALIVE_TIME 5
 #define MAX_KEEP_ALIVE_TIME     70
 #define MAX_RECONNECTIONS       20
 #define DEFAULT_RECONNECTIONS   20
@@ -64,7 +64,7 @@ bool RequestParser::parse(const char *buffer, size_t len, const std::vector<Serv
     }
     catch (const InvalidRequestError &e)
     {
-        // ! Log here using the logger class that we have recieved an invalid request
+        Log(ERR) << "Invalid request!" << std::endl;
         _valid = false;
         return true;
     }
@@ -386,9 +386,8 @@ Resource RequestParser::formCGIResource(const std ::string &routeName,
     std::string cgiPath = _requestedURL.substr(0, cgiPos + extIt->length());
     cgiPath = sanitizeURL(configPair.second.serveDir + "/" + cgiPath.substr(routeName.length()));
 
-    // !
-    // if (!isFile(cgiPath))
-    //     return Resource(NOT_FOUND, _requestedURL, cgiPath, configPair);
+    if (!isFile(cgiPath))
+        return Resource(NOT_FOUND, _requestedURL, cgiPath, configPair);
 
     return Resource(CGI, _requestedURL, cgiPath, configPair);
 }

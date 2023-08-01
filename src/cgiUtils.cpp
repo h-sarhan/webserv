@@ -9,9 +9,15 @@
  */
 
 #include "cgiUtils.hpp"
+#include "logger/Logger.hpp"
 #include "utils.hpp"
 #include <algorithm>
+#include <cstddef>
+#include <cstdlib>
 #include <cstring>
+#include <exception>
+#include <libgen.h>
+#include <cstdio>
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/fcntl.h>

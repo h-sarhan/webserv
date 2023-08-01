@@ -219,9 +219,9 @@ void Response::createFileResponse(Request &request, int statusCode)
     std::ofstream file;
     std::string filename = request.resource().path;
 
-    if (isDir(request.resource().path))
-        filename += "/dirfile";
-    file.open(filename);
+    // if (isDir(request.resource().path))
+    //     filename += "/dirfile";
+    file.open(filename.c_str());
     if (!file.good())
     {
         Log(ERR) << "Cannot open file to write: " << filename << std::endl;
@@ -306,11 +306,6 @@ void Response::trimBody()
         _length = bodyStart - _buffer + 4;
 }
 
-static void printstderr(const char *str)
-{
-    fprintf(stderr, "%s\n", str);
-}
-
 void Response::runCGI(int p[2], int outFd, Request &req, std::vector<char *> env)
 {
     chdir(dirName(req.resource().path).c_str());
@@ -319,12 +314,10 @@ void Response::runCGI(int p[2], int outFd, Request &req, std::vector<char *> env
     close(p[0]);
     dup2(outFd, STDOUT_FILENO);
     close(outFd);
-    std::string filename = "/Users/mfirdous/Desktop/Cursus/webserv/cgi_tester";
+    // std::string filename = "/Users/mfirdous/Desktop/Cursus/webserv/cgi_tester";
 
-    std::for_each(env.begin(), env.end(), printstderr);
-
-    // std::string filename = "./";
-    // filename += baseName(req.resource().path);
+    std::string filename = "./";
+    filename += baseName(req.resource().path);
     std::vector<char *> args = createExecArgs(filename);
 
     if (execve(filename.c_str(), &args[0], &env[0]) == -1)
@@ -376,7 +369,6 @@ int Response::sendCGIRequestBody(int pipeFd, Request &req)
     time(&startTime);
     while (totalBytes < bodySize)
     {
-        // bytesWritten = write(pipeFd, body + totalBytes, bodySize);
         bytesWritten = write(pipeFd, body + totalBytes, WRITE_SIZE(bodySize - totalBytes));
         if (bytesWritten == -1)
         {
@@ -419,13 +411,11 @@ void Response::createCGIResponse(Request &req, std::vector<char *> env)
         Log(DBUG) << "WAITING FOR CHILD" << std::endl;
         pid_t waitStatus = waitCGI(pid, status, errCode);
         close(p[0]);   // child done reading from input pipe
-        // close(p[1][1]);   // child done writing to output pipe
         close(outFd); // child done writing to output pipe
         std::for_each(env.begin(), env.end(), free);
         errCode = checkCGIError(pid, errCode, waitStatus, status);
         if (errCode != EXIT_SUCCESS)
         {
-            // close(p[1][0]);
             std::remove(CGI_OUTFILE);
             return createHTMLResponse(errCode, errorPage(errCode, req.resource()), req.keepAlive());
         }

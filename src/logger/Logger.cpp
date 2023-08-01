@@ -30,8 +30,6 @@ Logger &Logger::operator()(const std::string &color)
 {
     this->_color = color;
 	_os << color << getTimeStamp();
-	// _os << getTimeStamp();
-    // (void)color;
     return *this;
 }
 
