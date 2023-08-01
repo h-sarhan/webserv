@@ -6,34 +6,39 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/12 17:34:41 by mfirdous          #+#    #+#             */
-/*   Updated: 2023/07/25 13:50:40 by mfirdous         ###   ########.fr       */
+/*   Updated: 2023/08/01 15:55:33 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "network/Connection.hpp"
+#include "cgiUtils.hpp"
 #include "enums/HTTPMethods.hpp"
 #include "enums/ResourceTypes.hpp"
 #include "enums/conversions.hpp"
 #include "logger/Logger.hpp"
+#include "network/Server.hpp"
 #include "requests/Request.hpp"
 #include "responses/DefaultPages.hpp"
 #include "responses/Response.hpp"
+#include "utils.hpp"
+#include <cstddef>
 
 Connection::Connection()
     : _listener(-1), _request(), _response(), _keepAlive(false), _timeOut(0), _startTime(0),
-      _dropped(false)
+      _dropped(false), _ip(), _reqReady(false)
 {
 }
 
-Connection::Connection(int listener)
+Connection::Connection(int listener, std::string ip)
     : _listener(listener), _request(listener), _response(), _keepAlive(false), _timeOut(0),
-      _startTime(0), _dropped(false)
+      _startTime(0), _dropped(false), _ip(ip), _reqReady(false)
 {
 }
 
 Connection::Connection(const Connection &c)
     : _listener(c._listener), _request(c._request), _response(c._response),
-      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime), _dropped(c._dropped)
+      _keepAlive(c._keepAlive), _timeOut(c._timeOut), _startTime(c._startTime),
+      _dropped(c._dropped), _ip(c._ip), _reqReady(c._reqReady)
 {
 }
 
@@ -48,6 +53,8 @@ Connection &Connection::operator=(const Connection &c)
         this->_timeOut = c._timeOut;
         this->_startTime = c._startTime;
         this->_dropped = c._dropped;
+        this->_ip = c._ip;
+        this->_reqReady = c._reqReady;
     }
     return (*this);
 }
@@ -87,6 +94,16 @@ bool &Connection::dropped()
     return _dropped;
 }
 
+bool &Connection::reqReady()
+{
+    return _reqReady;
+}
+
+std::string Connection::ip()
+{
+    return _ip;
+}
+
 void Connection::processGET()
 {
     Resource resource = _request.resource();
@@ -115,6 +132,7 @@ void Connection::processGET()
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     case CGI:
+        _response.createCGIResponse(_request, prepCGIEnvironment());
         break;
     }
 }
@@ -135,7 +153,8 @@ void Connection::processPOST()
         _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case DIRECTORY:
-        _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
+        _response.createFileResponse(_request, 201);
+        // _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case NOT_FOUND:
         _response.createFileResponse(_request, 201);
@@ -147,6 +166,7 @@ void Connection::processPOST()
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     case CGI:
+        _response.createCGIResponse(_request, prepCGIEnvironment());
         break;
     }
 }
@@ -167,7 +187,8 @@ void Connection::processPUT()
         _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case DIRECTORY:
-        _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
+        _response.createFileResponse(_request, 201);
+        // _response.createHTMLResponse(405, errorPage(405, resource), _keepAlive);
         break;
     case NOT_FOUND:
         _response.createFileResponse(_request, 201);
@@ -179,6 +200,7 @@ void Connection::processPUT()
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     case CGI:
+        _response.createFileResponse(_request, 204);
         break;
     }
 }
@@ -211,6 +233,7 @@ void Connection::processDELETE()
         _response.createHTMLResponse(404, errorPage(404, resource), _keepAlive);
         break;
     case CGI:
+        _response.createDELETEResponse(_request);
         break;
     }
 }
@@ -243,6 +266,8 @@ void Connection::processHEAD()
         _response.createHEADResponse(404, NO_CONTENT, _keepAlive);
         break;
     case CGI:
+        _response.createCGIResponse(_request, prepCGIEnvironment());
+        _response.trimBody();
         break;
     }
 }
@@ -301,6 +326,23 @@ bool Connection::bodySizeExceeded()
         _response.createHTMLResponse(413, errorPage(413, _request.resource()), _keepAlive);
     _request.clear();
     return true;
+}
+
+std::vector<char *> Connection::prepCGIEnvironment()
+{
+    std::vector<char *> env;
+    std::string var;
+
+    env.push_back(strdup("SERVER_SOFTWARE=Webserv/1.1"));
+    env.push_back(strdup("GATEWAY_INTERFACE=CGI/1.1"));
+    env.push_back(strdup("SERVER_PROTOCOL=HTTP/1.1"));
+    addToEnv(env, "SERVER_NAME=" + _request.hostname());
+    addToEnv(env, "SERVER_PORT=" + toStr(Server::getConfig(_request.listener())[0]->port));
+    addToEnv(env, "REQUEST_METHOD=" + enumToStr(_request.method()));
+    addToEnv(env, "REMOTE_ADDR=" + _ip);
+    addPathEnv(env, _request.resource());
+    addHeadersToEnv(env, _request.headers());
+    return env;
 }
 
 Connection::~Connection()

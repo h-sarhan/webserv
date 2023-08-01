@@ -1,3 +1,4 @@
+#!/usr/bin/env php-cgi
 <?php session_start();?>
 
 <!DOCTYPE html>
@@ -64,6 +65,16 @@
         </div>
     </div>
     <?php
+        $envVariables = getenv();
+        $stderr = fopen('php://stderr', 'w');
+        foreach ($envVariables as $key => $value) {
+            fwrite($stderr, "$key: $value" . PHP_EOL);
+        }
+        fwrite($stderr, "GET contents:". PHP_EOL);
+        foreach ($_GET as $key => $value) {
+            fwrite($stderr, "$key: $value" . PHP_EOL);
+        }
+        fclose($stderr);
         if (!isset($_SESSION["friends"]))
             $_SESSION["friends"] = 0;
 

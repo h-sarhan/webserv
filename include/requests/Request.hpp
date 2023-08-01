@@ -52,6 +52,8 @@ class Request
     std::map<std::string, std::string> &headers();   // ! Make this const
     bool keepAlive() const;
     unsigned int keepAliveTimer() const;
+    const std::string hostname() const;
+    int listener() const;
 
     // Returns a resource object associated with the request
     const Resource &resource() const;

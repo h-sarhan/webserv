@@ -26,6 +26,10 @@
 #include "network/SystemCallException.hpp"
 #include "network/network.hpp"
 #include "responses/Response.hpp"
+#include <netinet/in.h>
+#include <strings.h>
+#include <sys/fcntl.h>
+#include <sys/socket.h>
 
 bool quit = false;
 
@@ -122,11 +126,13 @@ void Server::respondToRequest(size_t clientNo)
     if (sendStatus == SEND_PARTIAL)
         return;
     if (sendStatus == SEND_SUCCESS)
+    {
         if (c.keepConnectionAlive())
         {
             Log(INFO) << "Connection " << sockets[clientNo].fd << " is keep alive" << std::endl;
             return;
         }
+    }
     closeConnection(clientNo);
 }
 
@@ -151,6 +157,7 @@ void Server::readBody(size_t clientNo)
         if (!req.chunkedEncodingComplete())
             return;
     }
+    cons.at(sockets[clientNo].fd).reqReady() = true;
     Log(SUCCESS) << "Request recieved from connection " << sockets[clientNo].fd
                  << ". Size = " << req.length() << std::endl;
     Log(DBUG) << enumToStr(req.method()) << " " << req.resource().originalRequest << std::endl;
@@ -167,6 +174,7 @@ void Server::recvData(size_t clientNo)
         bufSize = fromStr<size_t>(req.headers().at("content-length"));
     buf = new char[bufSize];
 
+    cons.at(sockets[clientNo].fd).reqReady() = false;
     Log(INFO) << "Receiving request data from connection " << sockets[clientNo].fd << "... "
               << std::endl;
     bytesRec = recv(sockets[clientNo].fd, buf, bufSize, 0);
@@ -175,6 +183,7 @@ void Server::recvData(size_t clientNo)
                  << strerror(errno) << std::endl;
     else if (bytesRec == 0)
         Log(ERR) << "Connection " << sockets[clientNo].fd << " closed by client" << std::endl;
+    // if (bytesRec < 0)
     if (bytesRec <= 0)
     {
         closeConnection(clientNo);
@@ -198,10 +207,14 @@ void Server::acceptNewConnection(size_t listenerNo)
         Log(ERR) << "Accept failed" << std::endl;
         return;
     }
-    fcntl(newFd, F_SETFL, O_NONBLOCK);   // enable this when doing partial recv
-    Log(SUCCESS) << "New connection! fd = " << newFd << std::endl;
-    cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd)));
+    SystemCallException::checkErr("fcntl", fcntl(newFd, F_SETFL, O_NONBLOCK));   // enable this when doing partial recv
+    SystemCallException::checkErr("fcntl", fcntl(newFd, F_SETFD, FD_CLOEXEC));   // enable this when doing partial recv
+    char ipBuf[INET_ADDRSTRLEN];
+    bzero(ipBuf, INET_ADDRSTRLEN);
+    std::string ip(inet_ntop(AF_INET, &theirAddr, ipBuf, INET_ADDRSTRLEN), INET_ADDRSTRLEN);
+    cons.insert(std::make_pair(newFd, Connection(sockets[listenerNo].fd, ip)));
     sockets.push_back(createPollFd(newFd, POLLIN | POLLOUT));
+    Log(SUCCESS) << "New connection! Socket: " << newFd << ", IP: " << ip << std::endl;
     if (sockets.size() - configBlocks.size() > MAX_CLIENTS)
     {
         cons.at(newFd).dropped() = true;
@@ -239,7 +252,7 @@ void Server::startListening()
                             readBody(i);   // this will only be run if the headers are parsed
                 }
             }
-            else if ((sockets[i].revents & POLLOUT))
+            else if ((sockets[i].revents & POLLOUT) && cons.at(eventFd).reqReady())
                 respondToRequest(i);
         }
     }

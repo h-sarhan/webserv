@@ -9,6 +9,7 @@
  */
 
 #include "network/ServerInfo.hpp"
+#include <sys/fcntl.h>
 
 /**
  * @brief Constructs a new ServerInfo object for TCP sockets and localhost
@@ -62,6 +63,7 @@ int ServerInfo::bindSocketToPort()
         {
             // Setting the socket to be non-blocking
             SystemCallException::checkErr("fcntl", fcntl(listenerFd, F_SETFL, O_NONBLOCK));
+            SystemCallException::checkErr("fcntl", fcntl(listenerFd, F_SETFD, FD_CLOEXEC));   // enable this when doing partial recv
             SystemCallException::checkErr(
                 "setsockopt",
                 setsockopt(listenerFd, SOL_SOCKET, SO_REUSEADDR, &reusePort, sizeof(reusePort)));

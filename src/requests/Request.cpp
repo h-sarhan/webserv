@@ -34,8 +34,7 @@ Resource::Resource(const ResourceType &type, const std::string &request, const s
  * @param listener
  */
 Request::Request(int listener)
-    : _buffer(new char[REQ_BUFFER_SIZE]), _length(0), _capacity(REQ_BUFFER_SIZE),
-      _listener(listener)
+    : _buffer(new char[REQ_BUFFER_SIZE]), _length(0), _capacity(REQ_BUFFER_SIZE), _listener(listener)
 {
 }
 
@@ -157,6 +156,16 @@ bool Request::keepAlive() const
 unsigned int Request::keepAliveTimer() const
 {
     return _parser.keepAlive().second;
+}
+
+const std::string Request::hostname() const
+{
+    return _parser.hostname();
+}
+
+int Request::listener() const
+{
+    return _listener;
 }
 
 /**

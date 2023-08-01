@@ -61,7 +61,8 @@ btn = form.getfirst('buttonType', 'empty')
 # Printing env variables
 for name, value in os.environ.items():
     print("{0}: {1}".format(name, value), file=sys.stderr)
-
+# while(1):
+#     nothing=True
 # Avoid script injection escaping the user input
 btn = html.escape(btn)
 

@@ -21,7 +21,7 @@ REQUEST_SRC := $(addprefix $(REQUEST_DIR)/, $(REQUEST_SRC))
 RESPONSE_SRC := $(addprefix $(RESPONSE_DIR)/, $(RESPONSE_SRC))
 LOGGER_SRC := $(addprefix $(LOGGER_DIR)/, $(LOGGER_SRC))
 
-SRC := $(SRC_DIR)/main.cpp  $(SRC_DIR)/utils.cpp $(SRC_DIR)/tests.cpp $(SRC_DIR)/enumConversions.cpp $(CONFIG_SRC) $(NETWORK_SRC) $(REQUEST_SRC) $(RESPONSE_SRC) $(LOGGER_SRC)
+SRC := $(SRC_DIR)/main.cpp  $(SRC_DIR)/utils.cpp $(SRC_DIR)/tests.cpp $(SRC_DIR)/enumConversions.cpp $(SRC_DIR)/cgiUtils.cpp $(CONFIG_SRC) $(NETWORK_SRC) $(REQUEST_SRC) $(RESPONSE_SRC) $(LOGGER_SRC)
 
 # Release and debug object files
 OBJ_DIR = .build
@@ -122,6 +122,6 @@ re: fclean
 	make db
 
 valgrind: $(DBG_BUILD)
-	valgrind --leak-check=full --track-fds=yes --track-origins=yes --show-leak-kinds=all ./webserv test.conf
+	valgrind --track-fds=yes --track-origins=yes --trace-children=yes ./webserv example.conf
 
 .PHONY: all re fclean clean run dbg db docs build $(COMPILE_DB) valgrind

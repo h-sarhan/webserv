@@ -20,6 +20,7 @@
 # include "network/network.hpp"
 #include "HeaderData.hpp"
 #include "requests/Request.hpp"
+#include <sys/wait.h>
 
 # define IDLE_CONNECTION 0
 # define SEND_FAIL 1
@@ -37,9 +38,6 @@
 // content types
 # define HTML "text/html; charset=UTF-8"
 # define NO_CONTENT ""
-
-#define IMG_HEADERS  "HTTP/1.1 200 OK\r\nContent-Type: image/jpg\r\nContent-Length: "
-#define HTTP_HEADERS "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n"
 
 struct Headers
 {
@@ -67,6 +65,7 @@ class Response
         size_t length();
         size_t totalBytesSent();
         int statusCode();
+        
         int sendResponse(int fd);
         void setResponse(std::stringstream& ss);
         void setResponseHeaders(std::stringstream& ss, Headers header);
@@ -77,6 +76,14 @@ class Response
         void createHEADFileResponse(Request &request);
         void createHEADResponse(int statusCode, std::string contentType, bool keepAlive);
         void createHTMLResponse(int statusCode, std::string page, bool keepAlive);
+        void trimBody();
+
+        // CGI
+        int sendCGIRequestBody(int pipeFd, Request &req);
+        void readCGIResponse(Request &req);
+        void runCGI(int p[2], int outFd, Request &req, std::vector<char *> env);
+        void createCGIResponse(Request &request, std::vector<char *> env);
+
         void clear();
         ~Response();
 };

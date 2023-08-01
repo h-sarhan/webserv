@@ -18,6 +18,7 @@
 #include "logger/Logger.hpp"
 
 using logger::Log;
+
 class Connection
 {
     private:
@@ -28,6 +29,8 @@ class Connection
         time_t _timeOut;
         time_t _startTime;
         bool _dropped;
+        std::string _ip;
+        bool _reqReady; // whether the request is ready to be processed - set to true when the request is fully received and false when the response is fully sent
 
         void processGET();
         void processPOST();
@@ -37,7 +40,7 @@ class Connection
 
     public:
         Connection();
-        Connection(int listener);
+        Connection(int listener, std::string ip);
         Connection(const Connection &c);
         Connection& operator=(const Connection &c);
         int& listener();
@@ -47,9 +50,12 @@ class Connection
         time_t& timeOut();
         time_t& startTime();
         bool& dropped();
+        bool& reqReady();
+        std::string ip();
         void processRequest();
         bool keepConnectionAlive();
         bool bodySizeExceeded();
+        std::vector<char *> prepCGIEnvironment();
         ~Connection();
 
 };

@@ -37,6 +37,10 @@ std::string getStatus(int statusCode)
 			return "409 Conflict";
 		case 413:
 			return "413 Content Too Large";
+        case 502:
+            return "502 Bad Gateway";
+        case 504:
+            return "504 Gateway Timeout";
 		case 503:
 			return "503 Service Unavailable";
 	}
