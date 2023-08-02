@@ -159,6 +159,16 @@ unsigned int Request::keepAliveTimer() const
     return _parser.keepAlive().second;
 }
 
+const std::string Request::hostname() const
+{
+    return _parser.hostname();
+}
+
+int Request::listener() const
+{
+    return _listener;
+}
+
 /**
  * @brief Get the resource that was requested by the client
  *

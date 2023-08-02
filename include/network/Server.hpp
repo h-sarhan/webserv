@@ -15,13 +15,13 @@
 #include "Connection.hpp"
 #include "SystemCallException.hpp"
 #include "config/ServerBlock.hpp"
+#include "logger/Logger.hpp"
 #include "network.hpp"
 #include "network/ServerInfo.hpp"
 #include "responses/DefaultPages.hpp"
-#include "logger/Logger.hpp"
 
-#define MAX_CLIENTS 50
-#define READ_SIZE 1000000
+#define MAX_CLIENTS     170
+#define READ_SIZE       1000000
 #define START_POS(x, y) (x <= y ? 0 : x - y)
 
 typedef std::vector<ServerBlock> &serverList;
@@ -41,11 +41,11 @@ class Server
     void recvData(size_t clientNo);
     void readBody(size_t clientNo);
     void respondToRequest(size_t clientNo);
-  
+
   public:
     Server(serverList virtualServers);
     void startListening();
-    static std::vector<ServerBlock *>& getConfig(int listener);
+    static std::vector<ServerBlock *> &getConfig(int listener);
     ~Server();
 };
 

@@ -9,8 +9,8 @@
  */
 
 #include "config/Parser.hpp"
-#include "config/Validators.hpp"
 #include "config/ServerBlock.hpp"
+#include "config/Validators.hpp"
 #include "network/Server.hpp"
 #include "tests.hpp"
 #include "utils.hpp"
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
             // ConfigTokenizer tokenizer(filename);
             // std::vector<Token> tokens = tokenizer.tokens();
             Parser parser(filename);
-            std::vector<ServerBlock>& config = parser.getConfig();
+            std::vector<ServerBlock> &config = parser.getConfig();
             Server s(config);
             s.startListening();
         }

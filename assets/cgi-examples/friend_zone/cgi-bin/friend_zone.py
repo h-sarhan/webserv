@@ -2,6 +2,9 @@
 import hashlib, time, os, sys, cgi, html
 from http.cookies import SimpleCookie
 
+for name, value in os.environ.items():
+    print("{0}: {1}".format(name, value), file=sys.stderr)
+ 
 friend_file = open("./friend-zone.html", "r")
 for name, value in os.environ.items():
     print("{0}: {1}".format(name, value), file=sys.stderr)

@@ -272,7 +272,10 @@ void Parser::parseLocationBlock()
 
     // Trim '/' from route path
     if (routePath != "/")
+    {
         rightTrimStr(routePath, "/");
+        routePath += "/";
+    }
 
     // Insert an empty route block
     _currRoute = _currServerBlock->routes.insert(std::make_pair(routePath, Route())).first;

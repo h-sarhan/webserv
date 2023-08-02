@@ -14,10 +14,10 @@
 #define SYSTEM_CALL_EXCEPTION_HPP
 
 #include <cstring>
+#include <errno.h>
 #include <exception>
 #include <iostream>
 #include <string>
-#include <errno.h>
 
 class SystemCallException : public std::exception
 {
@@ -25,13 +25,11 @@ class SystemCallException : public std::exception
     std::string errorMessage;
 
   public:
-    SystemCallException(const std::string &functionName,
-                        const std::string &errorMsg)
+    SystemCallException(const std::string &functionName, const std::string &errorMsg)
         : errorMessage(functionName + ": " + errorMsg)
     {
     }
-    SystemCallException(const std::string &errorMsg)
-        : errorMessage("webserv: " + errorMsg)
+    SystemCallException(const std::string &errorMsg) : errorMessage("webserv: " + errorMsg)
     {
     }
     virtual const char *what() const throw()

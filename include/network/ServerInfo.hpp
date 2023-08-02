@@ -12,10 +12,10 @@
 #define SERVER_INFO_HPP
 
 #include "SystemCallException.hpp"
-#include "network.hpp"
 #include "logger/Logger.hpp"
+#include "network.hpp"
 
-#define BACKLOG  10
+#define BACKLOG 50
 
 using logger::Log;
 class ServerInfo
